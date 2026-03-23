@@ -161,13 +161,15 @@ select:focus {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.param-section {
+.param-section,
+.hsl-section {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 8px;
   margin-bottom: 12px;
 }
 
-.param-section .section-label {
+.param-section .section-label,
+.hsl-section .section-label {
   display: block;
   font-size: 11px;
   font-weight: 600;
@@ -200,6 +202,50 @@ select:focus {
   accent-color: #888;
   width: 14px;
   height: 14px;
+}
+
+.hsl-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.hsl-slider-row input[type="range"] {
+  flex: 1;
+  accent-color: #888;
+}
+
+.hsl-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #999;
+  width: 1rem;
+  flex-shrink: 0;
+}
+
+.hsl-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5rem;
+  text-align: right;
+  color: #aaa;
+  flex-shrink: 0;
+}
+
+.btn-hsl-reset {
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.btn-hsl-reset:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .button-row {

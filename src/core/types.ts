@@ -89,4 +89,6 @@ export interface GenerateOptions {
   outDir?: string;
   /** Pattern-specific params as key=value pairs */
   params?: Record<string, number>;
+  /** HSL color adjustment (post-processing) */
+  hsl?: { h?: number; s?: number; l?: number };
 }
