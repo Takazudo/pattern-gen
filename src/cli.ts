@@ -47,7 +47,7 @@ function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir
       case '--zoom':
       case '-z':
         options.zoom = requireFloat('--zoom', args[++i]);
-        if (options.zoom <= 0 || options.zoom > 100) fail('--zoom must be between 0 and 100');
+        if (options.zoom <= 0 || options.zoom > 100) fail('--zoom must be greater than 0 and at most 100');
         break;
       case '--bg': {
         let bgInput = args[++i];
