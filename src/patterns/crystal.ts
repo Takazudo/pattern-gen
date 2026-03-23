@@ -1,0 +1,233 @@
+import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import { darken, lighten, hexToRgb } from '../core/color-utils.js';
+
+/**
+ * Crystal / gem facet pattern — Voronoi cells with inner facet lines
+ * from edge midpoints to cell centroid, plus shading for gem-like faceted look.
+ */
+export const crystal: PatternGenerator = {
+  name: 'crystal',
+  displayName: 'Crystal',
+  description: 'Gem-like faceted Voronoi cells with inner shading and facet lines',
+
+  generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
+    const { width, height, rand, colorScheme, zoom } = options;
+
+    const bg = colorScheme.palette[0];
+    const fgColors = colorScheme.palette.slice(1);
+
+    // Fill background
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    // Generate seed points
+    const baseCount = Math.floor((width * height) / 6000);
+    const numSeeds = Math.max(8, Math.floor(baseCount * zoom * zoom));
+
+    interface Seed {
+      x: number;
+      y: number;
+      color: string;
+    }
+
+    const seeds: Seed[] = [];
+    for (let i = 0; i < numSeeds; i++) {
+      seeds.push({
+        x: rand() * width,
+        y: rand() * height,
+        color: fgColors[i % fgColors.length],
+      });
+    }
+
+    // For each seed, collect its Voronoi cell boundary vertices
+    // We'll use a scanline approach to find cell pixels, then draw facets with Canvas paths
+
+    // Step 1: Assign each pixel to its nearest seed (build cell map)
+    const cellMap = new Int32Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let minDist = Infinity;
+        let closestIdx = 0;
+        for (let i = 0; i < seeds.length; i++) {
+          const dx = x - seeds[i].x;
+          const dy = y - seeds[i].y;
+          const dist = dx * dx + dy * dy;
+          if (dist < minDist) {
+            minDist = dist;
+            closestIdx = i;
+          }
+        }
+        cellMap[y * width + x] = closestIdx;
+      }
+    }
+
+    // Step 2: Find boundary edges between cells
+    // For each cell, collect boundary midpoints and compute centroid
+    const cellBounds: Map<
+      number,
+      { minX: number; minY: number; maxX: number; maxY: number; count: number; sumX: number; sumY: number }
+    > = new Map();
+
+    for (let i = 0; i < numSeeds; i++) {
+      cellBounds.set(i, {
+        minX: width,
+        minY: height,
+        maxX: 0,
+        maxY: 0,
+        count: 0,
+        sumX: 0,
+        sumY: 0,
+      });
+    }
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = cellMap[y * width + x];
+        const bounds = cellBounds.get(idx)!;
+        bounds.sumX += x;
+        bounds.sumY += y;
+        bounds.count++;
+        if (x < bounds.minX) bounds.minX = x;
+        if (x > bounds.maxX) bounds.maxX = x;
+        if (y < bounds.minY) bounds.minY = y;
+        if (y > bounds.maxY) bounds.maxY = y;
+      }
+    }
+
+    // Step 3: Precompute per-cell centroid and maxDist
+    const cellCentroidX = new Float64Array(numSeeds);
+    const cellCentroidY = new Float64Array(numSeeds);
+    const cellMaxDist = new Float64Array(numSeeds);
+
+    for (let i = 0; i < numSeeds; i++) {
+      const bounds = cellBounds.get(i)!;
+      if (bounds.count > 0) {
+        cellCentroidX[i] = bounds.sumX / bounds.count;
+        cellCentroidY[i] = bounds.sumY / bounds.count;
+        cellMaxDist[i] = Math.max(
+          bounds.maxX - bounds.minX,
+          bounds.maxY - bounds.minY,
+        ) / 2 || 1;
+      }
+    }
+
+    // Step 4: For each cell, fill with faceted shading
+    // Light direction from top-left
+    const lightX = -0.6;
+    const lightY = -0.8;
+    const lightLen = Math.sqrt(lightX * lightX + lightY * lightY);
+    const lnX = lightX / lightLen;
+    const lnY = lightY / lightLen;
+
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const cellIdx = cellMap[y * width + x];
+        const seed = seeds[cellIdx];
+        const centroidX = cellCentroidX[cellIdx];
+        const centroidY = cellCentroidY[cellIdx];
+
+        // Vector from centroid to pixel
+        const dx = x - centroidX;
+        const dy = y - centroidY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxDist = cellMaxDist[cellIdx];
+
+        // Normalize distance from centroid (0=center, 1=edge)
+        const t = Math.min(1, dist / (maxDist || 1));
+
+        // Facet normal approximation — direction from centroid
+        const nx = dist > 0 ? dx / dist : 0;
+        const ny = dist > 0 ? dy / dist : 0;
+
+        // Light intensity based on facet angle
+        const lightIntensity = Math.max(0, nx * lnX + ny * lnY);
+
+        // Apply shading: center brighter, edges darker, plus light direction
+        let color: string;
+        const edgeDarken = 0.15 * t;
+        const lightBoost = 0.25 * lightIntensity * (1 - t * 0.5);
+
+        if (lightBoost > edgeDarken) {
+          color = lighten(seed.color, lightBoost - edgeDarken);
+        } else {
+          color = darken(seed.color, 1 - (edgeDarken - lightBoost));
+        }
+
+        const [r, g, b] = hexToRgb(color);
+        const pixIdx = (y * width + x) * 4;
+        data[pixIdx] = r;
+        data[pixIdx + 1] = g;
+        data[pixIdx + 2] = b;
+        data[pixIdx + 3] = 255;
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    // Step 4: Draw cell borders and facet lines
+    ctx.lineWidth = Math.max(0.5, 1 / zoom);
+
+    for (let i = 0; i < numSeeds; i++) {
+      const seed = seeds[i];
+      const bounds = cellBounds.get(i)!;
+      if (bounds.count === 0) continue;
+
+      const centroidX = bounds.sumX / bounds.count;
+      const centroidY = bounds.sumY / bounds.count;
+      const borderColor = darken(seed.color, 0.5);
+
+      // Find boundary pixels and draw facet lines from edge midpoints to centroid
+      // Sample boundary points at intervals
+      const edgePoints: { x: number; y: number }[] = [];
+      const step = Math.max(3, Math.floor(8 / zoom));
+
+      for (let y = bounds.minY; y <= bounds.maxY; y += step) {
+        for (let x = bounds.minX; x <= bounds.maxX; x += step) {
+          if (x < 0 || x >= width || y < 0 || y >= height) continue;
+          if (cellMap[y * width + x] !== i) continue;
+
+          // Check if this is a boundary pixel
+          let isBorder = false;
+          for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+            const nx = x + ox;
+            const ny = y + oy;
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+              isBorder = true;
+              break;
+            }
+            if (cellMap[ny * width + nx] !== i) {
+              isBorder = true;
+              break;
+            }
+          }
+          if (isBorder) {
+            edgePoints.push({ x, y });
+          }
+        }
+      }
+
+      // Draw facet lines from sampled edge midpoints to centroid
+      ctx.strokeStyle = borderColor;
+      ctx.globalAlpha = 0.4;
+      const facetStep = Math.max(1, Math.floor(edgePoints.length / 8));
+      for (let j = 0; j < edgePoints.length; j += facetStep) {
+        ctx.beginPath();
+        ctx.moveTo(centroidX, centroidY);
+        ctx.lineTo(edgePoints[j].x, edgePoints[j].y);
+        ctx.stroke();
+      }
+
+      // Draw cell borders
+      ctx.strokeStyle = borderColor;
+      ctx.globalAlpha = 0.6;
+      for (const pt of edgePoints) {
+        ctx.fillStyle = borderColor;
+        ctx.fillRect(pt.x, pt.y, 1, 1);
+      }
+    }
+
+    ctx.globalAlpha = 1;
+  },
+};
