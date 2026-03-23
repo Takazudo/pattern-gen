@@ -26,6 +26,7 @@ export function HslTweakPanel({
           step={1}
           value={hue}
           onChange={(e) => onChange(parseInt(e.target.value), saturation, lightness)}
+          aria-label="Hue shift"
         />
         <span className="hsl-value">{hue}</span>
       </div>
@@ -39,6 +40,7 @@ export function HslTweakPanel({
           step={1}
           value={saturation}
           onChange={(e) => onChange(hue, parseInt(e.target.value), lightness)}
+          aria-label="Saturation shift"
         />
         <span className="hsl-value">{saturation}</span>
       </div>
@@ -52,6 +54,7 @@ export function HslTweakPanel({
           step={1}
           value={lightness}
           onChange={(e) => onChange(hue, saturation, parseInt(e.target.value))}
+          aria-label="Lightness shift"
         />
         <span className="hsl-value">{lightness}</span>
       </div>

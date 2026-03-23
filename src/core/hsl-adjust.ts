@@ -19,13 +19,17 @@ export function applyHslAdjust(
   height: number,
   adjust: HslAdjust,
 ): void {
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const data = imageData.data;
   const hShift = adjust.h ?? 0;
   const sShift = adjust.s ?? 0;
   const lShift = adjust.l ?? 0;
 
+  if (hShift === 0 && sShift === 0 && lShift === 0) return;
+
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+
   for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] === 0) continue; // skip transparent pixels
     const hsl = rgbToHsl(data[i], data[i + 1], data[i + 2]);
 
     // Apply shifts with wrapping/clamping

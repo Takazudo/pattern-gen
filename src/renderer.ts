@@ -2,6 +2,7 @@ import { hashString } from './core/hash.js';
 import { createRandom } from './core/seeded-random.js';
 import { COLOR_SCHEMES, colorSchemesByKey, normalizeSchemeKey } from './core/color-schemes.js';
 import { applyHslAdjust } from './core/hsl-adjust.js';
+import type { HslAdjust } from './core/hsl-adjust.js';
 import { patternsByName } from './patterns/index.js';
 import type { ColorScheme } from './core/color-schemes.js';
 import type { PatternOptions, GenerateOptions } from './core/types.js';
@@ -71,7 +72,7 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
 
   pattern.generate(ctx as unknown as CanvasRenderingContext2D, patternOptions);
 
-  if (options.hsl && (options.hsl.h || options.hsl.s || options.hsl.l)) {
+  if (options.hsl) {
     applyHslAdjust(ctx as unknown as CanvasRenderingContext2D, size, size, options.hsl);
   }
 
@@ -100,7 +101,7 @@ export function renderPatternToCanvas(
     bg?: string;
     colorScheme?: string;
     params?: Record<string, number>;
-    hsl?: { h?: number; s?: number; l?: number };
+    hsl?: HslAdjust;
   },
 ): { colorSchemeName: string } {
   const zoom = options?.zoom ?? 1;
@@ -143,9 +144,8 @@ export function renderPatternToCanvas(
 
   pattern.generate(ctx, patternOptions);
 
-  const hsl = options?.hsl;
-  if (hsl && (hsl.h || hsl.s || hsl.l)) {
-    applyHslAdjust(ctx, width, height, hsl);
+  if (options?.hsl) {
+    applyHslAdjust(ctx, width, height, options.hsl);
   }
 
   return { colorSchemeName: scheme.name };
