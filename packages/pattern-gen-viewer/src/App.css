@@ -161,6 +161,47 @@ select:focus {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.param-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+  margin-bottom: 12px;
+}
+
+.param-section .section-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #777;
+  margin-bottom: 8px;
+}
+
+.param-control {
+  margin-bottom: 8px;
+}
+
+.param-control label {
+  font-size: 10px;
+}
+
+.param-control .range-value {
+  min-width: 36px;
+  font-size: 11px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle-row input[type="checkbox"] {
+  accent-color: #888;
+  width: 14px;
+  height: 14px;
+}
+
 .button-row {
   margin-top: 12px;
   display: flex;

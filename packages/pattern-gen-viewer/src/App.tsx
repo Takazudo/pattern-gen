@@ -1,10 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { hashString } from 'pattern-gen/core/hash';
 import { createRandom } from 'pattern-gen/core/seeded-random';
-import { COLOR_SCHEMES, colorSchemesByKey, normalizeSchemeKey } from 'pattern-gen/core/color-schemes';
+import { COLOR_SCHEMES } from 'pattern-gen/core/color-schemes';
 import { patternRegistry, patternsByName } from 'pattern-gen/patterns/index';
-import type { PatternOptions } from 'pattern-gen/core/types';
-import type { ColorScheme } from 'pattern-gen/core/color-schemes';
+import type { PatternOptions, ParamDef } from 'pattern-gen/core/types';
+import { ParamControls } from './components/param-controls.js';
 
 const CANVAS_SIZE = 1200;
 
@@ -17,12 +17,21 @@ function randomSlug(): string {
   return s;
 }
 
+function getDefaults(paramDefs: ParamDef[]): Record<string, number> {
+  const defaults: Record<string, number> = {};
+  for (const def of paramDefs) {
+    defaults[def.key] = def.defaultValue;
+  }
+  return defaults;
+}
+
 function generateOnCanvas(
   canvas: HTMLCanvasElement,
   slug: string,
   patternType: string,
   colorSchemeIndex: number,
   zoom: number,
+  params: Record<string, number>,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -40,6 +49,7 @@ function generateOnCanvas(
     rand,
     colorScheme: scheme,
     zoom,
+    params: Object.keys(params).length > 0 ? params : undefined,
   };
 
   pattern.generate(ctx, options);
@@ -51,23 +61,41 @@ export function App() {
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
+  const [params, setParams] = useState<Record<string, number>>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Get current pattern's paramDefs
+  const currentParamDefs = useMemo(() => {
+    const pattern = patternsByName.get(patternType);
+    return pattern?.paramDefs ?? [];
+  }, [patternType]);
+
+  // Reset params to defaults when pattern type changes
+  useEffect(() => {
+    setParams(getDefaults(currentParamDefs));
+  }, [currentParamDefs]);
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom);
-  }, [slug, patternType, colorSchemeIndex, zoom]);
+    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, params);
+  }, [slug, patternType, colorSchemeIndex, zoom, params]);
 
   useEffect(() => {
     render();
   }, [render]);
 
+  const handleParamChange = useCallback((key: string, value: number) => {
+    setParams((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
   const randomize = useCallback(() => {
     setSlug(randomSlug());
     setColorSchemeIndex(Math.floor(Math.random() * COLOR_SCHEMES.length));
-    setPatternType(patternRegistry[Math.floor(Math.random() * patternRegistry.length)].name);
+    const nextPattern = patternRegistry[Math.floor(Math.random() * patternRegistry.length)];
+    setPatternType(nextPattern.name);
     setZoom(Math.round((1 + Math.random() * 4) * 10) / 10);
+    // Params will auto-reset via the patternType effect
   }, []);
 
   const download = useCallback(() => {
@@ -148,6 +176,12 @@ export function App() {
                 <span className="range-value">{zoom.toFixed(1)}</span>
               </div>
             </div>
+
+            <ParamControls
+              paramDefs={currentParamDefs}
+              values={params}
+              onChange={handleParamChange}
+            />
 
             <div className="control-group">
               <label htmlFor="scheme-select">Color Scheme</label>

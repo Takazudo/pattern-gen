@@ -12,7 +12,10 @@ export {
 export type { ColorScheme, Palette } from './core/color-schemes.js';
 
 // Types
-export type { PatternGenerator, PatternOptions, GenerateOptions } from './core/types.js';
+export type { PatternGenerator, PatternOptions, GenerateOptions, ParamDef, SliderParamDef, SelectParamDef, ToggleParamDef } from './core/types.js';
+
+// Param utilities
+export { getParam } from './core/param-utils.js';
 
 // Pattern registry
 export { patternRegistry, patternsByName, getPatternNames } from './patterns/index.js';

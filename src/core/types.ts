@@ -19,6 +19,39 @@ export interface PatternOptions {
 }
 
 /**
+ * Discriminated union for pattern parameter definitions.
+ * All values are numbers — selects encode choices as numeric values, toggles as 0/1.
+ */
+export type ParamDef = SliderParamDef | SelectParamDef | ToggleParamDef;
+
+interface ParamDefBase {
+  /** Machine-readable key, matches the key in options.params */
+  key: string;
+  /** Human-readable label for the UI */
+  label: string;
+}
+
+export interface SliderParamDef extends ParamDefBase {
+  type: 'slider';
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+}
+
+export interface SelectParamDef extends ParamDefBase {
+  type: 'select';
+  options: { value: number; label: string }[];
+  defaultValue: number;
+}
+
+export interface ToggleParamDef extends ParamDefBase {
+  type: 'toggle';
+  /** 0 = off, 1 = on */
+  defaultValue: 0 | 1;
+}
+
+/**
  * A pattern generator draws on a Canvas 2D context.
  */
 export interface PatternGenerator {
@@ -28,6 +61,8 @@ export interface PatternGenerator {
   displayName: string;
   /** Short description */
   description: string;
+  /** Parameter definitions for the viewer UI */
+  paramDefs?: ParamDef[];
   /** Draw the pattern onto the canvas context */
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void;
 }

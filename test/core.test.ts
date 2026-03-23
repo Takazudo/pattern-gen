@@ -5,6 +5,8 @@ import { createNoise2D, fbm } from '../src/core/noise.js';
 import { hexToRgb, rgbToHex, lerpColor, darken, lighten } from '../src/core/color-utils.js';
 import { COLOR_SCHEMES, normalizeSchemeKey, colorSchemesByKey } from '../src/core/color-schemes.js';
 import { patternRegistry, patternsByName, getPatternNames } from '../src/patterns/index.js';
+import { getParam } from '../src/core/param-utils.js';
+import type { ParamDef, PatternOptions } from '../src/core/types.js';
 
 describe('hashString', () => {
   it('returns a consistent hash for the same input', () => {
@@ -143,5 +145,56 @@ describe('pattern registry', () => {
       expect(typeof p.description).toBe('string');
       expect(typeof p.generate).toBe('function');
     }
+  });
+
+  it('patterns with paramDefs have valid definitions', () => {
+    for (const p of patternRegistry) {
+      if (!p.paramDefs) continue;
+      for (const def of p.paramDefs) {
+        expect(typeof def.key).toBe('string');
+        expect(typeof def.label).toBe('string');
+        expect(['slider', 'select', 'toggle']).toContain(def.type);
+        expect(typeof def.defaultValue).toBe('number');
+        if (def.type === 'slider') {
+          expect(def.defaultValue).toBeGreaterThanOrEqual(def.min);
+          expect(def.defaultValue).toBeLessThanOrEqual(def.max);
+        }
+        if (def.type === 'select') {
+          const validValues = def.options.map((o) => o.value);
+          expect(validValues).toContain(def.defaultValue);
+        }
+      }
+    }
+  });
+});
+
+describe('getParam', () => {
+  const testDefs: ParamDef[] = [
+    { key: 'size', label: 'Size', type: 'slider', min: 1, max: 100, step: 1, defaultValue: 50 },
+    { key: 'mode', label: 'Mode', type: 'select', options: [{ value: 0, label: 'A' }, { value: 1, label: 'B' }], defaultValue: 0 },
+  ];
+
+  const baseOptions: PatternOptions = {
+    width: 800, height: 800, rand: () => 0.5,
+    colorScheme: { name: 'test', palette: ['#000', '#111', '#222', '#333', '#444', '#555', '#666', '#777'] },
+    zoom: 1,
+  };
+
+  it('returns default when params is undefined', () => {
+    expect(getParam(baseOptions, testDefs, 'size')).toBe(50);
+  });
+
+  it('returns default when key is missing from params', () => {
+    const opts = { ...baseOptions, params: { other: 99 } };
+    expect(getParam(opts, testDefs, 'size')).toBe(50);
+  });
+
+  it('returns overridden value when key exists in params', () => {
+    const opts = { ...baseOptions, params: { size: 75 } };
+    expect(getParam(opts, testDefs, 'size')).toBe(75);
+  });
+
+  it('throws for unknown key', () => {
+    expect(() => getParam(baseOptions, testDefs, 'nonexistent')).toThrow('Unknown param key');
   });
 });
