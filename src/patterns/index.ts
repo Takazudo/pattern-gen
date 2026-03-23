@@ -1,5 +1,10 @@
 import type { PatternGenerator } from '../core/types.js';
 import { woodBlock } from './wood-block.js';
+import { truchet } from './truchet.js';
+import { herringbone } from './herringbone.js';
+import { isometric } from './isometric.js';
+import { penrose } from './penrose.js';
+import { patchwork } from './patchwork.js';
 
 /**
  * Registry of all available pattern generators.
@@ -7,6 +12,11 @@ import { woodBlock } from './wood-block.js';
  */
 export const patternRegistry: PatternGenerator[] = [
   woodBlock,
+  truchet,
+  herringbone,
+  isometric,
+  penrose,
+  patchwork,
 ];
 
 /** Map of pattern name to generator for fast lookup */
