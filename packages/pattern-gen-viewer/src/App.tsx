@@ -4,6 +4,7 @@ import { createRandom } from 'pattern-gen/core/seeded-random';
 import { COLOR_SCHEMES } from 'pattern-gen/core/color-schemes';
 import { patternRegistry, patternsByName } from 'pattern-gen/patterns/index';
 import { applyHslAdjust } from 'pattern-gen/core/hsl-adjust';
+import { getEffectiveParams } from 'pattern-gen/core/randomize-defaults';
 import type { PatternOptions, ParamDef } from 'pattern-gen/core/types';
 import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
@@ -19,21 +20,13 @@ function randomSlug(): string {
   return s;
 }
 
-function getDefaults(paramDefs: ParamDef[]): Record<string, number> {
-  const defaults: Record<string, number> = {};
-  for (const def of paramDefs) {
-    defaults[def.key] = def.defaultValue;
-  }
-  return defaults;
-}
-
 function generateOnCanvas(
   canvas: HTMLCanvasElement,
   slug: string,
   patternType: string,
   colorSchemeIndex: number,
   zoom: number,
-  params: Record<string, number>,
+  userOverrides: Record<string, number>,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -51,7 +44,9 @@ function generateOnCanvas(
     rand,
     colorScheme: scheme,
     zoom,
-    params: Object.keys(params).length > 0 ? params : undefined,
+    // Only pass user-overridden params; randomizeDefaults inside generate()
+    // handles seed-randomization for non-overridden slider params
+    params: Object.keys(userOverrides).length > 0 ? userOverrides : undefined,
   };
 
   pattern.generate(ctx, options);
@@ -63,10 +58,10 @@ export function App() {
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
-  const [params, setParams] = useState<Record<string, number>>({});
+  // Only tracks params the user explicitly changed via UI controls
+  const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Cache pattern ImageData to avoid re-generating when only HSL changes
   const cachedImageDataRef = useRef<ImageData | null>(null);
 
   // Get current pattern's paramDefs
@@ -75,21 +70,40 @@ export function App() {
     return pattern?.paramDefs ?? [];
   }, [patternType]);
 
-  // Reset params to defaults when pattern type changes
+  // Compute seed-randomized defaults for UI display
+  // Uses same seed + PRNG to produce identical values to what generate() uses
+  const seedRandomizedParams = useMemo(() => {
+    if (currentParamDefs.length === 0) return {};
+    const seed = hashString(slug);
+    return getEffectiveParams(seed, currentParamDefs, createRandom);
+  }, [slug, currentParamDefs]);
+
+  // Display values: seed-randomized merged with user overrides
+  const displayParams = useMemo(() => ({
+    ...seedRandomizedParams,
+    ...userOverrides,
+  }), [seedRandomizedParams, userOverrides]);
+
+  // Reset user overrides when pattern type changes
   useEffect(() => {
-    setParams(getDefaults(currentParamDefs));
-  }, [currentParamDefs]);
+    setUserOverrides({});
+  }, [patternType]);
+
+  // Also reset user overrides when slug changes (new seed = fresh randomization)
+  useEffect(() => {
+    setUserOverrides({});
+  }, [slug]);
 
   // Generate pattern (without HSL) and cache the result
   const generateAndCache = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, params);
+    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, userOverrides);
     const ctx = canvas.getContext('2d');
     if (ctx) {
       cachedImageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
-  }, [slug, patternType, colorSchemeIndex, zoom, params]);
+  }, [slug, patternType, colorSchemeIndex, zoom, userOverrides]);
 
   // Apply HSL adjustment from cached ImageData (fast — no re-generation)
   const applyHsl = useCallback(() => {
@@ -98,9 +112,7 @@ export function App() {
     if (!canvas || !cached) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    // Restore cached pattern first
     ctx.putImageData(cached, 0, 0);
-    // Then apply HSL adjustment
     applyHslAdjust(ctx, canvas.width, canvas.height, {
       h: hslAdjust.h,
       s: hslAdjust.s,
@@ -119,7 +131,7 @@ export function App() {
   }, [applyHsl, generateAndCache]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
-    setParams((prev) => ({ ...prev, [key]: value }));
+    setUserOverrides((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   const handleHslChange = useCallback((h: number, s: number, l: number) => {
@@ -212,7 +224,7 @@ export function App() {
 
             <ParamControls
               paramDefs={currentParamDefs}
-              values={params}
+              values={displayParams}
               onChange={handleParamChange}
             />
 
