@@ -1,5 +1,27 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { hexToRgb, darken } from '../core/color-utils.js';
+import { getParam } from '../core/param-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'seedCount',
+    label: 'Seed Count',
+    type: 'slider',
+    min: 5,
+    max: 200,
+    step: 1,
+    defaultValue: 40,
+  },
+  {
+    key: 'borderWidth',
+    label: 'Border Width',
+    type: 'slider',
+    min: 0.5,
+    max: 8,
+    step: 0.5,
+    defaultValue: 2.5,
+  },
+];
 
 /**
  * Voronoi diagram pattern — classic cell decomposition from random seed points.
@@ -9,6 +31,7 @@ export const voronoi: PatternGenerator = {
   name: 'voronoi',
   displayName: 'Voronoi',
   description: 'Classic Voronoi diagram with colored cells and visible borders',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -21,8 +44,8 @@ export const voronoi: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Number of seed points scales with area and zoom
-    const baseCount = Math.floor((width * height) / 4000);
-    const numSeeds = Math.max(10, Math.floor(baseCount * zoom * zoom));
+    const seedCount = getParam(options, paramDefs, 'seedCount');
+    const numSeeds = Math.max(10, Math.floor(seedCount * zoom * zoom));
 
     // Generate seed points
     const seeds: { x: number; y: number; color: string }[] = [];
@@ -35,7 +58,8 @@ export const voronoi: PatternGenerator = {
     }
 
     // Border thickness in pixels
-    const borderThreshold = 2.5 / zoom;
+    const borderWidth = getParam(options, paramDefs, 'borderWidth');
+    const borderThreshold = borderWidth / zoom;
 
     // Use ImageData for pixel-level rendering
     const imageData = ctx.getImageData(0, 0, width, height);

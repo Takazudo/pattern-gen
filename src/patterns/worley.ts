@@ -1,5 +1,36 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { hexToRgb, lerpColor } from '../core/color-utils.js';
+import { getParam } from '../core/param-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'cellSize',
+    label: 'Cell Size',
+    type: 'slider',
+    min: 10,
+    max: 150,
+    step: 5,
+    defaultValue: 80,
+  },
+  {
+    key: 'f1Weight',
+    label: 'F1 Weight',
+    type: 'slider',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    defaultValue: 0.4,
+  },
+  {
+    key: 'f2Weight',
+    label: 'F2 Weight',
+    type: 'slider',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    defaultValue: 0.6,
+  },
+];
 
 /**
  * Worley (cellular) noise pattern — renders distance values from random seed points.
@@ -9,6 +40,7 @@ export const worley: PatternGenerator = {
   name: 'worley',
   displayName: 'Worley',
   description: 'Cellular noise creating stone wall and cracked earth textures',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -20,8 +52,12 @@ export const worley: PatternGenerator = {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
+    // Read params
+    const f1Weight = getParam(options, paramDefs, 'f1Weight');
+    const f2Weight = getParam(options, paramDefs, 'f2Weight');
+
     // Grid-based approach for efficient nearest-neighbor lookup
-    const cellSize = Math.max(30, Math.floor(80 / zoom));
+    const cellSize = Math.max(30, Math.floor(getParam(options, paramDefs, 'cellSize') / zoom));
     const gridCols = Math.ceil(width / cellSize) + 2;
     const gridRows = Math.ceil(height / cellSize) + 2;
 
@@ -84,7 +120,7 @@ export const worley: PatternGenerator = {
         const distValue = Math.min(1, f1 / maxDist);
 
         // Blend: use edgeValue for border prominence, distValue for inner shading
-        const t = edgeValue * 0.6 + distValue * 0.4;
+        const t = edgeValue * f2Weight + distValue * f1Weight;
 
         // Map t to gradient
         const gradientPos = t * (gradientStops.length - 1);
