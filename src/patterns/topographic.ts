@@ -1,6 +1,13 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { key: 'noiseScale', label: 'Noise Scale', type: 'slider', min: 0.001, max: 0.015, step: 0.001, defaultValue: 0.004 },
+  { key: 'contourLevels', label: 'Contour Levels', type: 'slider', min: 4, max: 32, step: 1, defaultValue: 16 },
+  { key: 'octaves', label: 'Octaves', type: 'slider', min: 2, max: 8, step: 1, defaultValue: 5 },
+];
 
 /**
  * Topographic pattern — Simplex noise rendered as contour lines.
@@ -11,6 +18,7 @@ export const topographic: PatternGenerator = {
   name: 'topographic',
   displayName: 'Topographic',
   description: 'Contour map lines from simplex noise height field',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -23,15 +31,16 @@ export const topographic: PatternGenerator = {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
-    const noiseScale = 0.004 * zoom;
-    const contourLevels = 16;
+    const noiseScale = getParam(options, paramDefs, 'noiseScale') * zoom;
+    const contourLevels = getParam(options, paramDefs, 'contourLevels');
+    const octaves = getParam(options, paramDefs, 'octaves');
     const contourStep = 2 / contourLevels; // noise range is [-1, 1]
 
     // Pre-compute height field
     const heightField = new Float32Array(width * height);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        heightField[y * width + x] = fbm(noise, x * noiseScale, y * noiseScale, 5, 2, 0.5);
+        heightField[y * width + x] = fbm(noise, x * noiseScale, y * noiseScale, octaves, 2, 0.5);
       }
     }
 

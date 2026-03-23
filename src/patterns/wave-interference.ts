@@ -1,5 +1,11 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { hexToRgb } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { key: 'sourceCount', label: 'Source Count', type: 'slider', min: 2, max: 12, step: 1, defaultValue: 6 },
+  { key: 'frequency', label: 'Frequency', type: 'slider', min: 0.005, max: 0.15, step: 0.005, defaultValue: 0.04 },
+];
 
 /**
  * Wave Interference pattern — Multiple sine wave sources at random positions,
@@ -9,6 +15,7 @@ export const waveInterference: PatternGenerator = {
   name: 'wave-interference',
   displayName: 'Wave Interference',
   description: 'Overlapping sine wave sources creating interference patterns',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -21,13 +28,14 @@ export const waveInterference: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Generate wave sources
-    const sourceCount = 4 + Math.floor(rand() * 4); // 4-7 sources
+    const sourceCount = options.params?.sourceCount ?? (4 + Math.floor(rand() * 4));
+    const baseFreq = getParam(options, paramDefs, 'frequency');
     const sources: { x: number; y: number; freq: number; phase: number }[] = [];
     for (let i = 0; i < sourceCount; i++) {
       sources.push({
         x: rand() * width,
         y: rand() * height,
-        freq: (0.02 + rand() * 0.04) * zoom,
+        freq: (baseFreq + rand() * baseFreq) * zoom,
         phase: rand() * Math.PI * 2,
       });
     }
