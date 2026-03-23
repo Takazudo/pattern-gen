@@ -1,6 +1,13 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'slider', key: 'dotSpacing', label: 'Dot Spacing', min: 3, max: 20, step: 1, defaultValue: 11 },
+  { type: 'select', key: 'channelCount', label: 'Channel Count', options: [{ value: 2, label: '2 channels' }, { value: 3, label: '3 channels' }], defaultValue: 2 },
+  { type: 'slider', key: 'noiseOctaves', label: 'Noise Octaves', min: 1, max: 6, step: 1, defaultValue: 3 },
+];
 
 /**
  * CMYK-style halftone dots.
@@ -12,6 +19,7 @@ export const halftone: PatternGenerator = {
   name: 'halftone',
   displayName: 'Halftone',
   description: 'CMYK-style halftone dots — noise-based image rendered as sized dot grids',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -25,12 +33,15 @@ export const halftone: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Dot grid spacing
-    const dotSpacing = (8 + rand() * 6) / zoom; // 8-14px
+    const dotSpacing = options.params?.dotSpacing
+      ? options.params.dotSpacing / zoom
+      : (8 + rand() * 6) / zoom; // 8-14px
     const maxDotRadius = dotSpacing * 0.45;
     const noiseScale = 0.004 * zoom;
+    const noiseOctaves = getParam(options, paramDefs, 'noiseOctaves');
 
     // Use 2-3 palette colors as channels, each with a slight rotation
-    const numChannels = 2 + Math.floor(rand() * 2);
+    const numChannels = options.params?.channelCount ?? (2 + Math.floor(rand() * 2));
     const channels: { color: string; angle: number }[] = [];
     const baseAngle = rand() * Math.PI;
     for (let i = 0; i < numChannels; i++) {
@@ -62,7 +73,7 @@ export const halftone: PatternGenerator = {
               canvasY < -maxDotRadius || canvasY > height + maxDotRadius) continue;
 
           // Sample noise at this position for brightness
-          const noiseVal = fbm(noise, canvasX * noiseScale, canvasY * noiseScale, 3);
+          const noiseVal = fbm(noise, canvasX * noiseScale, canvasY * noiseScale, noiseOctaves);
           const brightness = (noiseVal + 1) / 2; // 0-1
 
           // Dot radius proportional to brightness

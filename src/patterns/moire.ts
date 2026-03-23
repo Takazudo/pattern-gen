@@ -1,5 +1,11 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { withAlpha } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'select', key: 'layerCount', label: 'Layer Count', options: [{ value: 2, label: '2 layers' }, { value: 3, label: '3 layers' }], defaultValue: 2 },
+  { type: 'slider', key: 'lineSpacing', label: 'Line Spacing', min: 2, max: 30, step: 1, defaultValue: 9 },
+  { type: 'slider', key: 'lineWidth', label: 'Line Width', min: 0.5, max: 5, step: 0.25, defaultValue: 1.75 },
+];
 
 /**
  * Moiré interference pattern from overlaid line grids at slight angle offsets.
@@ -10,6 +16,7 @@ export const moire: PatternGenerator = {
   name: 'moire',
   displayName: 'Moiré',
   description: 'Interference patterns from overlapping line grids at slight angle offsets',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -22,11 +29,15 @@ export const moire: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Number of grid layers: 2 or 3
-    const numLayers = 2 + Math.floor(rand() * 2);
+    const numLayers = options.params?.layerCount ?? (2 + Math.floor(rand() * 2));
 
     // Line spacing and base angle
-    const baseSpacing = (6 + rand() * 6) / zoom; // 6-12px base spacing
-    const lineWidth = Math.max(0.5, (1 + rand() * 1.5) / zoom);
+    const baseSpacing = options.params?.lineSpacing
+      ? options.params.lineSpacing / zoom
+      : (6 + rand() * 6) / zoom; // 6-12px base spacing
+    const lineWidth = options.params?.lineWidth
+      ? Math.max(0.5, options.params.lineWidth / zoom)
+      : Math.max(0.5, (1 + rand() * 1.5) / zoom);
     const baseAngle = rand() * Math.PI;
 
     // Diagonal of canvas for calculating line extent
