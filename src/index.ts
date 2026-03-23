@@ -2,7 +2,7 @@
 export { hashString } from './core/hash.js';
 export { createRandom } from './core/seeded-random.js';
 export { createNoise2D, fbm } from './core/noise.js';
-export { hexToRgb, rgbToHex, lerpColor, darken, lighten, withAlpha } from './core/color-utils.js';
+export { hexToRgb, rgbToHex, lerpColor, darken, lighten, withAlpha, rgbToHsl, hslToRgb } from './core/color-utils.js';
 export {
   COLOR_SCHEMES,
   colorSchemesByKey,
@@ -10,6 +10,9 @@ export {
   getColorSchemeNames,
 } from './core/color-schemes.js';
 export type { ColorScheme, Palette } from './core/color-schemes.js';
+
+export { applyHslAdjust } from './core/hsl-adjust.js';
+export type { HslAdjust } from './core/hsl-adjust.js';
 
 // Types
 export type { PatternGenerator, PatternOptions, GenerateOptions, ParamDef, SliderParamDef, SelectParamDef, ToggleParamDef } from './core/types.js';

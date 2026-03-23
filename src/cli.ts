@@ -67,6 +67,21 @@ function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir
         options.outDir = args[++i];
         if (!options.outDir) fail('--out-dir requires a directory path');
         break;
+      case '--hue':
+        options.hsl = options.hsl ?? {};
+        options.hsl.h = requireFloat('--hue', args[++i]);
+        if (options.hsl.h < -180 || options.hsl.h > 180) fail('--hue must be between -180 and 180');
+        break;
+      case '--saturation':
+        options.hsl = options.hsl ?? {};
+        options.hsl.s = requireFloat('--saturation', args[++i]);
+        if (options.hsl.s < -100 || options.hsl.s > 100) fail('--saturation must be between -100 and 100');
+        break;
+      case '--lightness':
+        options.hsl = options.hsl ?? {};
+        options.hsl.l = requireFloat('--lightness', args[++i]);
+        if (options.hsl.l < -100 || options.hsl.l > 100) fail('--lightness must be between -100 and 100');
+        break;
       case '--list-types':
         console.log('Available pattern types:');
         console.log(getPatternNames().join('\n'));
@@ -85,6 +100,9 @@ Options:
   --zoom, -z <number>         Zoom factor (default: 1)
   --bg <color>                Override background color
   --color-scheme, -c <name>   Color scheme name or "random"
+  --hue <number>              Hue shift (-180 to 180)
+  --saturation <number>       Saturation shift (-100 to 100)
+  --lightness <number>        Lightness shift (-100 to 100)
   --out, -o <path>            Output file path
   --out-dir <dir>             Output directory
   --list-types                List available pattern types
