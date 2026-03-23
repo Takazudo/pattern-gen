@@ -1,4 +1,10 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'select', key: 'shapeType', label: 'Shape Type', options: [{ value: 0, label: 'Circles' }, { value: 1, label: 'Squares' }], defaultValue: 0 },
+  { type: 'slider', key: 'baseSpacing', label: 'Base Spacing', min: 1, max: 15, step: 0.5, defaultValue: 6 },
+  { type: 'slider', key: 'bumpStrength', label: 'Bump Strength', min: 0.1, max: 1.5, step: 0.05, defaultValue: 0.55 },
+];
 
 /**
  * Riley-style op art — concentric shapes with modulated spacing.
@@ -9,6 +15,7 @@ export const opArt: PatternGenerator = {
   name: 'op-art',
   displayName: 'Op Art',
   description: 'Riley-style concentric shapes with sinusoidal spacing — 3D surface illusion',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -21,7 +28,8 @@ export const opArt: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Choose shape type: circles or squares
-    const useCircles = rand() < 0.6;
+    const shapeTypeValue = options.params?.shapeType ?? (rand() < 0.6 ? 0 : 1);
+    const useCircles = shapeTypeValue === 0;
 
     // Center of the distortion (1-2 bump points)
     const numBumps = 1 + Math.floor(rand() * 2);
@@ -30,12 +38,14 @@ export const opArt: PatternGenerator = {
       bumps.push({
         x: width * (0.2 + rand() * 0.6),
         y: height * (0.2 + rand() * 0.6),
-        strength: 0.3 + rand() * 0.5,
+        strength: options.params?.bumpStrength ?? (0.3 + rand() * 0.5),
       });
     }
 
     const maxDim = Math.max(width, height);
-    const baseSpacing = (4 + rand() * 4) / zoom; // 4-8px
+    const baseSpacing = options.params?.baseSpacing
+      ? options.params.baseSpacing / zoom
+      : (4 + rand() * 4) / zoom; // 4-8px
     const numRings = Math.ceil(maxDim / baseSpacing) + 10;
 
     // Center of the concentric shapes

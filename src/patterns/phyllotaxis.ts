@@ -1,5 +1,12 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { withAlpha } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'slider', key: 'dotCount', label: 'Dot Count', min: 100, max: 3000, step: 50, defaultValue: 800 },
+  { type: 'slider', key: 'dotScale', label: 'Dot Scale', min: 0.5, max: 5, step: 0.25, defaultValue: 2 },
+  { type: 'select', key: 'colorMode', label: 'Color Mode', options: [{ value: 0, label: 'By Angle' }, { value: 1, label: 'By Radius' }], defaultValue: 0 },
+];
 
 /**
  * Fibonacci spiral dot arrangement (sunflower pattern).
@@ -10,6 +17,7 @@ export const phyllotaxis: PatternGenerator = {
   name: 'phyllotaxis',
   displayName: 'Phyllotaxis',
   description: 'Fibonacci spiral dot arrangement — sunflower seed head pattern',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -26,13 +34,14 @@ export const phyllotaxis: PatternGenerator = {
     const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.508 degrees in radians
 
     // Number of dots and spacing factor
-    const numDots = Math.floor(800 * zoom);
+    const numDots = Math.floor(getParam(options, paramDefs, 'dotCount') * zoom);
     const maxRadius = Math.min(width, height) * 0.45;
     const c = maxRadius / Math.sqrt(numDots); // Spacing constant
 
     // Random offset for variation
     const angleOffset = rand() * Math.PI * 2;
-    const colorMode = rand(); // Determines color assignment strategy
+    const colorModeValue = options.params?.colorMode ?? (rand() < 0.5 ? 0 : 1);
+    const dotScale = getParam(options, paramDefs, 'dotScale');
 
     for (let n = 1; n <= numDots; n++) {
       const r = c * Math.sqrt(n);
@@ -46,11 +55,11 @@ export const phyllotaxis: PatternGenerator = {
 
       // Dot size: smaller near center, larger at edges
       const normalizedR = r / maxRadius;
-      const dotRadius = (1.5 + normalizedR * 4) * (1 / zoom);
+      const dotRadius = (1.5 + normalizedR * 4) * (dotScale / 2) * (1 / zoom);
 
       // Color: based on angle or radius depending on mode
       let colorIdx: number;
-      if (colorMode < 0.5) {
+      if (colorModeValue === 0) {
         // Color by angle
         const normalizedAngle = ((theta % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
         colorIdx = Math.floor((normalizedAngle / (Math.PI * 2)) * fgColors.length) % fgColors.length;
