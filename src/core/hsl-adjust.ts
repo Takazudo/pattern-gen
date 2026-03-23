@@ -25,6 +25,8 @@ export function applyHslAdjust(
   const sShift = adjust.s ?? 0;
   const lShift = adjust.l ?? 0;
 
+  if (hShift === 0 && sShift === 0 && lShift === 0) return;
+
   for (let i = 0; i < data.length; i += 4) {
     const hsl = rgbToHsl(data[i], data[i + 1], data[i + 2]);
 

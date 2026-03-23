@@ -1,4 +1,5 @@
 import type { ColorScheme } from './color-schemes.js';
+import type { HslAdjust } from './hsl-adjust.js';
 
 /**
  * Options passed to every pattern generator function.
@@ -90,5 +91,5 @@ export interface GenerateOptions {
   /** Pattern-specific params as key=value pairs */
   params?: Record<string, number>;
   /** HSL color adjustment (post-processing) */
-  hsl?: { h?: number; s?: number; l?: number };
+  hsl?: HslAdjust;
 }
