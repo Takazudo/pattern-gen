@@ -1,5 +1,12 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { darken, lighten } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'slider', key: 'gridDivisions', label: 'Grid Divisions', min: 5, max: 20, step: 1, defaultValue: 10 },
+  { type: 'slider', key: 'gapFactor', label: 'Gap Factor', min: 0, max: 0.2, step: 0.01, defaultValue: 0.08 },
+  { type: 'slider', key: 'colorVariation', label: 'Color Variation', min: 0, max: 0.3, step: 0.01, defaultValue: 0.15 },
+];
 
 /**
  * Herringbone pattern — Rectangular bricks arranged in V-shaped zigzag.
@@ -9,6 +16,7 @@ export const herringbone: PatternGenerator = {
   name: 'herringbone',
   displayName: 'Herringbone',
   description: 'V-shaped zigzag brick arrangement — classic parquet flooring',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -21,7 +29,8 @@ export const herringbone: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Brick dimensions
-    const baseBrickW = Math.max(width, height) / 10;
+    const gridDivisions = getParam(options, paramDefs, 'gridDivisions');
+    const baseBrickW = Math.max(width, height) / gridDivisions;
     const brickW = baseBrickW / zoom;
     const brickH = brickW / 3;
 
@@ -30,18 +39,20 @@ export const herringbone: PatternGenerator = {
     const unitH = brickH * 2;
     const estCols = Math.ceil(width / unitW) + 6;
     const estRows = Math.ceil(height / unitH) + 6;
+    const colorVariationAmount = getParam(options, paramDefs, 'colorVariation');
     const numColorVariations = estCols * estRows * 4 + 64;
     const colorVariations: string[] = [];
     for (let i = 0; i < numColorVariations; i++) {
       const baseColor = fgColors[Math.floor(rand() * fgColors.length)];
-      const variation = rand() * 0.15;
+      const variation = rand() * colorVariationAmount;
       colorVariations.push(
         rand() < 0.5 ? darken(baseColor, 1 - variation) : lighten(baseColor, variation),
       );
     }
 
     // Gap between bricks
-    const gap = brickH * 0.08;
+    const gapFactor = getParam(options, paramDefs, 'gapFactor');
+    const gap = brickH * gapFactor;
 
     const cols = Math.ceil(width / unitW) + 3;
     const rows = Math.ceil(height / unitH) + 3;

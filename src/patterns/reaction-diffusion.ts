@@ -1,5 +1,13 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { lerpColor } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'slider', key: 'feedRate', label: 'Feed Rate', min: 0.01, max: 0.08, step: 0.001, defaultValue: 0.046 },
+  { type: 'slider', key: 'killRate', label: 'Kill Rate', min: 0.03, max: 0.08, step: 0.001, defaultValue: 0.063 },
+  { type: 'slider', key: 'iterations', label: 'Iterations', min: 500, max: 5000, step: 100, defaultValue: 2500 },
+  { type: 'slider', key: 'gridSize', label: 'Grid Size', min: 40, max: 120, step: 5, defaultValue: 100 },
+];
 
 /**
  * Gray-Scott reaction-diffusion simulation.
@@ -10,6 +18,7 @@ export const reactionDiffusion: PatternGenerator = {
   name: 'reaction-diffusion',
   displayName: 'Reaction Diffusion',
   description: 'Gray-Scott reaction-diffusion — organic spots, stripes, and Turing patterns',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -22,13 +31,13 @@ export const reactionDiffusion: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Grid size — cap at 120 to prevent performance issues at high zoom
-    const baseGridSize = 100;
+    const baseGridSize = getParam(options, paramDefs, 'gridSize');
     const gridW = Math.min(120, Math.round(baseGridSize * zoom));
     const gridH = Math.min(120, Math.round(baseGridSize * zoom));
 
     // Gray-Scott parameters — chosen for interesting patterns
-    const feed = 0.037 + rand() * 0.018; // 0.037-0.055
-    const kill = 0.06 + rand() * 0.006;  // 0.06-0.066
+    const feed = options.params?.feedRate ?? (0.037 + rand() * 0.018); // 0.037-0.055
+    const kill = options.params?.killRate ?? (0.06 + rand() * 0.006);  // 0.06-0.066
     const dA = 1.0;
     const dB = 0.5;
     const dt = 1.0;
@@ -58,7 +67,7 @@ export const reactionDiffusion: PatternGenerator = {
     }
 
     // Run simulation
-    const iterations = 2500;
+    const iterations = getParam(options, paramDefs, 'iterations');
     for (let iter = 0; iter < iterations; iter++) {
       for (let y = 0; y < gridH; y++) {
         for (let x = 0; x < gridW; x++) {

@@ -1,4 +1,27 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { withAlpha } from '../core/color-utils.js';
+import { getParam } from '../core/param-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'cellSize',
+    label: 'Cell Size',
+    type: 'slider',
+    min: 10,
+    max: 80,
+    step: 1,
+    defaultValue: 40,
+  },
+  {
+    key: 'contrast',
+    label: 'Contrast',
+    type: 'slider',
+    min: 0.3,
+    max: 1.0,
+    step: 0.05,
+    defaultValue: 0.8,
+  },
+];
 
 /**
  * Classic houndstooth check pattern.
@@ -9,6 +32,7 @@ export const houndstooth: PatternGenerator = {
   name: 'houndstooth',
   displayName: 'Houndstooth',
   description: 'Classic jagged check pattern used in woven textiles',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -18,6 +42,7 @@ export const houndstooth: PatternGenerator = {
 
     // Pick two colors for the houndstooth
     const colorA = bg;
+    const contrast = getParam(options, paramDefs, 'contrast');
     const colorB = fgColors[Math.floor(rand() * fgColors.length)];
 
     // Fill background
@@ -25,7 +50,7 @@ export const houndstooth: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Cell size — the houndstooth repeats every 4 cells
-    const baseCellSize = Math.max(width, height) / 40;
+    const baseCellSize = Math.max(width, height) / getParam(options, paramDefs, 'cellSize');
     const cellSize = baseCellSize / zoom;
 
     // The classic houndstooth pattern is defined on a 4x4 grid
@@ -39,7 +64,7 @@ export const houndstooth: PatternGenerator = {
     const cols = Math.ceil(width / cellSize) + 4;
     const rows = Math.ceil(height / cellSize) + 4;
 
-    ctx.fillStyle = colorB;
+    ctx.fillStyle = withAlpha(colorB, contrast);
 
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {

@@ -1,5 +1,36 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { withAlpha, darken, lighten } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'unitSize',
+    label: 'Unit Size',
+    type: 'slider',
+    min: 10,
+    max: 80,
+    step: 1,
+    defaultValue: 40,
+  },
+  {
+    key: 'lineWidth',
+    label: 'Line Width',
+    type: 'slider',
+    min: 1,
+    max: 10,
+    step: 0.5,
+    defaultValue: 4,
+  },
+  {
+    key: 'frameCount',
+    label: 'Frame Count',
+    type: 'slider',
+    min: 1,
+    max: 5,
+    step: 1,
+    defaultValue: 2,
+  },
+];
 
 /**
  * Meander pattern — Greek key / meander with nested rectangular spirals.
@@ -10,6 +41,7 @@ export const meander: PatternGenerator = {
   name: 'meander',
   displayName: 'Meander',
   description: 'Greek key meander with nested rectangular spirals in concentric frames',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -26,12 +58,13 @@ export const meander: PatternGenerator = {
     const accentColor = fgColors[Math.floor(rand() * fgColors.length)];
 
     // Tile sizing
-    const baseUnit = Math.max(width, height) / 40;
+    const unitSizeDivisor = getParam(options, paramDefs, 'unitSize');
+    const baseUnit = Math.max(width, height) / unitSizeDivisor;
     const unit = baseUnit / zoom;
-    const lineWidth = Math.max(2, unit * 0.8);
+    const lineWidth = Math.max(2, getParam(options, paramDefs, 'lineWidth'));
 
     // Number of concentric frames (1-3)
-    const numFrames = 1 + Math.floor(rand() * 3);
+    const numFrames = options.params?.frameCount ?? 1 + Math.floor(rand() * 3);
     const frameSpacing = unit * 5;
 
     ctx.lineCap = 'square';

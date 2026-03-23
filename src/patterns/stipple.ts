@@ -1,5 +1,36 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { createNoise2D, fbm } from '../core/noise.js';
+import { getParam } from '../core/param-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'dotSpacing',
+    label: 'Dot Spacing',
+    type: 'slider',
+    min: 3,
+    max: 20,
+    step: 1,
+    defaultValue: 8,
+  },
+  {
+    key: 'noiseScale',
+    label: 'Noise Scale',
+    type: 'slider',
+    min: 0.001,
+    max: 0.02,
+    step: 0.001,
+    defaultValue: 0.005,
+  },
+  {
+    key: 'jitter',
+    label: 'Jitter',
+    type: 'slider',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    defaultValue: 0.6,
+  },
+];
 
 /**
  * Weighted Voronoi stippling / dot-matrix effect.
@@ -10,6 +41,7 @@ export const stipple: PatternGenerator = {
   name: 'stipple',
   displayName: 'Stipple',
   description: 'Pointillist dot-matrix pattern with noise-driven density variation',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -24,13 +56,17 @@ export const stipple: PatternGenerator = {
     const noise = createNoise2D(rand);
 
     // Grid spacing for dot placement
-    const baseSpacing = 8;
+    const baseSpacing = getParam(options, paramDefs, 'dotSpacing');
     const spacing = baseSpacing / zoom;
     const maxRadius = spacing * 0.45;
     const minRadius = spacing * 0.08;
 
     // Noise scale for the density field
-    const noiseScale = 0.005 * zoom;
+    const noiseScaleBase = getParam(options, paramDefs, 'noiseScale');
+    const noiseScale = noiseScaleBase * zoom;
+
+    // Jitter factor
+    const jitter = getParam(options, paramDefs, 'jitter');
 
     // Place dots on a jittered grid
     const cols = Math.ceil(width / spacing) + 1;
@@ -39,8 +75,8 @@ export const stipple: PatternGenerator = {
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         // Grid position with jitter
-        const x = col * spacing + (rand() - 0.5) * spacing * 0.6;
-        const y = row * spacing + (rand() - 0.5) * spacing * 0.6;
+        const x = col * spacing + (rand() - 0.5) * spacing * jitter;
+        const y = row * spacing + (rand() - 0.5) * spacing * jitter;
 
         if (x < -maxRadius || x > width + maxRadius ||
             y < -maxRadius || y > height + maxRadius) continue;
