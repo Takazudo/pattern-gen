@@ -55,26 +55,31 @@ export const guilloche: PatternGenerator = {
       const totalAngle = revolutions * Math.PI * 2;
 
       // Step size for smooth curves — more steps at higher zoom, capped for perf
-      const steps = Math.min(50000, Math.max(2000, Math.floor(totalAngle * 100 * zoom)));
+      const steps = Math.min(20000, Math.max(1500, Math.floor(totalAngle * 50 * zoom)));
       const dt = totalAngle / steps;
+
+      // Pre-compute constants used in the hot loop
+      const Rr = R - r;
+      const ratio = Rr / r;
 
       ctx.strokeStyle = withAlpha(color, alpha);
       ctx.lineWidth = Math.max(0.3, getParam(options, paramDefs, 'lineWidth') / zoom);
-      ctx.beginPath();
+
+      const path = new Path2D();
 
       for (let i = 0; i <= steps; i++) {
         const t = i * dt;
-        const x = cx + (R - r) * Math.cos(t) + d * Math.cos(t * (R - r) / r);
-        const y = cy + (R - r) * Math.sin(t) - d * Math.sin(t * (R - r) / r);
+        const x = cx + Rr * Math.cos(t) + d * Math.cos(t * ratio);
+        const y = cy + Rr * Math.sin(t) - d * Math.sin(t * ratio);
 
         if (i === 0) {
-          ctx.moveTo(x, y);
+          path.moveTo(x, y);
         } else {
-          ctx.lineTo(x, y);
+          path.lineTo(x, y);
         }
       }
 
-      ctx.stroke();
+      ctx.stroke(path);
     }
   },
 };
