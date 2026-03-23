@@ -2,6 +2,8 @@ import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.j
 import { getParam } from '../core/param-utils.js';
 import { hexToRgb, rgbToHex, darken, lighten, withAlpha } from '../core/color-utils.js';
 import { createNoise2D } from '../core/noise.js';
+import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   {
@@ -45,9 +47,10 @@ export const zellige: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
     const noise = createNoise2D(rand);
 
     // Grout color — dark version of background

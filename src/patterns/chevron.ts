@@ -2,6 +2,7 @@ import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.j
 import { lerpColor } from '../core/color-utils.js';
 import { getParam } from '../core/param-utils.js';
 import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   {
@@ -37,9 +38,10 @@ export const chevron: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
 
     // Fill background
     ctx.fillStyle = bg;
@@ -49,13 +51,19 @@ export const chevron: PatternGenerator = {
     const baseRowHeight = Math.max(width, height) / getParam(options, paramDefs, 'rowHeight');
     const rowHeight = baseRowHeight / zoom;
 
+    // Seed-based stripe width wobble factor (0.85–1.15x per row)
+    const wobbleStrength = 0.05 + rand() * 0.10;
+
     // Build color sequence by cycling and shuffling palette colors
     const colorSequence: string[] = [];
     const shuffled = shuffleArray(fgColors, rand);
     // Repeat enough to fill the canvas
     const rowCount = Math.ceil(height / rowHeight) + 4;
+    // Pre-compute per-row wobble factors
+    const rowWobble: number[] = [];
     for (let i = 0; i < rowCount; i++) {
       colorSequence.push(shuffled[i % shuffled.length]);
+      rowWobble.push(1 + (rand() * 2 - 1) * wobbleStrength);
     }
 
     // Number of sub-rows for gradient between each chevron band
@@ -64,15 +72,21 @@ export const chevron: PatternGenerator = {
     const subRowHeight = rowHeight / gradientSteps;
 
     // Draw chevron rows from top to bottom
+    // Track cumulative Y to account for wobbled row heights
+    let cumulativeY = -2 * rowHeight;
     for (let row = -2; row < rowCount; row++) {
       const currentColor = colorSequence[((row % colorSequence.length) + colorSequence.length) % colorSequence.length];
       const nextColor = colorSequence[(((row + 1) % colorSequence.length) + colorSequence.length) % colorSequence.length];
+
+      const wobbleIdx = ((row % rowWobble.length) + rowWobble.length) % rowWobble.length;
+      const wobbledRowHeight = rowHeight * rowWobble[wobbleIdx];
+      const wobbledSubRowHeight = wobbledRowHeight / gradientSteps;
 
       for (let step = 0; step < gradientSteps; step++) {
         const t = step / gradientSteps;
         const color = lerpColor(currentColor, nextColor, t);
 
-        const baseY = row * rowHeight + step * subRowHeight;
+        const baseY = cumulativeY + step * wobbledSubRowHeight;
 
         // Draw the V-shape (chevron) as a filled polygon
         ctx.fillStyle = color;
@@ -80,21 +94,22 @@ export const chevron: PatternGenerator = {
 
         // Left arm of V
         const y0 = baseY;
-        const y1 = baseY + subRowHeight;
+        const y1 = baseY + wobbledSubRowHeight;
 
         // Top edge of sub-row: V shape
-        ctx.moveTo(0, y0 + rowHeight);
+        ctx.moveTo(0, y0 + wobbledRowHeight);
         ctx.lineTo(width / 2, y0);
-        ctx.lineTo(width, y0 + rowHeight);
+        ctx.lineTo(width, y0 + wobbledRowHeight);
 
         // Bottom edge of sub-row: V shape (shifted down)
-        ctx.lineTo(width, y1 + rowHeight);
+        ctx.lineTo(width, y1 + wobbledRowHeight);
         ctx.lineTo(width / 2, y1);
-        ctx.lineTo(0, y1 + rowHeight);
+        ctx.lineTo(0, y1 + wobbledRowHeight);
 
         ctx.closePath();
         ctx.fill();
       }
+      cumulativeY += wobbledRowHeight;
     }
   },
 };

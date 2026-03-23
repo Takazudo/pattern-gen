@@ -2,6 +2,8 @@ import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.j
 import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'slider', key: 'dotSpacing', label: 'Dot Spacing', min: 3, max: 20, step: 1, defaultValue: 11 },
@@ -23,9 +25,10 @@ export const halftone: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
     const palette = colorScheme.palette;
     const bg = palette[0];
-    const fgColors = palette.slice(1);
+    const fgColors = shuffleArray(palette.slice(1), rand);
     const noise = createNoise2D(rand);
 
     // Fill background

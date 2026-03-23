@@ -1,13 +1,92 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+
+/* ========================================
+ * Tier 1: Palette — raw color values
+ * Never referenced directly by components.
+ * ======================================== */
+:root {
+  /* Solid neutrals (oklch for perceptual uniformity) */
+  --palette-neutral-950: oklch(14% 0 0); /* ~#111 */
+  --palette-neutral-600: oklch(53% 0 0); /* ~#777 */
+  --palette-neutral-500: oklch(60% 0 0); /* ~#888 */
+  --palette-neutral-400: oklch(66% 0 0); /* ~#999 */
+  --palette-neutral-300: oklch(73% 0 0); /* ~#aaa */
+  --palette-neutral-100: oklch(90% 0 0); /* ~#e0e0e0 */
+
+  /* Glass transparency */
+  --palette-glass-bg: oklch(0% 0 0 / 75%);
+  --palette-glass-light-8: oklch(100% 0 0 / 8%);
+  --palette-glass-light-10: oklch(100% 0 0 / 10%);
+  --palette-glass-light-12: oklch(100% 0 0 / 12%);
+  --palette-glass-light-15: oklch(100% 0 0 / 15%);
+  --palette-glass-light-30: oklch(100% 0 0 / 30%);
 }
+
+/* ========================================
+ * Tier 2: Theme — semantic tokens
+ * Maps palette to roles. Also defines the
+ * tight spacing, radius, and font-size scales.
+ * Becomes Tailwind utilities via @theme.
+ * ======================================== */
+@theme {
+  /* Approach B defaults (no default theme loaded) */
+  --default-transition-duration: 0.15s;
+  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Semantic Colors ── */
+  --color-bg: var(--palette-neutral-950);
+  --color-fg: var(--palette-neutral-100);
+  --color-fg-muted: var(--palette-neutral-300);
+  --color-fg-subtle: var(--palette-neutral-400);
+  --color-fg-faint: var(--palette-neutral-600);
+  --color-accent: var(--palette-neutral-500);
+
+  --color-surface-glass: var(--palette-glass-bg);
+  --color-control-bg: var(--palette-glass-light-8);
+  --color-control-bg-hover: var(--palette-glass-light-15);
+
+  --color-border: var(--palette-glass-light-12);
+  --color-border-hover: var(--palette-glass-light-15);
+  --color-border-focus: var(--palette-glass-light-30);
+  --color-border-subtle: var(--palette-glass-light-8);
+  --color-border-faint: var(--palette-glass-light-10);
+
+  /* ── Tight Spacing Scale ── */
+  --spacing-0: 0;
+  --spacing-1px: 1px;
+  --spacing-sp-3xs: 3px;
+  --spacing-sp-2xs: 4px;
+  --spacing-sp-xs: 6px;
+  --spacing-sp-sm: 8px;
+  --spacing-sp-md: 12px;
+  --spacing-sp-lg: 16px;
+  --spacing-sp-xl: 20px;
+  --spacing-sp-2xl: 28px;
+
+  /* ── Border Radius ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+
+  /* ── Font Sizes ── */
+  --font-size-2xs: 10px;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-lg: 18px;
+}
+
+/* ========================================
+ * Tier 3: Component styles
+ * Use theme tokens via var(). One-off values
+ * (widths, blur, min-width) stay as literals.
+ * ======================================== */
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #111;
-  color: #e0e0e0;
+  background: var(--color-bg);
+  color: var(--color-fg);
   overflow: hidden;
 }
 
@@ -31,44 +110,48 @@ body {
   object-fit: cover;
 }
 
+/* ── Controls panel (glass) ── */
+
 .controls {
   position: fixed;
-  top: 16px;
-  right: 16px;
-  width: 280px;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  border-radius: 12px;
-  padding: 20px;
+  top: var(--spacing-sp-lg);
+  right: var(--spacing-sp-lg);
+  width: 280px; /* ARBITRARY: panel-specific width */
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px); /* ARBITRARY: glass effect */
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sp-xl);
   z-index: 10;
-  max-height: calc(100vh - 32px);
+  max-height: calc(100vh - 32px); /* ARBITRARY: 2 * sp-lg */
   overflow-y: auto;
 }
 
 .controls h1 {
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-sp-lg);
   letter-spacing: 0.02em;
 }
 
+/* ── Control groups ── */
+
 .control-group {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-sp-md);
 }
 
 .control-group label {
   display: block;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #999;
-  margin-bottom: 4px;
+  color: var(--color-fg-subtle);
+  margin-bottom: var(--spacing-sp-2xs);
 }
 
 .slug-row {
   display: flex;
-  gap: 6px;
+  gap: var(--spacing-sp-xs);
 }
 
 .slug-row input {
@@ -76,121 +159,133 @@ body {
   min-width: 0;
 }
 
+/* ── Form elements ── */
+
 input[type="text"],
 select {
   width: 100%;
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  color: #e0e0e0;
-  font-size: 13px;
+  padding: var(--spacing-sp-xs) var(--spacing-sp-sm);
+  background: var(--color-control-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  font-size: var(--font-size-base);
   outline: none;
 }
 
 input[type="text"]:focus,
 select:focus {
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--color-border-focus);
 }
 
+/* ── Buttons ── */
+
 .btn {
-  padding: 6px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e0e0e0;
-  font-size: 12px;
+  padding: var(--spacing-sp-xs) var(--spacing-sp-md);
+  border: 1px solid var(--color-border-hover);
+  border-radius: var(--radius-md);
+  background: var(--color-control-bg);
+  color: var(--color-fg);
+  font-size: var(--font-size-sm);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-control-bg-hover);
 }
 
 .btn-toggle-details {
   width: 100%;
-  padding: 6px;
+  padding: var(--spacing-sp-xs);
   background: none;
   border: none;
-  color: #777;
-  font-size: 12px;
+  color: var(--color-fg-faint);
+  font-size: var(--font-size-sm);
   cursor: pointer;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sp-sm);
 }
 
 .btn-toggle-details:hover {
-  color: #aaa;
+  color: var(--color-fg-muted);
 }
 
 .details-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--spacing-sp-md);
 }
+
+/* ── Range sliders ── */
 
 .range-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sp-sm);
 }
 
 .range-row input[type="range"] {
   flex: 1;
-  accent-color: #888;
+  accent-color: var(--color-accent);
 }
 
 .range-value {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
-  min-width: 28px;
+  min-width: 28px; /* ARBITRARY: value display width */
   text-align: right;
-  color: #aaa;
+  color: var(--color-fg-muted);
 }
+
+/* ── Color scheme preview ── */
 
 .scheme-preview {
   display: flex;
-  gap: 3px;
-  margin-top: 6px;
+  gap: var(--spacing-sp-3xs);
+  margin-top: var(--spacing-sp-xs);
 }
 
 .scheme-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 20px; /* ARBITRARY: swatch size */
+  height: 20px; /* ARBITRARY: swatch size */
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-faint);
 }
+
+/* ── Sections (params + HSL) ── */
 
 .param-section,
 .hsl-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 8px;
-  margin-bottom: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-md);
 }
 
 .param-section .section-label,
 .hsl-section .section-label {
   display: block;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #777;
-  margin-bottom: 8px;
+  color: var(--color-fg-faint);
+  margin-bottom: var(--spacing-sp-sm);
 }
 
 .param-control {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sp-sm);
 }
 
 .param-control label {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
 }
 
 .param-control .range-value {
-  min-width: 36px;
-  font-size: 11px;
+  min-width: 36px; /* ARBITRARY: wider value display */
+  font-size: var(--font-size-xs);
 }
+
+/* ── Toggle row ── */
 
 .toggle-row {
   display: flex;
@@ -199,59 +294,63 @@ select:focus {
 }
 
 .toggle-row input[type="checkbox"] {
-  accent-color: #888;
-  width: 14px;
-  height: 14px;
+  accent-color: var(--color-accent);
+  width: 14px; /* ARBITRARY: checkbox size */
+  height: 14px; /* ARBITRARY: checkbox size */
 }
+
+/* ── HSL sliders ── */
 
 .hsl-slider-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-xs);
 }
 
 .hsl-slider-row input[type="range"] {
   flex: 1;
-  accent-color: #888;
+  accent-color: var(--color-accent);
 }
 
 .hsl-label {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
-  color: #999;
-  width: 1rem;
+  color: var(--color-fg-subtle);
+  width: 1rem; /* ARBITRARY: single-char label width */
   flex-shrink: 0;
 }
 
 .hsl-value {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-variant-numeric: tabular-nums;
-  min-width: 2.5rem;
+  min-width: 2.5rem; /* ARBITRARY: HSL value display width */
   text-align: right;
-  color: #aaa;
+  color: var(--color-fg-muted);
   flex-shrink: 0;
 }
 
 .btn-hsl-reset {
-  padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e0e0e0;
-  font-size: 11px;
+  padding: var(--spacing-sp-2xs) var(--spacing-sp-md);
+  border: 1px solid var(--color-border-hover);
+  border-radius: var(--radius-md);
+  background: var(--color-control-bg);
+  color: var(--color-fg);
+  font-size: var(--font-size-xs);
   cursor: pointer;
-  margin-top: 4px;
+  margin-top: var(--spacing-sp-2xs);
 }
 
 .btn-hsl-reset:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-control-bg-hover);
 }
 
+/* ── Button row ── */
+
 .button-row {
-  margin-top: 12px;
+  margin-top: var(--spacing-sp-md);
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-sp-sm);
 }
 
 .btn-download {

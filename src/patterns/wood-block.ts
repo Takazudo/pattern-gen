@@ -3,6 +3,7 @@ import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb, rgbToHex, darken } from '../core/color-utils.js';
 import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'slider', key: 'gridDivisions', label: 'Grid Divisions', min: 10, max: 40, step: 1, defaultValue: 20 },
@@ -28,10 +29,11 @@ export const woodBlock: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
     const noise = createNoise2D(rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
 
     // Fill background
     ctx.fillStyle = bg;

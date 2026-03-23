@@ -1,5 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'select', key: 'shapeType', label: 'Shape Type', options: [{ value: 0, label: 'Circles' }, { value: 1, label: 'Squares' }], defaultValue: 0 },
@@ -20,9 +22,10 @@ export const opArt: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
     const palette = colorScheme.palette;
     const bg = palette[0];
-    const fgColors = palette.slice(1);
+    const fgColors = shuffleArray(palette.slice(1), rand);
 
     // Fill background
     ctx.fillStyle = bg;

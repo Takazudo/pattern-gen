@@ -1,6 +1,8 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { darken, lighten, lerpColor } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'slider', key: 'subdivisions', label: 'Subdivisions', min: 2, max: 8, step: 1, defaultValue: 5 },
@@ -20,9 +22,10 @@ export const penrose: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
 
     // Fill background
     ctx.fillStyle = bg;
@@ -31,11 +34,18 @@ export const penrose: PatternGenerator = {
     // Golden ratio
     const phi = (1 + Math.sqrt(5)) / 2;
 
-    // Pick colors for kites and darts
-    const kiteColor1 = fgColors[0];
-    const kiteColor2 = fgColors[1 % fgColors.length];
-    const dartColor1 = fgColors[2 % fgColors.length];
-    const dartColor2 = fgColors[3 % fgColors.length];
+    // Seed-based palette rotation for color diversity
+    const paletteOffset = Math.floor(rand() * fgColors.length);
+    const rotated = (i: number) => fgColors[(i + paletteOffset) % fgColors.length];
+
+    // Seed-based brightness variation range (instead of fixed 0.08)
+    const brightnessVariation = 0.02 + rand() * 0.12;
+
+    // Pick colors for kites and darts (with seed-based rotation)
+    const kiteColor1 = rotated(0);
+    const kiteColor2 = rotated(1);
+    const dartColor1 = rotated(2);
+    const dartColor2 = rotated(3);
 
     // Triangle types for Robinson decomposition
     // Type 0 = "thin" (dart half), Type 1 = "thick" (kite half)
@@ -130,7 +140,7 @@ export const penrose: PatternGenerator = {
       }
 
       // Add slight random variation (call rand() before the visibility cull for determinism)
-      const variation = rand() * 0.08;
+      const variation = rand() * brightnessVariation;
       fillColor = rand() < 0.5 ? darken(fillColor, 1 - variation) : lighten(fillColor, variation);
 
       // Skip triangles fully outside canvas
