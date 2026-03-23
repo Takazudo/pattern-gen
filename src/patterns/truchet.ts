@@ -1,5 +1,13 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { darken, lighten } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'slider', key: 'gridDivisions', label: 'Grid Divisions', min: 6, max: 24, step: 1, defaultValue: 12 },
+  { type: 'slider', key: 'lineWidth', label: 'Line Width', min: 0.05, max: 0.35, step: 0.01, defaultValue: 0.15 },
+  { type: 'slider', key: 'overlayAlpha', label: 'Overlay Alpha', min: 0, max: 0.8, step: 0.05, defaultValue: 0.3 },
+  { type: 'slider', key: 'overlayDensity', label: 'Overlay Density', min: 0, max: 1, step: 0.05, defaultValue: 0.3 },
+];
 
 /**
  * Truchet pattern — Quarter-circle arc tiles in a square grid, randomly oriented per cell.
@@ -10,6 +18,7 @@ export const truchet: PatternGenerator = {
   name: 'truchet',
   displayName: 'Truchet',
   description: 'Quarter-circle arc tiles creating flowing organic curves',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -21,7 +30,8 @@ export const truchet: PatternGenerator = {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
-    const baseTileSize = Math.max(width, height) / 12;
+    const gridDivisions = getParam(options, paramDefs, 'gridDivisions');
+    const baseTileSize = Math.max(width, height) / gridDivisions;
     const tileSize = baseTileSize / zoom;
 
     // Pick 2-3 arc colors from palette
@@ -40,7 +50,8 @@ export const truchet: PatternGenerator = {
     const rows = Math.ceil(height / tileSize) + 2;
 
     // Line width proportional to tile size
-    const lineWidth = tileSize * 0.15;
+    const lineWidthFactor = getParam(options, paramDefs, 'lineWidth');
+    const lineWidth = tileSize * lineWidthFactor;
 
     // Draw main grid
     for (let row = -1; row < rows; row++) {
@@ -61,11 +72,13 @@ export const truchet: PatternGenerator = {
     const smallCols = Math.ceil(width / smallTileSize) + 2;
     const smallRows = Math.ceil(height / smallTileSize) + 2;
 
-    ctx.globalAlpha = 0.3;
+    const overlayAlpha = getParam(options, paramDefs, 'overlayAlpha');
+    const overlayDensity = getParam(options, paramDefs, 'overlayDensity');
+    ctx.globalAlpha = overlayAlpha;
     for (let row = -1; row < smallRows; row++) {
       for (let col = -1; col < smallCols; col++) {
         // Only draw some of the small tiles
-        if (rand() < 0.7) continue;
+        if (rand() < (1 - overlayDensity)) continue;
         const x = col * smallTileSize;
         const y = row * smallTileSize;
         const orientation = rand() < 0.5;

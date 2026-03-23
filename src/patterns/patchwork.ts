@@ -1,5 +1,12 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { darken, lighten } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'slider', key: 'gridDivisions', label: 'Grid Divisions', min: 3, max: 15, step: 1, defaultValue: 6 },
+  { type: 'slider', key: 'borderWidth', label: 'Border Width', min: 0.5, max: 3, step: 0.1, defaultValue: 1.5 },
+  { type: 'slider', key: 'colorVariation', label: 'Color Variation', min: 0, max: 0.3, step: 0.01, defaultValue: 0.1 },
+];
 
 /**
  * Patchwork quilt pattern — Canvas divided into a grid of square blocks,
@@ -10,6 +17,7 @@ export const patchwork: PatternGenerator = {
   name: 'patchwork',
   displayName: 'Patchwork',
   description: 'Quilt blocks with log cabin, nine-patch, pinwheel, and triangle patterns',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -22,7 +30,8 @@ export const patchwork: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Block size
-    const baseBlockSize = Math.max(width, height) / 6;
+    const gridDivisions = getParam(options, paramDefs, 'gridDivisions');
+    const baseBlockSize = Math.max(width, height) / gridDivisions;
     const blockSize = baseBlockSize / zoom;
 
     const cols = Math.ceil(width / blockSize) + 1;
@@ -47,13 +56,14 @@ export const patchwork: PatternGenerator = {
         ctx.rect(x, y, blockSize, blockSize);
         ctx.clip();
 
-        patterns[patternIdx](ctx, x, y, blockSize, [bg, color1, color2, color3], rand);
+        const colorVariation = getParam(options, paramDefs, 'colorVariation');
+        patterns[patternIdx](ctx, x, y, blockSize, [bg, color1, color2, color3], rand, colorVariation);
 
         ctx.restore();
 
         // Block border (quilt stitching)
         ctx.strokeStyle = darken(bg, 0.8);
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = getParam(options, paramDefs, 'borderWidth');
         ctx.strokeRect(x, y, blockSize, blockSize);
       }
     }
@@ -68,6 +78,7 @@ function drawLogCabin(
   size: number,
   colors: string[],
   rand: () => number,
+  colorVariation: number,
 ): void {
   const strips = 5;
   const stripW = size / (strips * 2);
@@ -81,7 +92,7 @@ function drawLogCabin(
   for (let i = 1; i <= strips; i++) {
     const isLight = i % 2 === 0;
     const baseColor = isLight ? colors[2] : colors[3];
-    const variation = rand() * 0.1;
+    const variation = rand() * colorVariation;
     const color = rand() < 0.5 ? darken(baseColor, 1 - variation) : lighten(baseColor, variation);
     ctx.fillStyle = color;
 
@@ -126,6 +137,7 @@ function drawNinePatch(
   size: number,
   colors: string[],
   rand: () => number,
+  colorVariation: number,
 ): void {
   const cellSize = size / 3;
 
@@ -133,7 +145,7 @@ function drawNinePatch(
     for (let c = 0; c < 3; c++) {
       const isAccent = (r + c) % 2 === 0;
       const baseColor = isAccent ? colors[1] : colors[2];
-      const variation = rand() * 0.08;
+      const variation = rand() * colorVariation;
       const color = rand() < 0.5 ? darken(baseColor, 1 - variation) : lighten(baseColor, variation);
 
       ctx.fillStyle = color;
@@ -155,6 +167,7 @@ function drawPinwheel(
   size: number,
   colors: string[],
   rand: () => number,
+  colorVariation: number,
 ): void {
   const cx = x + size / 2;
   const cy = y + size / 2;
@@ -168,7 +181,7 @@ function drawPinwheel(
 
   // Top-left quadrant: triangle
   for (let q = 0; q < 4; q++) {
-    const variation = rand() * 0.06;
+    const variation = rand() * colorVariation;
     const color = lighten(quadColors[q], variation);
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -213,6 +226,7 @@ function drawHalfSquareTriangle(
   size: number,
   colors: string[],
   rand: () => number,
+  colorVariation: number,
 ): void {
   const half = size / 2;
 
@@ -225,8 +239,8 @@ function drawHalfSquareTriangle(
       const c1 = colors[1 + ((r + c) % 3)];
       const c2 = colors[1 + ((r + c + 1) % 3)];
 
-      const v1 = rand() * 0.06;
-      const v2 = rand() * 0.06;
+      const v1 = rand() * colorVariation;
+      const v2 = rand() * colorVariation;
       const color1 = lighten(c1, v1);
       const color2 = darken(c2, 1 - v2);
 

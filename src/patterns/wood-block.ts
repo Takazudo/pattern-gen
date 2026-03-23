@@ -1,6 +1,14 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb, rgbToHex, darken } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'slider', key: 'gridDivisions', label: 'Grid Divisions', min: 10, max: 40, step: 1, defaultValue: 20 },
+  { type: 'slider', key: 'noiseScale', label: 'Noise Scale', min: 0.001, max: 0.01, step: 0.001, defaultValue: 0.003 },
+  { type: 'slider', key: 'gradientColors', label: 'Gradient Colors', min: 2, max: 4, step: 1, defaultValue: 2 },
+  { type: 'slider', key: 'shadowIntensity', label: 'Shadow Intensity', min: 0.2, max: 1.0, step: 0.05, defaultValue: 0.6 },
+];
 
 /**
  * Wood Block pattern — Diamond-rotated square grid with color gradients
@@ -15,6 +23,7 @@ export const woodBlock: PatternGenerator = {
   name: 'wood-block',
   displayName: 'Wood Block',
   description: 'Diamond grid with gradient color mountains — inspired by wooden block art',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -28,15 +37,16 @@ export const woodBlock: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Grid parameters — block size adjusted by zoom
-    const baseBlockSize = Math.max(width, height) / 20;
+    const gridDivisions = getParam(options, paramDefs, 'gridDivisions');
+    const baseBlockSize = Math.max(width, height) / gridDivisions;
     const blockSize = baseBlockSize / zoom;
     const halfBlock = blockSize / 2;
 
     // Noise scale for the gradient field
-    const noiseScale = 0.003 * zoom;
+    const noiseScale = getParam(options, paramDefs, 'noiseScale') * zoom;
 
-    // Choose 2-3 gradient colors from palette for the mountain shapes
-    const numGradientColors = 2 + Math.floor(rand() * 2); // 2 or 3
+    // Choose gradient colors from palette for the mountain shapes
+    const numGradientColors = options.params?.gradientColors ?? (2 + Math.floor(rand() * 2));
     const gradientColors: string[] = [];
     const shuffled = [...fgColors];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -137,7 +147,8 @@ export const woodBlock: PatternGenerator = {
         const blockB = finalB + (bgB - finalB) * bgBlend;
 
         const blockColor = rgbToHex(blockR, blockG, blockB);
-        const shadowColor = darken(blockColor, 0.6);
+        const shadowIntensity = getParam(options, paramDefs, 'shadowIntensity');
+        const shadowColor = darken(blockColor, shadowIntensity);
 
         // Draw diamond block (rotated square)
         // Shadow first

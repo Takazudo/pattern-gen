@@ -1,5 +1,12 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { darken, lighten, lerpColor } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { type: 'slider', key: 'subdivisions', label: 'Subdivisions', min: 2, max: 8, step: 1, defaultValue: 5 },
+  { type: 'slider', key: 'lineWidth', label: 'Line Width', min: 0.3, max: 3, step: 0.1, defaultValue: 1 },
+  { type: 'slider', key: 'edgeDarkness', label: 'Edge Darkness', min: 0.3, max: 1.0, step: 0.05, defaultValue: 0.7 },
+];
 
 /**
  * Penrose P3 tiling — Kites and darts created via recursive subdivision
@@ -9,6 +16,7 @@ export const penrose: PatternGenerator = {
   name: 'penrose',
   displayName: 'Penrose',
   description: 'Aperiodic Penrose P3 tiling with kites and darts',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -66,8 +74,8 @@ export const penrose: PatternGenerator = {
       }
     }
 
-    // Subdivide 5 times for detail
-    const subdivisions = 5;
+    // Subdivide for detail
+    const subdivisions = getParam(options, paramDefs, 'subdivisions');
     for (let s = 0; s < subdivisions; s++) {
       const newTriangles: Triangle[] = [];
 
@@ -137,8 +145,9 @@ export const penrose: PatternGenerator = {
       ctx.fill();
 
       // Thin edge lines
-      ctx.strokeStyle = darken(fillColor, 0.7);
-      ctx.lineWidth = 0.3;
+      const edgeDarkness = getParam(options, paramDefs, 'edgeDarkness');
+      ctx.strokeStyle = darken(fillColor, edgeDarkness);
+      ctx.lineWidth = getParam(options, paramDefs, 'lineWidth');
       ctx.stroke();
     }
   },
