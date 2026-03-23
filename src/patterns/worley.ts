@@ -1,5 +1,5 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
-import { hexToRgb, lerpColor } from '../core/color-utils.js';
+import { hexToRgb } from '../core/color-utils.js';
 import { getParam } from '../core/param-utils.js';
 
 const paramDefs: ParamDef[] = [
@@ -78,8 +78,8 @@ export const worley: PatternGenerator = {
     // Find max possible distance for normalization
     const maxDist = cellSize * 1.5;
 
-    // Build gradient from palette colors
-    const gradientStops = [bg, ...fgColors.slice(0, 4)];
+    // Build gradient from palette colors (pre-parsed to RGB)
+    const gradientStops = [bg, ...fgColors.slice(0, 4)].map((hex) => hexToRgb(hex));
 
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
@@ -122,20 +122,18 @@ export const worley: PatternGenerator = {
         // Blend: use edgeValue for border prominence, distValue for inner shading
         const t = edgeValue * f2Weight + distValue * f1Weight;
 
-        // Map t to gradient
+        // Map t to gradient (inline RGB lerp — avoids hex parse/format per pixel)
         const gradientPos = t * (gradientStops.length - 1);
         const stopIdx = Math.min(
           Math.floor(gradientPos),
           gradientStops.length - 2,
         );
         const stopT = gradientPos - stopIdx;
-        const color = lerpColor(
-          gradientStops[stopIdx],
-          gradientStops[stopIdx + 1],
-          stopT,
-        );
-
-        const [r, g, b] = hexToRgb(color);
+        const [r1, g1, b1] = gradientStops[stopIdx];
+        const [r2, g2, b2] = gradientStops[stopIdx + 1];
+        const r = r1 + (r2 - r1) * stopT;
+        const g = g1 + (g2 - g1) * stopT;
+        const b = b1 + (b2 - b1) * stopT;
         const idx = (y * width + x) * 4;
         data[idx] = r;
         data[idx + 1] = g;

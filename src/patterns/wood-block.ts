@@ -48,11 +48,8 @@ export const woodBlock: PatternGenerator = {
 
     // Choose gradient colors from palette for the mountain shapes
     const numGradientColors = getParam(options, paramDefs, 'gradientColors');
-    const gradientColors: string[] = [];
     const shuffled = shuffleArray(fgColors, rand);
-    for (let i = 0; i < numGradientColors; i++) {
-      gradientColors.push(shuffled[i]);
-    }
+    const gradientColors = shuffled.slice(0, numGradientColors);
 
     // Gradient center positions (where the color mountains peak)
     const centers: { x: number; y: number; color: string }[] = [];
@@ -76,6 +73,10 @@ export const woodBlock: PatternGenerator = {
     // Center offset
     const offsetX = width / 2;
     const offsetY = height / 2;
+
+    // Pre-parse bg color and hoist constant params
+    const [bgR, bgG, bgB] = hexToRgb(bg);
+    const shadowIntensity = getParam(options, paramDefs, 'shadowIntensity');
 
     for (let row = -Math.floor(rows / 2); row <= Math.floor(rows / 2); row++) {
       for (let col = -Math.floor(cols / 2); col <= Math.floor(cols / 2); col++) {
@@ -137,14 +138,12 @@ export const woodBlock: PatternGenerator = {
         const finalB = baseB * brightness * variation;
 
         // Blend with background for distant blocks
-        const [bgR, bgG, bgB] = hexToRgb(bg);
         const bgBlend = Math.max(0, 1 - distFactor * 1.5);
         const blockR = finalR + (bgR - finalR) * bgBlend;
         const blockG = finalG + (bgG - finalG) * bgBlend;
         const blockB = finalB + (bgB - finalB) * bgBlend;
 
         const blockColor = rgbToHex(blockR, blockG, blockB);
-        const shadowIntensity = getParam(options, paramDefs, 'shadowIntensity');
         const shadowColor = darken(blockColor, shadowIntensity);
 
         // Draw diamond block (rotated square)

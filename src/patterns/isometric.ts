@@ -51,6 +51,9 @@ export const isometric: PatternGenerator = {
       cubeColors.push(rowColors);
     }
 
+    const topBrightness = getParam(options, paramDefs, 'topBrightness');
+    const rightDarkness = getParam(options, paramDefs, 'rightDarkness');
+
     // Draw cubes back to front (top to bottom)
     for (let row = -2; row < rows; row++) {
       for (let col = -2; col < cols; col++) {
@@ -64,8 +67,6 @@ export const isometric: PatternGenerator = {
 
         const baseColor = cubeColors[(row + 2) % cubeColors.length][(col + 2) % cubeColors[0].length];
 
-        const topBrightness = getParam(options, paramDefs, 'topBrightness');
-        const rightDarkness = getParam(options, paramDefs, 'rightDarkness');
         drawIsoCube(ctx, cx, cy, cubeSize, baseColor, topBrightness, rightDarkness);
       }
     }

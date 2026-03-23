@@ -37,11 +37,8 @@ export const truchet: PatternGenerator = {
 
     // Pick 2-3 arc colors from palette
     const numColors = 2 + Math.floor(rand() * 2);
-    const arcColors: string[] = [];
     const shuffled = shuffleArray(fgColors, rand);
-    for (let i = 0; i < numColors; i++) {
-      arcColors.push(shuffled[i]);
-    }
+    const arcColors = shuffled.slice(0, numColors);
 
     const cols = Math.ceil(width / tileSize) + 2;
     const rows = Math.ceil(height / tileSize) + 2;
