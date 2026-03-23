@@ -1,2 +1,3 @@
 packages:
   - "packages/pattern-gen-viewer"
+  - "doc"
