@@ -1,6 +1,37 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { hexToRgb, rgbToHex, darken, lighten, withAlpha } from '../core/color-utils.js';
 import { createNoise2D } from '../core/noise.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'cellSize',
+    label: 'Cell Size',
+    type: 'slider',
+    min: 5,
+    max: 40,
+    step: 1,
+    defaultValue: 16,
+  },
+  {
+    key: 'jitter',
+    label: 'Jitter',
+    type: 'slider',
+    min: 0,
+    max: 0.6,
+    step: 0.01,
+    defaultValue: 0.2,
+  },
+  {
+    key: 'groutWidth',
+    label: 'Grout Width',
+    type: 'slider',
+    min: 0.02,
+    max: 0.2,
+    step: 0.01,
+    defaultValue: 0.06,
+  },
+];
 
 /**
  * Zellige pattern — Moroccan mosaic tiles with irregular polygonal shapes,
@@ -10,6 +41,7 @@ export const zellige: PatternGenerator = {
   name: 'zellige',
   displayName: 'Zellige',
   description: 'Moroccan mosaic tiles with hand-cut irregular shapes and glazed ceramic finish',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -26,15 +58,18 @@ export const zellige: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Grid sizing for tile layout
-    const baseSize = Math.max(width, height) / 16;
+    const cellSizeDivisor = getParam(options, paramDefs, 'cellSize');
+    const baseSize = Math.max(width, height) / cellSizeDivisor;
     const cellSize = baseSize / zoom;
-    const groutWidth = Math.max(1.5, cellSize * 0.06);
+    const groutWidthFactor = getParam(options, paramDefs, 'groutWidth');
+    const groutWidth = Math.max(1.5, cellSize * groutWidthFactor);
 
     const cols = Math.ceil(width / cellSize) + 2;
     const rows = Math.ceil(height / cellSize) + 2;
 
     // Generate jittered grid points
-    const jitter = cellSize * 0.2;
+    const jitterFactor = getParam(options, paramDefs, 'jitter');
+    const jitter = cellSize * jitterFactor;
     const points: { x: number; y: number }[][] = [];
 
     for (let row = -1; row <= rows + 1; row++) {
