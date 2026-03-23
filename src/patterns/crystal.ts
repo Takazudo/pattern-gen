@@ -1,5 +1,36 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { darken, lighten, hexToRgb } from '../core/color-utils.js';
+import { getParam } from '../core/param-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'seedCount',
+    label: 'Seed Count',
+    type: 'slider',
+    min: 5,
+    max: 100,
+    step: 1,
+    defaultValue: 30,
+  },
+  {
+    key: 'lightAngle',
+    label: 'Light Angle',
+    type: 'slider',
+    min: 0,
+    max: 360,
+    step: 5,
+    defaultValue: 233,
+  },
+  {
+    key: 'edgeDarkening',
+    label: 'Edge Darkening',
+    type: 'slider',
+    min: 0.05,
+    max: 0.5,
+    step: 0.05,
+    defaultValue: 0.15,
+  },
+];
 
 /**
  * Crystal / gem facet pattern — Voronoi cells with inner facet lines
@@ -9,6 +40,7 @@ export const crystal: PatternGenerator = {
   name: 'crystal',
   displayName: 'Crystal',
   description: 'Gem-like faceted Voronoi cells with inner shading and facet lines',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -21,8 +53,8 @@ export const crystal: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Generate seed points
-    const baseCount = Math.floor((width * height) / 6000);
-    const numSeeds = Math.max(8, Math.floor(baseCount * zoom * zoom));
+    const seedCount = getParam(options, paramDefs, 'seedCount');
+    const numSeeds = Math.max(8, Math.floor(seedCount * zoom * zoom));
 
     interface Seed {
       x: number;
@@ -112,12 +144,16 @@ export const crystal: PatternGenerator = {
     }
 
     // Step 4: For each cell, fill with faceted shading
-    // Light direction from top-left
-    const lightX = -0.6;
-    const lightY = -0.8;
+    // Light direction from angle parameter
+    const lightAngle = getParam(options, paramDefs, 'lightAngle');
+    const lightRad = (lightAngle * Math.PI) / 180;
+    const lightX = Math.cos(lightRad);
+    const lightY = Math.sin(lightRad);
     const lightLen = Math.sqrt(lightX * lightX + lightY * lightY);
     const lnX = lightX / lightLen;
     const lnY = lightY / lightLen;
+
+    const edgeDarkenAmount = getParam(options, paramDefs, 'edgeDarkening');
 
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
@@ -146,7 +182,7 @@ export const crystal: PatternGenerator = {
 
         // Apply shading: center brighter, edges darker, plus light direction
         let color: string;
-        const edgeDarken = 0.15 * t;
+        const edgeDarken = edgeDarkenAmount * t;
         const lightBoost = 0.25 * lightIntensity * (1 - t * 0.5);
 
         if (lightBoost > edgeDarken) {
