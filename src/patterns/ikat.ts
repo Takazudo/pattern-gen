@@ -1,6 +1,37 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { createNoise2D } from '../core/noise.js';
 import { withAlpha } from '../core/color-utils.js';
+import { getParam } from '../core/param-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'bandWidth',
+    label: 'Band Width',
+    type: 'slider',
+    min: 5,
+    max: 40,
+    step: 1,
+    defaultValue: 20,
+  },
+  {
+    key: 'blurAmount',
+    label: 'Blur Amount',
+    type: 'slider',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    defaultValue: 0.4,
+  },
+  {
+    key: 'diamondHeight',
+    label: 'Diamond Height',
+    type: 'slider',
+    min: 1,
+    max: 5,
+    step: 0.1,
+    defaultValue: 2.5,
+  },
+];
 
 /**
  * Ikat-inspired pattern with intentionally blurred/offset edges
@@ -14,6 +45,7 @@ export const ikat: PatternGenerator = {
   name: 'ikat',
   displayName: 'Ikat',
   description: 'Woven textile pattern with noise-displaced edges simulating dye bleeding',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -27,13 +59,13 @@ export const ikat: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Pattern parameters
-    const baseBandWidth = Math.max(width, height) / 20;
+    const baseBandWidth = Math.max(width, height) / getParam(options, paramDefs, 'bandWidth');
     const bandWidth = baseBandWidth / zoom;
-    const diamondHeight = bandWidth * 2.5;
+    const diamondHeight = bandWidth * getParam(options, paramDefs, 'diamondHeight');
 
     // Noise parameters for edge displacement
     const noiseScale = 0.015 * zoom;
-    const displacementAmount = bandWidth * 0.4;
+    const displacementAmount = bandWidth * getParam(options, paramDefs, 'blurAmount');
 
     // Choose colors for bands
     const shuffled = [...fgColors];

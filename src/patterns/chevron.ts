@@ -1,5 +1,27 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { lerpColor } from '../core/color-utils.js';
+import { getParam } from '../core/param-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'rowHeight',
+    label: 'Row Height',
+    type: 'slider',
+    min: 4,
+    max: 30,
+    step: 1,
+    defaultValue: 16,
+  },
+  {
+    key: 'gradientSteps',
+    label: 'Gradient Steps',
+    type: 'slider',
+    min: 0,
+    max: 20,
+    step: 1,
+    defaultValue: 0,
+  },
+];
 
 /**
  * Zigzag/chevron stripes with gradient color transitions between rows.
@@ -10,6 +32,7 @@ export const chevron: PatternGenerator = {
   name: 'chevron',
   displayName: 'Chevron',
   description: 'Zigzag V-shaped stripes with smooth color gradients between rows',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -22,7 +45,7 @@ export const chevron: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Chevron parameters
-    const baseRowHeight = Math.max(width, height) / 16;
+    const baseRowHeight = Math.max(width, height) / getParam(options, paramDefs, 'rowHeight');
     const rowHeight = baseRowHeight / zoom;
 
     // Build color sequence by cycling and shuffling palette colors
@@ -39,7 +62,8 @@ export const chevron: PatternGenerator = {
     }
 
     // Number of sub-rows for gradient between each chevron band
-    const gradientSteps = Math.max(4, Math.ceil(rowHeight / 3));
+    const gradientStepsParam = getParam(options, paramDefs, 'gradientSteps');
+    const gradientSteps = gradientStepsParam > 0 ? gradientStepsParam : Math.max(4, Math.ceil(rowHeight / 3));
     const subRowHeight = rowHeight / gradientSteps;
 
     // Draw chevron rows from top to bottom
