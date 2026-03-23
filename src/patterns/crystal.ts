@@ -150,11 +150,9 @@ export const crystal: PatternGenerator = {
     // Light direction from angle parameter
     const lightAngle = getParam(options, paramDefs, 'lightAngle');
     const lightRad = (lightAngle * Math.PI) / 180;
-    const lightX = Math.cos(lightRad);
-    const lightY = Math.sin(lightRad);
-    const lightLen = Math.sqrt(lightX * lightX + lightY * lightY);
-    const lnX = lightX / lightLen;
-    const lnY = lightY / lightLen;
+    // cos/sin already produce a unit vector — no need to normalize
+    const lnX = Math.cos(lightRad);
+    const lnY = Math.sin(lightRad);
 
     const edgeDarkenAmount = getParam(options, paramDefs, 'edgeDarkening');
 
@@ -204,9 +202,9 @@ export const crystal: PatternGenerator = {
           b = sb * f;
         }
         const pixIdx = (y * width + x) * 4;
-        data[pixIdx] = r;
-        data[pixIdx + 1] = g;
-        data[pixIdx + 2] = b;
+        data[pixIdx] = Math.max(0, Math.min(255, r));
+        data[pixIdx + 1] = Math.max(0, Math.min(255, g));
+        data[pixIdx + 2] = Math.max(0, Math.min(255, b));
         data[pixIdx + 3] = 255;
       }
     }

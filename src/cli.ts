@@ -47,12 +47,18 @@ function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir
       case '--zoom':
       case '-z':
         options.zoom = requireFloat('--zoom', args[++i]);
-        if (options.zoom <= 0) fail('--zoom must be positive');
+        if (options.zoom <= 0 || options.zoom > 100) fail('--zoom must be between 0 and 100');
         break;
-      case '--bg':
+      case '--bg': {
         options.bg = args[++i];
         if (!options.bg) fail('--bg requires a color value');
+        // Validate hex color format
+        const bgHex = options.bg.replace('#', '');
+        if (!/^[0-9a-fA-F]{3}$/.test(bgHex) && !/^[0-9a-fA-F]{6}$/.test(bgHex)) {
+          fail('--bg must be a valid hex color (e.g., #ff0000 or #f00)');
+        }
         break;
+      }
       case '--color-scheme':
       case '-c':
         options.colorScheme = args[++i];
