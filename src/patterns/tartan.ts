@@ -1,5 +1,36 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { withAlpha } from '../core/color-utils.js';
+import { getParam } from '../core/param-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'baseStripeWidth',
+    label: 'Stripe Width',
+    type: 'slider',
+    min: 5,
+    max: 60,
+    step: 1,
+    defaultValue: 30,
+  },
+  {
+    key: 'stripeCount',
+    label: 'Stripe Count',
+    type: 'slider',
+    min: 3,
+    max: 20,
+    step: 1,
+    defaultValue: 8,
+  },
+  {
+    key: 'stripeAlpha',
+    label: 'Stripe Alpha',
+    type: 'slider',
+    min: 0.1,
+    max: 0.9,
+    step: 0.05,
+    defaultValue: 0.5,
+  },
+];
 
 /**
  * Tartan/plaid woven pattern.
@@ -10,6 +41,7 @@ export const tartan: PatternGenerator = {
   name: 'tartan',
   displayName: 'Tartan',
   description: 'Woven plaid pattern with overlapping semi-transparent stripes',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -22,17 +54,18 @@ export const tartan: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Generate stripe pattern definition (widths + colors)
-    const baseStripeWidth = Math.max(width, height) / 30;
+    const baseStripeWidth = Math.max(width, height) / getParam(options, paramDefs, 'baseStripeWidth');
     const stripeWidth = baseStripeWidth / zoom;
 
     // Build a stripe sequence that will tile
-    const stripeCount = 6 + Math.floor(rand() * 6); // 6-11 stripes per repeat
+    const stripeCount = getParam(options, paramDefs, 'stripeCount');
     const stripes: { width: number; color: string; alpha: number }[] = [];
 
+    const alphaBase = getParam(options, paramDefs, 'stripeAlpha');
     for (let i = 0; i < stripeCount; i++) {
       const w = stripeWidth * (0.4 + rand() * 1.6); // varied widths
       const color = fgColors[Math.floor(rand() * fgColors.length)];
-      const alpha = 0.3 + rand() * 0.4; // 0.3-0.7 transparency
+      const alpha = alphaBase - 0.2 + rand() * 0.4; // vary around base alpha
       stripes.push({ width: w, color, alpha });
     }
 
