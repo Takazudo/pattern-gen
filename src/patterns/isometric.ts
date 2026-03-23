@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { darken, lighten } from '../core/color-utils.js';
+import { randomizeDefaults } from './randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'slider', key: 'gridDivisions', label: 'Grid Divisions', min: 6, max: 30, step: 1, defaultValue: 14 },
@@ -20,10 +21,20 @@ export const isometric: PatternGenerator = {
   paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
+    // Seed-based randomization for visual diversity
+    options = randomizeDefaults(options, paramDefs, options.rand, [
+      'gridDivisions', 'topBrightness', 'rightDarkness',
+    ]);
+
     const { width, height, rand, colorScheme, zoom } = options;
+
+    // Seed-based palette offset for color clustering
+    const colorOffset = Math.floor(rand() * colorScheme.palette.length);
 
     const bg = colorScheme.palette[0];
     const fgColors = colorScheme.palette.slice(1);
+    // Rotate fg colors by seed-based offset
+    const rotatedFg = [...fgColors.slice(colorOffset % fgColors.length), ...fgColors.slice(0, colorOffset % fgColors.length)];
 
     // Fill background
     ctx.fillStyle = bg;
@@ -46,7 +57,7 @@ export const isometric: PatternGenerator = {
     for (let row = 0; row < rows + 4; row++) {
       const rowColors: string[] = [];
       for (let col = 0; col < cols + 4; col++) {
-        rowColors.push(fgColors[Math.floor(rand() * fgColors.length)]);
+        rowColors.push(rotatedFg[Math.floor(rand() * rotatedFg.length)]);
       }
       cubeColors.push(rowColors);
     }

@@ -2,6 +2,7 @@ import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.j
 import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb } from '../core/color-utils.js';
+import { randomizeDefaults } from './randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { key: 'noiseScale', label: 'Noise Scale', type: 'slider', min: 0.001, max: 0.015, step: 0.001, defaultValue: 0.004 },
@@ -21,6 +22,11 @@ export const topographic: PatternGenerator = {
   paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
+    // Seed-based randomization for visual diversity
+    options = randomizeDefaults(options, paramDefs, options.rand, [
+      'noiseScale', 'contourLevels', 'octaves',
+    ]);
+
     const { width, height, rand, colorScheme, zoom } = options;
     const noise = createNoise2D(rand);
 
@@ -36,16 +42,24 @@ export const topographic: PatternGenerator = {
     const octaves = getParam(options, paramDefs, 'octaves');
     const contourStep = 2 / contourLevels; // noise range is [-1, 1]
 
+    // Seed-based noise offset for different terrain per seed
+    const offsetX = rand() * 1000;
+    const offsetY = rand() * 1000;
+
+    // Seed-based color rotation for gradient direction diversity
+    const colorRotation = Math.floor(rand() * fgColors.length);
+
     // Pre-compute height field
     const heightField = new Float32Array(width * height);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        heightField[y * width + x] = fbm(noise, x * noiseScale, y * noiseScale, octaves, 2, 0.5);
+        heightField[y * width + x] = fbm(noise, (x + offsetX) * noiseScale, (y + offsetY) * noiseScale, octaves, 2, 0.5);
       }
     }
 
-    // Parse colors for pixel operations
-    const parsedFg = fgColors.map((c) => hexToRgb(c));
+    // Parse colors for pixel operations (with seed-based rotation)
+    const rotatedFg = [...fgColors.slice(colorRotation), ...fgColors.slice(0, colorRotation)];
+    const parsedFg = rotatedFg.map((c) => hexToRgb(c));
 
     // Draw contour lines using ImageData
     const imageData = ctx.getImageData(0, 0, width, height);
