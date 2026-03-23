@@ -54,6 +54,9 @@ export const waveInterference: PatternGenerator = {
     // Pre-parse all palette colors
     const allColors = [bg, ...fgColors].map((hex) => hexToRgb(hex));
 
+    // Total amplitude sum for accurate normalization
+    const totalAmplitude = sources.reduce((s, src) => s + src.amplitude, 0);
+
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
@@ -68,9 +71,8 @@ export const waveInterference: PatternGenerator = {
           sum += src.amplitude * Math.sin(dist * src.freq + src.phase);
         }
 
-        // Normalize sum to [0, 1]
-        // Max possible absolute sum is sourceCount, but typically lower
-        const normalized = (sum / sourceCount + 1) / 2;
+        // Normalize sum to [0, 1] using actual amplitude sum for full palette range
+        const normalized = (sum / totalAmplitude + 1) / 2;
 
         // Map to color index
         const colorIdx = Math.floor(normalized * (allColors.length - 1));

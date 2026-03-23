@@ -28,11 +28,11 @@ export const isometric: PatternGenerator = {
 
     const { width, height, rand, colorScheme, zoom } = options;
 
-    // Seed-based palette offset for color clustering
-    const colorOffset = Math.floor(rand() * colorScheme.palette.length);
-
     const bg = colorScheme.palette[0];
     const fgColors = colorScheme.palette.slice(1);
+
+    // Seed-based palette offset for color clustering (offset within fg colors only)
+    const colorOffset = Math.floor(rand() * fgColors.length);
     // Rotate fg colors by seed-based offset
     const rotatedFg = [...fgColors.slice(colorOffset % fgColors.length), ...fgColors.slice(0, colorOffset % fgColors.length)];
 
