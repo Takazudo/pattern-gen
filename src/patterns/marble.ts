@@ -1,6 +1,13 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { key: 'noiseScale', label: 'Noise Scale', type: 'slider', min: 0.002, max: 0.015, step: 0.001, defaultValue: 0.005 },
+  { key: 'veinFrequency', label: 'Vein Frequency', type: 'slider', min: 0.005, max: 0.1, step: 0.005, defaultValue: 0.02 },
+  { key: 'turbulenceAmplitude', label: 'Turbulence Amplitude', type: 'slider', min: 1, max: 20, step: 0.5, defaultValue: 5 },
+];
 
 /**
  * Marble pattern — Marble veining using turbulent noise.
@@ -11,6 +18,7 @@ export const marble: PatternGenerator = {
   name: 'marble',
   displayName: 'Marble',
   description: 'Marble veining pattern using turbulent noise layers',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -23,9 +31,9 @@ export const marble: PatternGenerator = {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
-    const noiseScale = 0.005 * zoom;
-    const frequency = 0.02 * zoom;
-    const turbulenceAmp = 5;
+    const noiseScale = getParam(options, paramDefs, 'noiseScale') * zoom;
+    const frequency = getParam(options, paramDefs, 'veinFrequency') * zoom;
+    const turbulenceAmp = getParam(options, paramDefs, 'turbulenceAmplitude');
 
     // Random vein direction angle
     const angle = rand() * Math.PI;

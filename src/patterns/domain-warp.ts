@@ -1,6 +1,13 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  { key: 'noiseScale', label: 'Noise Scale', type: 'slider', min: 0.001, max: 0.02, step: 0.001, defaultValue: 0.004 },
+  { key: 'warpStrength', label: 'Warp Strength', type: 'slider', min: 20, max: 200, step: 5, defaultValue: 80 },
+  { key: 'octaves', label: 'Octaves', type: 'slider', min: 2, max: 8, step: 1, defaultValue: 4 },
+];
 
 /**
  * Domain Warp pattern — Layered noise with domain warping.
@@ -11,6 +18,7 @@ export const domainWarp: PatternGenerator = {
   name: 'domain-warp',
   displayName: 'Domain Warp',
   description: 'Layered noise with domain warping creating swirling organic shapes',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -23,8 +31,9 @@ export const domainWarp: PatternGenerator = {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
-    const noiseScale = 0.004 * zoom;
-    const warpStrength = 80 / zoom;
+    const noiseScale = getParam(options, paramDefs, 'noiseScale') * zoom;
+    const warpStrength = getParam(options, paramDefs, 'warpStrength') / zoom;
+    const octaves = getParam(options, paramDefs, 'octaves');
 
     // Render pixel-by-pixel using ImageData for performance
     const imageData = ctx.getImageData(0, 0, width, height);
@@ -41,15 +50,15 @@ export const domainWarp: PatternGenerator = {
         const ny = y * noiseScale;
 
         // First warp layer
-        const warpX = fbm(noise, nx, ny, 4) * warpStrength * noiseScale;
-        const warpY = fbm(noise, nx + 5.2, ny + 1.3, 4) * warpStrength * noiseScale;
+        const warpX = fbm(noise, nx, ny, octaves) * warpStrength * noiseScale;
+        const warpY = fbm(noise, nx + 5.2, ny + 1.3, octaves) * warpStrength * noiseScale;
 
         // Second warp layer (domain warp)
-        const warpX2 = fbm(noise, nx + warpX + 1.7, ny + warpY + 9.2, 4) * warpStrength * noiseScale;
-        const warpY2 = fbm(noise, nx + warpX + 8.3, ny + warpY + 2.8, 4) * warpStrength * noiseScale;
+        const warpX2 = fbm(noise, nx + warpX + 1.7, ny + warpY + 9.2, octaves) * warpStrength * noiseScale;
+        const warpY2 = fbm(noise, nx + warpX + 8.3, ny + warpY + 2.8, octaves) * warpStrength * noiseScale;
 
         // Final value
-        const val = fbm(noise, nx + warpX2, ny + warpY2, 4);
+        const val = fbm(noise, nx + warpX2, ny + warpY2, octaves);
 
         // Map to color index (normalize from [-1,1] to [0, numColors-1])
         const normalized = (val + 1) / 2;
