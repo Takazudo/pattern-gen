@@ -7,11 +7,11 @@ export default defineConfig({
   base: "/pj/pattern-gen/",
   server: {
     host: "patterngen.localhost",
-    port: 1983,
+    port: 14362,
   },
   preview: {
     host: "patterngen.localhost",
-    port: 1983,
+    port: 14362,
   },
   resolve: {
     alias: {

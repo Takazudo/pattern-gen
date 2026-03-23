@@ -1,0 +1,48 @@
+export type {
+  HeaderNavItem,
+  ColorModeConfig,
+  HtmlPreviewConfig,
+  LocaleConfig,
+  VersionConfig,
+  FooterConfig,
+} from "./settings-types";
+import type {
+  HeaderNavItem,
+  ColorModeConfig,
+  HtmlPreviewConfig,
+  LocaleConfig,
+  VersionConfig,
+  FooterConfig,
+} from "./settings-types";
+
+export const settings = {
+  colorScheme: "Default Dark",
+  colorMode: false as ColorModeConfig | false,
+  siteName: "pattern-gen",
+  siteDescription: "Generate deterministic visual patterns from text seeds — 30 algorithms from geometric tiles to noise-based textures" as string,
+  base: "/pj/pattern-gen/doc/",
+  trailingSlash: false as boolean,
+  noindex: false as boolean,
+  editUrl: false as string | false,
+  siteUrl: "" as string,
+  docsDir: "src/content/docs",
+  locales: {} as Record<string, LocaleConfig>,
+  mermaid: false,
+  sitemap: false,
+  docMetainfo: false,
+  docTags: false,
+  llmsTxt: false,
+  math: false,
+  aiAssistant: false as boolean,
+  docHistory: false,
+  colorTweakPanel: false as boolean,
+  htmlPreview: undefined as HtmlPreviewConfig | undefined,
+  versions: false as VersionConfig[] | false,
+  claudeResources: false as { claudeDir: string; projectRoot?: string } | false,
+  footer: false as FooterConfig | false,
+  headerNav: [
+    { label: "Getting Started", path: "/docs/getting-started", categoryMatch: "getting-started" },
+    { label: "Patterns", path: "/docs/patterns", categoryMatch: "patterns" },
+    { label: "API", path: "/docs/api", categoryMatch: "api" },
+  ] satisfies HeaderNavItem[],
+};

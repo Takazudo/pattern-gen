@@ -1,0 +1,143 @@
+---
+title: API Reference
+sidebar_position: 1
+---
+
+# API Reference
+
+## Core Functions
+
+### `renderPattern(options)`
+
+Render a pattern to a PNG buffer (Node.js only).
+
+```typescript
+import { renderPattern } from '@takazudo/pattern-gen';
+
+const result = await renderPattern({
+  slug: 'my-pattern',    // Text seed
+  type: 'voronoi',       // Pattern type name
+  size: 800,             // Canvas size (px)
+  zoom: 1,               // Zoom factor
+  colorScheme: 'nord',   // Color scheme name or "random"
+  bg: '#1a1a2e',         // Override background (optional)
+});
+
+// result.buffer: Buffer (PNG)
+// result.patternName: string
+// result.colorSchemeName: string
+// result.width: number
+// result.height: number
+```
+
+### `renderPatternToCanvas(ctx, slug, type, options?)`
+
+Render a pattern on a browser Canvas 2D context.
+
+```typescript
+import { renderPatternToCanvas } from '@takazudo/pattern-gen';
+
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+
+const { colorSchemeName } = renderPatternToCanvas(
+  ctx,
+  'my-pattern',
+  'voronoi',
+  { zoom: 2, colorScheme: 'dracula' }
+);
+```
+
+## Utility Functions
+
+### `hashString(str)`
+
+FNV-1a hash: string to 32-bit unsigned integer.
+
+```typescript
+import { hashString } from '@takazudo/pattern-gen';
+const seed = hashString('hello-world'); // deterministic number
+```
+
+### `createRandom(seed)`
+
+Mulberry32 PRNG: seed to deterministic random number generator.
+
+```typescript
+import { createRandom } from '@takazudo/pattern-gen';
+const rand = createRandom(42);
+rand(); // 0.xxx (always same sequence for same seed)
+```
+
+### `createNoise2D(rand)`
+
+2D simplex noise from seeded PRNG. Returns `(x, y) => [-1, 1]`.
+
+```typescript
+import { createRandom, createNoise2D } from '@takazudo/pattern-gen';
+const noise = createNoise2D(createRandom(42));
+noise(1.5, 2.3); // deterministic float in [-1, 1]
+```
+
+### `fbm(noise, x, y, octaves?, lacunarity?, gain?)`
+
+Fractal Brownian Motion — sum multiple octaves of noise.
+
+### Color Utilities
+
+```typescript
+import {
+  hexToRgb,    // '#ff0000' → [255, 0, 0]
+  rgbToHex,    // (255, 0, 0) → '#ff0000'
+  lerpColor,   // ('#000', '#fff', 0.5) → '#808080'
+  darken,      // ('#fff', 0.5) → '#808080'
+  lighten,     // ('#000', 0.5) → '#808080'
+  withAlpha,   // ('#ff0000', 0.5) → 'rgba(255,0,0,0.5)'
+} from '@takazudo/pattern-gen';
+```
+
+## Pattern Registry
+
+```typescript
+import {
+  patternRegistry,   // PatternGenerator[]
+  patternsByName,     // Map<string, PatternGenerator>
+  getPatternNames,    // () => string[]
+} from '@takazudo/pattern-gen';
+```
+
+## Color Schemes
+
+```typescript
+import {
+  COLOR_SCHEMES,        // ColorScheme[]
+  colorSchemesByKey,     // Map<string, ColorScheme>
+  getColorSchemeNames,   // () => string[]
+} from '@takazudo/pattern-gen';
+```
+
+36 color schemes available: Default, Dracula, Nord, Catppuccin (4 variants), Gruvbox (2), TokyoNight (2), Rose Pine (3), Kanagawa (2), Monokai (2), Solarized (2), and more.
+
+## Adding a Custom Pattern
+
+```typescript
+import type { PatternGenerator, PatternOptions } from '@takazudo/pattern-gen';
+
+const myPattern: PatternGenerator = {
+  name: 'my-pattern',
+  displayName: 'My Pattern',
+  description: 'A custom pattern',
+
+  generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
+    const { width, height, rand, colorScheme, zoom } = options;
+    const bg = colorScheme.palette[0];      // Background
+    const fgColors = colorScheme.palette.slice(1); // 7 foreground colors
+
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    // Use rand() for ALL randomness (deterministic)
+    // Draw your pattern on ctx...
+  },
+};
+```

@@ -1,0 +1,83 @@
+---
+title: Getting Started
+sidebar_position: 1
+---
+
+# pattern-gen
+
+Generate deterministic visual patterns from text seeds. 30 algorithms spanning geometric tiles, noise-based textures, Voronoi cells, traditional cultural patterns, textile designs, and mathematical effects.
+
+## Features
+
+- **30 pattern types** — from wood-block grids to reaction-diffusion simulations
+- **Deterministic** — same seed always produces the same output
+- **36 color schemes** — terminal-inspired palettes (Dracula, Nord, Catppuccin, etc.)
+- **CLI tool** — generate PNGs from the command line
+- **Library** — use programmatically in Node.js or browser
+- **Interactive viewer** — browse and customize patterns in real-time
+
+## Quick Start
+
+### Install
+
+```bash
+pnpm add @takazudo/pattern-gen
+```
+
+### CLI Usage
+
+```bash
+# Generate a pattern
+pattern-gen hello-world --type voronoi --out pattern.png
+
+# Specify color scheme
+pattern-gen my-seed --type flow-field --color-scheme dracula --size 1200
+
+# List available types
+pattern-gen --list-types
+
+# List color schemes
+pattern-gen --list-color-schemes
+```
+
+### Programmatic Usage
+
+```typescript
+import { renderPattern } from '@takazudo/pattern-gen';
+
+const result = await renderPattern({
+  slug: 'hello-world',
+  type: 'voronoi',
+  size: 800,
+  colorScheme: 'nord',
+});
+
+// result.buffer is a PNG Buffer
+fs.writeFileSync('output.png', result.buffer);
+```
+
+### Browser Usage
+
+```typescript
+import { renderPatternToCanvas } from '@takazudo/pattern-gen';
+
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+
+renderPatternToCanvas(ctx, 'hello-world', 'voronoi', {
+  colorScheme: 'dracula',
+  zoom: 2,
+});
+```
+
+## CLI Options
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--type` | `-t` | Pattern type | `wood-block` |
+| `--size` | `-s` | Output size (px) | `800` |
+| `--zoom` | `-z` | Zoom factor | `1` |
+| `--bg` | | Background color | auto |
+| `--color-scheme` | `-c` | Color scheme name or `random` | auto |
+| `--out` | `-o` | Output file path | `{slug}.png` |
+| `--out-dir` | | Output directory | cwd |
