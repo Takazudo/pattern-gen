@@ -1,0 +1,72 @@
+import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import { createNoise2D, fbm } from '../core/noise.js';
+import { hexToRgb } from '../core/color-utils.js';
+
+/**
+ * Topographic pattern — Simplex noise rendered as contour lines.
+ * Uses fbm for the height field, then draws isolines by detecting
+ * threshold crossings between adjacent pixels.
+ */
+export const topographic: PatternGenerator = {
+  name: 'topographic',
+  displayName: 'Topographic',
+  description: 'Contour map lines from simplex noise height field',
+
+  generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
+    const { width, height, rand, colorScheme, zoom } = options;
+    const noise = createNoise2D(rand);
+
+    const bg = colorScheme.palette[0];
+    const fgColors = colorScheme.palette.slice(1);
+
+    // Fill background
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    const noiseScale = 0.004 * zoom;
+    const contourLevels = 16;
+    const contourStep = 2 / contourLevels; // noise range is [-1, 1]
+
+    // Pre-compute height field
+    const heightField = new Float32Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        heightField[y * width + x] = fbm(noise, x * noiseScale, y * noiseScale, 5, 2, 0.5);
+      }
+    }
+
+    // Parse colors for pixel operations
+    const parsedFg = fgColors.map((c) => hexToRgb(c));
+
+    // Draw contour lines using ImageData
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const val = heightField[y * width + x];
+        const valRight = x < width - 1 ? heightField[y * width + x + 1] : val;
+        const valDown = y < height - 1 ? heightField[(y + 1) * width + x] : val;
+
+        // Check for contour crossings with neighbors
+        const levelVal = Math.floor((val + 1) / contourStep);
+        const levelRight = Math.floor((valRight + 1) / contourStep);
+        const levelDown = Math.floor((valDown + 1) / contourStep);
+
+        if (levelVal !== levelRight || levelVal !== levelDown) {
+          // This pixel is on a contour line
+          const colorIndex = ((levelVal % fgColors.length) + fgColors.length) % fgColors.length;
+          const [r, g, b] = parsedFg[colorIndex];
+
+          const idx = (y * width + x) * 4;
+          data[idx] = r;
+          data[idx + 1] = g;
+          data[idx + 2] = b;
+          data[idx + 3] = 255;
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  },
+};
