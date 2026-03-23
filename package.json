@@ -1,0 +1,63 @@
+{
+  "name": "@takazudo/pattern-gen",
+  "version": "0.1.0",
+  "description": "Generate deterministic visual patterns from text seeds — 30 algorithms from geometric tiles to noise-based textures",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "pattern-gen": "dist/cli.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "prepublishOnly": "tsup && vitest run",
+    "// ── Viewer ──────────────────────────────────────": "",
+    "viewer:dev": "pnpm --filter pattern-gen-viewer dev",
+    "viewer:build": "pnpm --filter pattern-gen-viewer build",
+    "// ── Validation ──────────────────────────────────": "",
+    "b4push": "./scripts/run-b4push.sh",
+    "// ── Typecheck ───────────────────────────────────": "",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["pattern", "generative", "geometric", "texture", "canvas", "cli", "deterministic"],
+  "author": "Takazudo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Takazudo/pattern-gen.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Takazudo/pattern-gen/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "canvas": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "chokidar": "^5.0.0",
+      "undici-types": "^7.22.0"
+    },
+    "onlyBuiltDependencies": [
+      "canvas",
+      "esbuild"
+    ]
+  }
+}

@@ -1,0 +1,186 @@
+import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import { createNoise2D, fbm } from '../core/noise.js';
+import { hexToRgb, rgbToHex, darken } from '../core/color-utils.js';
+
+/**
+ * Wood Block pattern — Diamond-rotated square grid with color gradients
+ * forming mountain/wave shapes. Inspired by wooden block wall art.
+ *
+ * Each block is a rotated square (diamond orientation) with:
+ * - Color determined by noise-based gradient field
+ * - Subtle depth shadow suggesting 3D relief
+ * - Wood-grain-like slight color variation per block
+ */
+export const woodBlock: PatternGenerator = {
+  name: 'wood-block',
+  displayName: 'Wood Block',
+  description: 'Diamond grid with gradient color mountains — inspired by wooden block art',
+
+  generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
+    const { width, height, rand, colorScheme, zoom } = options;
+    const noise = createNoise2D(rand);
+
+    const bg = colorScheme.palette[0];
+    const fgColors = colorScheme.palette.slice(1);
+
+    // Fill background
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    // Grid parameters — block size adjusted by zoom
+    const baseBlockSize = Math.max(width, height) / 20;
+    const blockSize = baseBlockSize / zoom;
+    const halfBlock = blockSize / 2;
+
+    // Noise scale for the gradient field
+    const noiseScale = 0.003 * zoom;
+
+    // Choose 2-3 gradient colors from palette for the mountain shapes
+    const numGradientColors = 2 + Math.floor(rand() * 2); // 2 or 3
+    const gradientColors: string[] = [];
+    const shuffled = [...fgColors];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    for (let i = 0; i < numGradientColors; i++) {
+      gradientColors.push(shuffled[i]);
+    }
+
+    // Gradient center positions (where the color mountains peak)
+    const centers: { x: number; y: number; color: string }[] = [];
+    for (let i = 0; i < numGradientColors; i++) {
+      centers.push({
+        x: rand() * width,
+        y: rand() * height,
+        color: gradientColors[i],
+      });
+    }
+
+    // Shadow direction
+    const shadowDx = blockSize * 0.06;
+    const shadowDy = blockSize * 0.06;
+
+    // Calculate grid extent to cover the canvas (diamond orientation = 45deg rotation)
+    const diagonal = Math.sqrt(2) * Math.max(width, height);
+    const cols = Math.ceil(diagonal / blockSize) + 4;
+    const rows = Math.ceil(diagonal / blockSize) + 4;
+
+    // Center offset
+    const offsetX = width / 2;
+    const offsetY = height / 2;
+
+    for (let row = -Math.floor(rows / 2); row <= Math.floor(rows / 2); row++) {
+      for (let col = -Math.floor(cols / 2); col <= Math.floor(cols / 2); col++) {
+        // Diamond grid: rotate coordinates by 45 degrees
+        const gridX = col * blockSize;
+        const gridY = row * blockSize;
+        const cos45 = Math.SQRT1_2;
+        const sin45 = Math.SQRT1_2;
+        const cx = offsetX + gridX * cos45 - gridY * sin45;
+        const cy = offsetY + gridX * sin45 + gridY * cos45;
+
+        // Skip blocks entirely outside canvas (with margin)
+        if (cx < -blockSize || cx > width + blockSize ||
+            cy < -blockSize || cy > height + blockSize) continue;
+
+        // Noise-based value for color selection
+        const noiseVal = fbm(noise, cx * noiseScale, cy * noiseScale, 4);
+        const normalized = (noiseVal + 1) / 2; // 0-1
+
+        // Find closest gradient center and blend
+        let closestDist = Infinity;
+        let closestColor = gradientColors[0];
+        let secondColor = gradientColors[0];
+        let secondDist = Infinity;
+
+        for (const center of centers) {
+          const dx = cx - center.x;
+          const dy = cy - center.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < closestDist) {
+            secondDist = closestDist;
+            secondColor = closestColor;
+            closestDist = d;
+            closestColor = center.color;
+          } else if (d < secondDist) {
+            secondDist = d;
+            secondColor = center.color;
+          }
+        }
+
+        // Blend between closest and second closest by noise
+        const blendT = Math.max(0, Math.min(1, normalized));
+        const [r1, g1, b1] = hexToRgb(closestColor);
+        const [r2, g2, b2] = hexToRgb(secondColor);
+        const baseR = r1 + (r2 - r1) * blendT;
+        const baseG = g1 + (g2 - g1) * blendT;
+        const baseB = b1 + (b2 - b1) * blendT;
+
+        // Distance from nearest center affects brightness (farther = darker toward bg)
+        const maxDist = Math.max(width, height) * 0.6;
+        const distFactor = Math.max(0, 1 - closestDist / maxDist);
+        const brightness = 0.3 + distFactor * 0.7;
+
+        // Per-block variation (simulates wood grain uniqueness)
+        const variation = 0.9 + rand() * 0.2;
+
+        const finalR = baseR * brightness * variation;
+        const finalG = baseG * brightness * variation;
+        const finalB = baseB * brightness * variation;
+
+        // Blend with background for distant blocks
+        const [bgR, bgG, bgB] = hexToRgb(bg);
+        const bgBlend = Math.max(0, 1 - distFactor * 1.5);
+        const blockR = finalR + (bgR - finalR) * bgBlend;
+        const blockG = finalG + (bgG - finalG) * bgBlend;
+        const blockB = finalB + (bgB - finalB) * bgBlend;
+
+        const blockColor = rgbToHex(blockR, blockG, blockB);
+        const shadowColor = darken(blockColor, 0.6);
+
+        // Draw diamond block (rotated square)
+        // Shadow first
+        ctx.fillStyle = shadowColor;
+        ctx.beginPath();
+        ctx.moveTo(cx + shadowDx, cy - halfBlock + shadowDy);
+        ctx.lineTo(cx + halfBlock + shadowDx, cy + shadowDy);
+        ctx.lineTo(cx + shadowDx, cy + halfBlock + shadowDy);
+        ctx.lineTo(cx - halfBlock + shadowDx, cy + shadowDy);
+        ctx.closePath();
+        ctx.fill();
+
+        // Block face
+        ctx.fillStyle = blockColor;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - halfBlock);
+        ctx.lineTo(cx + halfBlock, cy);
+        ctx.lineTo(cx, cy + halfBlock);
+        ctx.lineTo(cx - halfBlock, cy);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle edge highlight (top-left edges lighter)
+        const highlightColor = rgbToHex(
+          Math.min(255, blockR * 1.15),
+          Math.min(255, blockG * 1.15),
+          Math.min(255, blockB * 1.15),
+        );
+        ctx.strokeStyle = highlightColor;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - halfBlock, cy);
+        ctx.lineTo(cx, cy - halfBlock);
+        ctx.stroke();
+
+        // Bottom-right edge darker
+        ctx.strokeStyle = shadowColor;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cx + halfBlock, cy);
+        ctx.lineTo(cx, cy + halfBlock);
+        ctx.stroke();
+      }
+    }
+  },
+};
