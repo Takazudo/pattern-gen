@@ -65,10 +65,13 @@ const paramDefs: ParamDef[] = [
   {
     key: 'motifRotation',
     label: 'Motif Rotation',
-    type: 'slider',
-    min: 0,
-    max: 3,
-    step: 1,
+    type: 'select',
+    options: [
+      { value: 0, label: '0°' },
+      { value: 1, label: '90°' },
+      { value: 2, label: '180°' },
+      { value: 3, label: '270°' },
+    ],
     defaultValue: 0,
   },
 ];
@@ -144,7 +147,6 @@ export const sashiko: PatternGenerator = {
     const gapLen = cellSize * 0.08;
     const gapIrregularity = getParam(options, paramDefs, 'gapIrregularity');
 
-    ctx.strokeStyle = stitchColors[0];
     ctx.lineWidth = stitchWidth;
     ctx.lineCap = 'round';
     ctx.setLineDash([dashLen, gapLen]);
@@ -166,10 +168,13 @@ export const sashiko: PatternGenerator = {
       ctx.translate(-width / 2, -height / 2);
     }
 
-    // Extra cells for 90/270 rotation to ensure full canvas coverage
-    const extra = (rotation === 1 || rotation === 3)
-      ? Math.ceil(Math.abs(width - height) / 2 / cellSize) + 2
-      : 0;
+    // Extra cells for 90/270 rotation to ensure full canvas coverage.
+    // Nowaki rows are spaced at arcRadius (cellSize/2), so needs 2x extra cells.
+    const extra = (() => {
+      if (rotation !== 1 && rotation !== 3) return 0;
+      const rowSpacing = motif === 'nowaki' ? cellSize / 2 : cellSize;
+      return Math.ceil(Math.abs(width - height) / 2 / rowSpacing) + 2;
+    })();
 
     const cols = Math.ceil(width / cellSize) + 2;
     const rows = Math.ceil(height / cellSize) + 2;
