@@ -1,5 +1,38 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { withAlpha, lighten } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'starPoints',
+    label: 'Star Points',
+    type: 'select',
+    options: [
+      { value: 6, label: '6-pointed' },
+      { value: 8, label: '8-pointed' },
+      { value: 12, label: '12-pointed' },
+    ],
+    defaultValue: 8,
+  },
+  {
+    key: 'gridDivisions',
+    label: 'Grid Divisions',
+    type: 'slider',
+    min: 4,
+    max: 20,
+    step: 1,
+    defaultValue: 8,
+  },
+  {
+    key: 'strandWidth',
+    label: 'Strand Width',
+    type: 'slider',
+    min: 0.1,
+    max: 0.3,
+    step: 0.01,
+    defaultValue: 0.18,
+  },
+];
 
 /**
  * Islamic Star pattern — geometric star patterns with interlacing strands.
@@ -10,6 +43,7 @@ export const islamicStar: PatternGenerator = {
   name: 'islamic-star',
   displayName: 'Islamic Star',
   description: 'Geometric star pattern with interlacing strands and over-under crossings',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -23,7 +57,7 @@ export const islamicStar: PatternGenerator = {
 
     // Choose star type: 6, 8, or 12 points
     const starTypes = [6, 8, 12];
-    const points = starTypes[Math.floor(rand() * starTypes.length)];
+    const points = options.params?.starPoints ?? starTypes[Math.floor(rand() * starTypes.length)];
 
     // Pick 2-3 strand colors
     const shuffled = [...fgColors];
@@ -35,10 +69,12 @@ export const islamicStar: PatternGenerator = {
     const strandColors = shuffled.slice(0, numColors);
 
     // Grid sizing
-    const baseSize = Math.max(width, height) / 8;
+    const gridDivisions = getParam(options, paramDefs, 'gridDivisions');
+    const baseSize = Math.max(width, height) / gridDivisions;
     const cellSize = baseSize / zoom;
     const radius = cellSize * 0.42;
-    const strandWidth = radius * 0.18;
+    const strandWidthFactor = getParam(options, paramDefs, 'strandWidth');
+    const strandWidth = radius * strandWidthFactor;
 
     // Calculate grid extent
     const cols = Math.ceil(width / cellSize) + 2;

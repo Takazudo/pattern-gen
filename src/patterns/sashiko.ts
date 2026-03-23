@@ -1,5 +1,39 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { darken, lighten, withAlpha } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'motif',
+    label: 'Motif',
+    type: 'select',
+    options: [
+      { value: 0, label: 'Asa-no-ha' },
+      { value: 1, label: 'Nowaki' },
+      { value: 2, label: 'Uroko' },
+      { value: 3, label: 'Yabane' },
+    ],
+    defaultValue: 0,
+  },
+  {
+    key: 'cellSize',
+    label: 'Cell Size',
+    type: 'slider',
+    min: 4,
+    max: 30,
+    step: 1,
+    defaultValue: 12,
+  },
+  {
+    key: 'stitchDash',
+    label: 'Stitch Dash',
+    type: 'slider',
+    min: 0.05,
+    max: 0.3,
+    step: 0.01,
+    defaultValue: 0.15,
+  },
+];
 
 /**
  * Sashiko pattern — Japanese stitching patterns rendered as dashed lines.
@@ -10,6 +44,7 @@ export const sashiko: PatternGenerator = {
   name: 'sashiko',
   displayName: 'Sashiko',
   description: 'Japanese sashiko stitching with dashed stitch lines on fabric background',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -35,10 +70,12 @@ export const sashiko: PatternGenerator = {
     const stitchColor = fgColors[Math.floor(rand() * fgColors.length)];
 
     // Stitch parameters
-    const baseSize = Math.max(width, height) / 12;
+    const cellSizeDivisor = getParam(options, paramDefs, 'cellSize');
+    const baseSize = Math.max(width, height) / cellSizeDivisor;
     const cellSize = baseSize / zoom;
     const stitchWidth = Math.max(1.5, cellSize * 0.04);
-    const dashLen = cellSize * 0.15;
+    const stitchDashFactor = getParam(options, paramDefs, 'stitchDash');
+    const dashLen = cellSize * stitchDashFactor;
     const gapLen = cellSize * 0.08;
 
     ctx.strokeStyle = stitchColor;
@@ -48,7 +85,8 @@ export const sashiko: PatternGenerator = {
 
     // Choose motif
     const motifs = ['asa-no-ha', 'nowaki', 'uroko', 'yabane'] as const;
-    const motif = motifs[Math.floor(rand() * motifs.length)];
+    const motifIndex = options.params?.motif ?? Math.floor(rand() * motifs.length);
+    const motif = motifs[motifIndex];
 
     const cols = Math.ceil(width / cellSize) + 2;
     const rows = Math.ceil(height / cellSize) + 2;

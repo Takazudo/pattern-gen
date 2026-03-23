@@ -1,5 +1,36 @@
-import type { PatternGenerator, PatternOptions } from '../core/types.js';
+import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { withAlpha, darken, lighten } from '../core/color-utils.js';
+
+const paramDefs: ParamDef[] = [
+  {
+    key: 'gridDivisions',
+    label: 'Grid Divisions',
+    type: 'slider',
+    min: 5,
+    max: 30,
+    step: 1,
+    defaultValue: 10,
+  },
+  {
+    key: 'strandWidth',
+    label: 'Strand Width',
+    type: 'slider',
+    min: 0.1,
+    max: 0.3,
+    step: 0.01,
+    defaultValue: 0.15,
+  },
+  {
+    key: 'gapSize',
+    label: 'Gap Size',
+    type: 'slider',
+    min: 2,
+    max: 15,
+    step: 1,
+    defaultValue: 4,
+  },
+];
 
 /**
  * Celtic Knot pattern — interlacing knotwork using a grid-based approach.
@@ -10,6 +41,7 @@ export const celticKnot: PatternGenerator = {
   name: 'celtic-knot',
   displayName: 'Celtic Knot',
   description: 'Interlacing knotwork with over-under crossings on a grid',
+  paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
@@ -22,11 +54,14 @@ export const celticKnot: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Grid parameters
-    const baseSize = Math.max(width, height) / 10;
+    const gridDivisions = getParam(options, paramDefs, 'gridDivisions');
+    const baseSize = Math.max(width, height) / gridDivisions;
     const cellSize = baseSize / zoom;
     const halfCell = cellSize / 2;
-    const strandWidth = cellSize * 0.15;
-    const gapWidth = strandWidth + 4; // gap for under-crossings
+    const strandWidthFactor = getParam(options, paramDefs, 'strandWidth');
+    const strandWidth = cellSize * strandWidthFactor;
+    const gapSize = getParam(options, paramDefs, 'gapSize');
+    const gapWidth = strandWidth + gapSize; // gap for under-crossings
 
     // Pick 2-3 knot colors
     const shuffled = [...fgColors];
