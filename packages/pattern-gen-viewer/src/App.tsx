@@ -89,13 +89,9 @@ export function App() {
     setParams((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  // Randomize only changes slug (seed) — keeps current pattern type
   const randomize = useCallback(() => {
     setSlug(randomSlug());
-    setColorSchemeIndex(Math.floor(Math.random() * COLOR_SCHEMES.length));
-    const nextPattern = patternRegistry[Math.floor(Math.random() * patternRegistry.length)];
-    setPatternType(nextPattern.name);
-    setZoom(Math.round((1 + Math.random() * 4) * 10) / 10);
-    // Params will auto-reset via the patternType effect
   }, []);
 
   const download = useCallback(() => {
@@ -122,21 +118,6 @@ export function App() {
         <h1>pattern-gen</h1>
 
         <div className="control-group">
-          <label htmlFor="slug-input">Slug / Seed</label>
-          <div className="slug-row">
-            <input
-              id="slug-input"
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-            />
-            <button className="btn btn-random" onClick={randomize}>
-              Random
-            </button>
-          </div>
-        </div>
-
-        <div className="control-group">
           <label htmlFor="type-select">Pattern Type</label>
           <select
             id="type-select"
@@ -149,6 +130,21 @@ export function App() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="control-group">
+          <label htmlFor="slug-input">Slug / Seed</label>
+          <div className="slug-row">
+            <input
+              id="slug-input"
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+            />
+            <button className="btn btn-random" onClick={randomize}>
+              Random
+            </button>
+          </div>
         </div>
 
         <button

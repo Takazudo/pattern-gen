@@ -1,4 +1,5 @@
 import type { PatternGenerator } from '../core/types.js';
+import { kumiko } from './kumiko.js';
 import { woodBlock } from './wood-block.js';
 import { truchet } from './truchet.js';
 import { herringbone } from './herringbone.js';
@@ -35,6 +36,8 @@ import { guilloche } from './guilloche.js';
  * Each pattern is registered with a unique slug name used for CLI --type flag.
  */
 export const patternRegistry: PatternGenerator[] = [
+  // Kumiko (Japanese woodwork)
+  kumiko,
   // Grid & Tile
   woodBlock,
   truchet,
