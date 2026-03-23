@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { darken, lighten } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
@@ -21,15 +22,11 @@ export const isometric: PatternGenerator = {
   paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
-    // Seed-based randomization for visual diversity
-    options = randomizeDefaults(options, paramDefs, options.rand, [
-      'gridDivisions', 'topBrightness', 'rightDarkness',
-    ]);
-
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
 
     // Seed-based palette offset for color clustering (offset within fg colors only)
     const colorOffset = Math.floor(rand() * fgColors.length);

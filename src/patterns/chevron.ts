@@ -37,15 +37,11 @@ export const chevron: PatternGenerator = {
   paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
-    // Seed-based randomization for visual diversity
-    options = randomizeDefaults(options, paramDefs, options.rand, [
-      'rowHeight', 'gradientSteps',
-    ]);
-
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
 
     // Fill background
     ctx.fillStyle = bg;

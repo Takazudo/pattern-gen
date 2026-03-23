@@ -1,6 +1,8 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { withAlpha } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'select', key: 'layerCount', label: 'Layer Count', options: [{ value: 2, label: '2 layers' }, { value: 3, label: '3 layers' }], defaultValue: 2 },
@@ -21,9 +23,10 @@ export const moire: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
     const palette = colorScheme.palette;
     const bg = palette[0];
-    const fgColors = palette.slice(1);
+    const fgColors = shuffleArray(palette.slice(1), rand);
 
     // Fill background
     ctx.fillStyle = bg;

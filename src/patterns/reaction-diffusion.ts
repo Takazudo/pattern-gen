@@ -1,6 +1,8 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { lerpColor } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'slider', key: 'feedRate', label: 'Feed Rate', min: 0.01, max: 0.08, step: 0.001, defaultValue: 0.046 },
@@ -22,9 +24,10 @@ export const reactionDiffusion: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
     const palette = colorScheme.palette;
     const bg = palette[0];
-    const fgColors = palette.slice(1);
+    const fgColors = shuffleArray(palette.slice(1), rand);
 
     // Fill background
     ctx.fillStyle = bg;

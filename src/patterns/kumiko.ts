@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 /**
  * Equilateral triangle grid — ported from kumiko-gen's grid.ts
@@ -172,9 +173,10 @@ export const kumiko: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
 
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);

@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { hexToRgb } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
@@ -19,15 +20,11 @@ export const waveInterference: PatternGenerator = {
   paramDefs,
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
-    // Seed-based randomization for visual diversity
-    options = randomizeDefaults(options, paramDefs, options.rand, [
-      'sourceCount', 'frequency',
-    ]);
-
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
 
     // Fill background
     ctx.fillStyle = bg;

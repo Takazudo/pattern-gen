@@ -2,6 +2,7 @@ import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.j
 import { withAlpha } from '../core/color-utils.js';
 import { getParam } from '../core/param-utils.js';
 import { shuffleArray } from '../core/array-utils.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   {
@@ -208,9 +209,10 @@ export const houndstooth: PatternGenerator = {
 
   generate(ctx: CanvasRenderingContext2D, options: PatternOptions): void {
     const { width, height, rand, colorScheme, zoom } = options;
+    options = randomizeDefaults(options, paramDefs, rand);
 
     const bg = colorScheme.palette[0];
-    const fgColors = colorScheme.palette.slice(1);
+    const fgColors = shuffleArray(colorScheme.palette.slice(1), rand);
 
     const contrast = getParam(options, paramDefs, 'contrast');
     const toothDepth = getParam(options, paramDefs, 'toothDepth');
