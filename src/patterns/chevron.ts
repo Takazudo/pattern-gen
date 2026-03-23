@@ -2,7 +2,7 @@ import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.j
 import { lerpColor } from '../core/color-utils.js';
 import { getParam } from '../core/param-utils.js';
 import { shuffleArray } from '../core/array-utils.js';
-import { randomizeDefaults } from './randomize-defaults.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   {

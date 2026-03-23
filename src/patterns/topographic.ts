@@ -2,7 +2,7 @@ import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.j
 import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb } from '../core/color-utils.js';
-import { randomizeDefaults } from './randomize-defaults.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { key: 'noiseScale', label: 'Noise Scale', type: 'slider', min: 0.001, max: 0.015, step: 0.001, defaultValue: 0.004 },

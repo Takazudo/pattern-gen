@@ -1,7 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { hexToRgb } from '../core/color-utils.js';
-import { randomizeDefaults } from './randomize-defaults.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { key: 'sourceCount', label: 'Source Count', type: 'slider', min: 2, max: 12, step: 1, defaultValue: 6 },

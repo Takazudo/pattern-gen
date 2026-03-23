@@ -178,12 +178,13 @@ export const meander: PatternGenerator = {
       }
     }
 
-    // Border decoration: dots at key corners
+    // Border decoration: dots at key corners (cap at 200 to prevent perf issues)
     if (borderDecoration === 1 && cornerPoints.length > 0) {
       const dotColor = withAlpha(accentColor, 0.7);
       const dotRadius = Math.max(2, lineWidth * 0.8);
       ctx.fillStyle = dotColor;
-      for (const pt of cornerPoints) {
+      const cappedPoints = cornerPoints.length > 200 ? cornerPoints.slice(0, 200) : cornerPoints;
+      for (const pt of cappedPoints) {
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, dotRadius, 0, Math.PI * 2);
         ctx.fill();

@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { darken, lighten, withAlpha } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 
 const paramDefs: ParamDef[] = [
   {
@@ -128,13 +129,10 @@ export const sashiko: PatternGenerator = {
       ctx.fillRect(fx, fy, 1, 1);
     }
 
-    // Thread colors — pick 1-3 colors from fg palette
+    // Thread colors — pick 1-3 distinct colors from fg palette
     const numColors = getParam(options, paramDefs, 'threadColors');
-    const stitchColors: string[] = [];
-    stitchColors.push(fgColors[Math.floor(rand() * fgColors.length)]);
-    for (let i = 1; i < numColors; i++) {
-      stitchColors.push(fgColors[Math.floor(rand() * fgColors.length)]);
-    }
+    const shuffledColors = shuffleArray(fgColors, rand);
+    const stitchColors = shuffledColors.slice(0, numColors);
 
     // Stitch parameters
     const cellSizeDivisor = getParam(options, paramDefs, 'cellSize');

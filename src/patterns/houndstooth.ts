@@ -46,10 +46,13 @@ const paramDefs: ParamDef[] = [
   {
     key: 'rotation',
     label: 'Rotation',
-    type: 'slider',
-    min: 0,
-    max: 3,
-    step: 1,
+    type: 'select',
+    options: [
+      { value: 0, label: '0°' },
+      { value: 1, label: '90°' },
+      { value: 2, label: '180°' },
+      { value: 3, label: '270°' },
+    ],
     defaultValue: 0,
   },
   {

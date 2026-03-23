@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { randomizeDefaults } from '../src/patterns/randomize-defaults.js';
+import { randomizeDefaults } from '../src/core/randomize-defaults.js';
 import { createRandom } from '../src/core/seeded-random.js';
 import type { ParamDef, PatternOptions } from '../src/core/types.js';
 

@@ -1,7 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { darken, lighten, lerpColor } from '../core/color-utils.js';
-import { randomizeDefaults } from './randomize-defaults.js';
+import { randomizeDefaults } from '../core/randomize-defaults.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'slider', key: 'subdivisions', label: 'Subdivisions', min: 2, max: 8, step: 1, defaultValue: 5 },

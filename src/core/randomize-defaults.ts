@@ -1,4 +1,4 @@
-import type { ParamDef, PatternOptions, SliderParamDef } from '../core/types.js';
+import type { ParamDef, PatternOptions, SliderParamDef } from './types.js';
 
 /**
  * Generate random values for specified slider param keys when the user hasn't
@@ -6,6 +6,7 @@ import type { ParamDef, PatternOptions, SliderParamDef } from '../core/types.js'
  * otherwise produce nearly identical output for different seeds.
  *
  * Only slider params are randomized (select/toggle don't have continuous ranges).
+ * Values are quantized to the param's step size.
  * When a key IS set in options.params, it is left unchanged.
  */
 export function randomizeDefaults(
@@ -24,7 +25,10 @@ export function randomizeDefaults(
     if (!def || def.type !== 'slider') continue;
 
     const slider = def as SliderParamDef;
-    newParams[key] = slider.min + rand() * (slider.max - slider.min);
+    const raw = slider.min + rand() * (slider.max - slider.min);
+    // Quantize to step size
+    const steps = Math.round((raw - slider.min) / slider.step);
+    newParams[key] = slider.min + steps * slider.step;
     modified = true;
   }
 
