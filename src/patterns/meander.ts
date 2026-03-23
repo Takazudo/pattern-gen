@@ -293,25 +293,24 @@ function drawRunningBorder(
   const numSpirals = Math.floor(length / step);
   if (numSpirals <= 0) return;
 
-  // Draw a continuous running spiral that wraps along the border
-  ctx.beginPath();
+  // Draw independent running spirals — each unit gets its own stroke
+  const turns = Math.min(complexity, 4);
 
   for (let i = 0; i < numSpirals; i++) {
-    const turns = Math.min(complexity, 4);
+    ctx.beginPath();
 
     if (direction === 'horizontal') {
       const sx = x + i * step;
       const sy = y;
-      // Running spiral: outer rectangle turning inward
-      drawRunningSpiral(ctx, sx, sy, step, bandHeight, turns, i === 0, corners);
+      drawRunningSpiral(ctx, sx, sy, step, bandHeight, turns, corners);
     } else {
       const sx = x;
       const sy = y + i * step;
-      drawRunningSpiral(ctx, sx, sy, bandHeight, step, turns, i === 0, corners);
+      drawRunningSpiral(ctx, sx, sy, bandHeight, step, turns, corners);
     }
-  }
 
-  ctx.stroke();
+    ctx.stroke();
+  }
 }
 
 function drawRunningSpiral(
@@ -321,17 +320,12 @@ function drawRunningSpiral(
   w: number,
   h: number,
   turns: number,
-  isFirst: boolean,
   corners: { x: number; y: number }[],
 ): void {
-  // Rectangular spiral that winds inward
+  // Rectangular spiral that winds inward — each call starts its own sub-path
   const insetStep = Math.min(w, h) / (turns * 2 + 1);
 
-  if (isFirst) {
-    ctx.moveTo(x, y + h / 2);
-  } else {
-    ctx.lineTo(x, y + h / 2);
-  }
+  ctx.moveTo(x, y + h / 2);
 
   let cx = x;
   let cy = y;
@@ -345,8 +339,8 @@ function drawRunningSpiral(
     ctx.lineTo(cx + insetStep, cy + ch);
     ctx.lineTo(cx + insetStep, cy + insetStep);
 
-    corners.push({ x: cx + cw, y: cy });
-    corners.push({ x: cx + cw, y: cy + ch });
+    if (corners.length < 200) corners.push({ x: cx + cw, y: cy });
+    if (corners.length < 200) corners.push({ x: cx + cw, y: cy + ch });
 
     cx += insetStep;
     cy += insetStep;
@@ -501,7 +495,7 @@ function drawLabyrinthBorder(
         ctx.lineTo(mx + stubLen * (rand() - 0.5) * 2, my + stubLen * (rand() - 0.5) * 2);
         ctx.stroke();
 
-        corners.push({ x: mx, y: my });
+        if (corners.length < 200) corners.push({ x: mx, y: my });
       }
     }
   }
@@ -773,17 +767,24 @@ function drawSpiralFill(
   const totalTurns = maxRadius / spacing;
   const steps = Math.floor(totalTurns * 60);
 
+  if (steps <= 0) return;
+
   ctx.beginPath();
+  let drawing = false;
   for (let i = 0; i <= steps; i++) {
     const angle = (i / steps) * totalTurns * Math.PI * 2;
     const r = (i / steps) * maxRadius;
     const px = centerX + Math.cos(angle) * r;
     const py = centerY + Math.sin(angle) * r;
 
-    if (px < startX || px > endX || py < startY || py > endY) continue;
+    if (px < startX || px > endX || py < startY || py > endY) {
+      drawing = false;
+      continue;
+    }
 
-    if (i === 0) {
+    if (!drawing) {
       ctx.moveTo(px, py);
+      drawing = true;
     } else {
       ctx.lineTo(px, py);
     }
