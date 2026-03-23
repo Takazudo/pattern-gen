@@ -33,7 +33,69 @@ const paramDefs: ParamDef[] = [
     step: 0.01,
     defaultValue: 0.15,
   },
+  {
+    key: 'threadColors',
+    label: 'Thread Colors',
+    type: 'select',
+    options: [
+      { value: 1, label: '1 Thread' },
+      { value: 2, label: '2 Threads' },
+      { value: 3, label: '3 Threads' },
+    ],
+    defaultValue: 1,
+  },
+  {
+    key: 'gapIrregularity',
+    label: 'Gap Irregularity',
+    type: 'slider',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    defaultValue: 0,
+  },
+  {
+    key: 'threadThickness',
+    label: 'Thread Thickness',
+    type: 'slider',
+    min: 0.5,
+    max: 3.0,
+    step: 0.25,
+    defaultValue: 1.0,
+  },
+  {
+    key: 'motifRotation',
+    label: 'Motif Rotation',
+    type: 'select',
+    options: [
+      { value: 0, label: '0°' },
+      { value: 1, label: '90°' },
+      { value: 2, label: '180°' },
+      { value: 3, label: '270°' },
+    ],
+    defaultValue: 0,
+  },
 ];
+
+/** Creates a stitch function that handles color cycling and gap irregularity */
+function createStitcher(
+  ctx: CanvasRenderingContext2D,
+  colors: string[],
+  dashLen: number,
+  baseGap: number,
+  gapIrregularity: number,
+  rand: () => number,
+): () => void {
+  let idx = 0;
+  return () => {
+    ctx.strokeStyle = colors[idx % colors.length];
+    idx++;
+    if (gapIrregularity > 0) {
+      const variation = 1 + (rand() * 2 - 1) * gapIrregularity;
+      ctx.setLineDash([dashLen, baseGap * Math.max(0.2, variation)]);
+    }
+    ctx.stroke();
+  };
+}
 
 /**
  * Sashiko pattern — Japanese stitching patterns rendered as dashed lines.
@@ -66,44 +128,74 @@ export const sashiko: PatternGenerator = {
       ctx.fillRect(fx, fy, 1, 1);
     }
 
-    // Stitch color — pick one fg color
-    const stitchColor = fgColors[Math.floor(rand() * fgColors.length)];
+    // Thread colors — pick 1-3 colors from fg palette
+    const numColors = getParam(options, paramDefs, 'threadColors');
+    const stitchColors: string[] = [];
+    stitchColors.push(fgColors[Math.floor(rand() * fgColors.length)]);
+    for (let i = 1; i < numColors; i++) {
+      stitchColors.push(fgColors[Math.floor(rand() * fgColors.length)]);
+    }
 
     // Stitch parameters
     const cellSizeDivisor = getParam(options, paramDefs, 'cellSize');
     const baseSize = Math.max(width, height) / cellSizeDivisor;
     const cellSize = baseSize / zoom;
-    const stitchWidth = Math.max(1.5, cellSize * 0.04);
+    const thicknessMul = getParam(options, paramDefs, 'threadThickness');
+    const stitchWidth = Math.max(1.5, cellSize * 0.04) * thicknessMul;
     const stitchDashFactor = getParam(options, paramDefs, 'stitchDash');
     const dashLen = cellSize * stitchDashFactor;
     const gapLen = cellSize * 0.08;
+    const gapIrregularity = getParam(options, paramDefs, 'gapIrregularity');
 
-    ctx.strokeStyle = stitchColor;
     ctx.lineWidth = stitchWidth;
     ctx.lineCap = 'round';
     ctx.setLineDash([dashLen, gapLen]);
+
+    // Create stitch function for color cycling and gap irregularity
+    const stitch = createStitcher(ctx, stitchColors, dashLen, gapLen, gapIrregularity, rand);
 
     // Choose motif
     const motifs = ['asa-no-ha', 'nowaki', 'uroko', 'yabane'] as const;
     const motifIndex = getParam(options, paramDefs, 'motif');
     const motif = motifs[motifIndex];
 
+    // Apply motif rotation (0/90/180/270 degrees)
+    const rotation = getParam(options, paramDefs, 'motifRotation');
+    if (rotation > 0) {
+      ctx.save();
+      ctx.translate(width / 2, height / 2);
+      ctx.rotate((rotation * Math.PI) / 2);
+      ctx.translate(-width / 2, -height / 2);
+    }
+
+    // Extra cells for 90/270 rotation to ensure full canvas coverage.
+    // Nowaki rows are spaced at arcRadius (cellSize/2), so needs 2x extra cells.
+    const extra = (() => {
+      if (rotation !== 1 && rotation !== 3) return 0;
+      const rowSpacing = motif === 'nowaki' ? cellSize / 2 : cellSize;
+      return Math.ceil(Math.abs(width - height) / 2 / rowSpacing) + 2;
+    })();
+
     const cols = Math.ceil(width / cellSize) + 2;
     const rows = Math.ceil(height / cellSize) + 2;
 
     switch (motif) {
       case 'asa-no-ha':
-        drawAsaNoHa(ctx, width, height, cellSize, cols, rows);
+        drawAsaNoHa(ctx, cellSize, cols, rows, extra, stitch);
         break;
       case 'nowaki':
-        drawNowaki(ctx, width, height, cellSize, cols, rows);
+        drawNowaki(ctx, cellSize, cols, rows, extra, stitch);
         break;
       case 'uroko':
-        drawUroko(ctx, width, height, cellSize, cols, rows);
+        drawUroko(ctx, cellSize, cols, rows, extra, stitch);
         break;
       case 'yabane':
-        drawYabane(ctx, width, height, cellSize, cols, rows);
+        drawYabane(ctx, cellSize, cols, rows, extra, stitch);
         break;
+    }
+
+    if (rotation > 0) {
+      ctx.restore();
     }
 
     // Reset line dash
@@ -114,16 +206,16 @@ export const sashiko: PatternGenerator = {
 /** Asa-no-ha (hemp leaf) — six-pointed star formed by triangular divisions */
 function drawAsaNoHa(
   ctx: CanvasRenderingContext2D,
-  _width: number,
-  _height: number,
   cellSize: number,
   cols: number,
   rows: number,
+  extra: number,
+  stitch: () => void,
 ): void {
   const half = cellSize / 2;
 
-  for (let row = -1; row <= rows; row++) {
-    for (let col = -1; col <= cols; col++) {
+  for (let row = -1 - extra; row <= rows + extra; row++) {
+    for (let col = -1 - extra; col <= cols + extra; col++) {
       const x = col * cellSize;
       const y = row * cellSize;
 
@@ -140,7 +232,7 @@ function drawAsaNoHa(
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(ex, ey);
-        ctx.stroke();
+        stitch();
       }
 
       // Diamond outline around cell
@@ -150,7 +242,7 @@ function drawAsaNoHa(
       ctx.lineTo(cx, y + cellSize);
       ctx.lineTo(x, cy);
       ctx.closePath();
-      ctx.stroke();
+      stitch();
     }
   }
 }
@@ -158,18 +250,18 @@ function drawAsaNoHa(
 /** Nowaki (waves) — concentric arcs in alternating rows */
 function drawNowaki(
   ctx: CanvasRenderingContext2D,
-  _width: number,
-  _height: number,
   cellSize: number,
   cols: number,
   rows: number,
+  extra: number,
+  stitch: () => void,
 ): void {
   const arcRadius = cellSize / 2;
 
-  for (let row = -1; row <= rows * 2; row++) {
+  for (let row = -1 - extra; row <= rows * 2 + extra; row++) {
     const yOff = row % 2 === 0 ? 0 : cellSize / 2;
 
-    for (let col = -1; col <= cols + 1; col++) {
+    for (let col = -1 - extra; col <= cols + 1 + extra; col++) {
       const cx = col * cellSize + yOff;
       const cy = row * arcRadius;
 
@@ -178,7 +270,7 @@ function drawNowaki(
         const arcR = arcRadius * (r / 3);
         ctx.beginPath();
         ctx.arc(cx, cy, arcR, 0, Math.PI);
-        ctx.stroke();
+        stitch();
       }
     }
   }
@@ -187,18 +279,18 @@ function drawNowaki(
 /** Uroko (scales) — overlapping triangular scales */
 function drawUroko(
   ctx: CanvasRenderingContext2D,
-  _width: number,
-  _height: number,
   cellSize: number,
   cols: number,
   rows: number,
+  extra: number,
+  stitch: () => void,
 ): void {
   const triH = cellSize * 0.866; // height of equilateral triangle
 
-  for (let row = -1; row <= rows + 1; row++) {
+  for (let row = -1 - extra; row <= rows + 1 + extra; row++) {
     const xOff = row % 2 === 0 ? 0 : cellSize / 2;
 
-    for (let col = -1; col <= cols + 1; col++) {
+    for (let col = -1 - extra; col <= cols + 1 + extra; col++) {
       const x = col * cellSize + xOff;
       const y = row * triH * 0.5;
 
@@ -208,7 +300,7 @@ function drawUroko(
       ctx.lineTo(x + cellSize / 2, y - triH * 0.5);
       ctx.lineTo(x + cellSize, y);
       ctx.closePath();
-      ctx.stroke();
+      stitch();
 
       // Downward triangle
       ctx.beginPath();
@@ -216,7 +308,7 @@ function drawUroko(
       ctx.lineTo(x + cellSize / 2, y + triH * 0.5);
       ctx.lineTo(x + cellSize, y);
       ctx.closePath();
-      ctx.stroke();
+      stitch();
     }
   }
 }
@@ -224,19 +316,19 @@ function drawUroko(
 /** Yabane (arrow feathers) — chevron/arrow patterns in rows */
 function drawYabane(
   ctx: CanvasRenderingContext2D,
-  _width: number,
-  _height: number,
   cellSize: number,
   cols: number,
   rows: number,
+  extra: number,
+  stitch: () => void,
 ): void {
   const arrowW = cellSize;
   const arrowH = cellSize * 0.6;
 
-  for (let row = -1; row <= rows + 1; row++) {
+  for (let row = -1 - extra; row <= rows + 1 + extra; row++) {
     const xOff = row % 2 === 0 ? 0 : arrowW / 2;
 
-    for (let col = -1; col <= cols + 1; col++) {
+    for (let col = -1 - extra; col <= cols + 1 + extra; col++) {
       const x = col * arrowW + xOff;
       const y = row * arrowH;
 
@@ -245,14 +337,14 @@ function drawYabane(
       ctx.moveTo(x, y);
       ctx.lineTo(x + arrowW / 2, y + arrowH / 2);
       ctx.lineTo(x, y + arrowH);
-      ctx.stroke();
+      stitch();
 
       // Right half of arrow
       ctx.beginPath();
       ctx.moveTo(x + arrowW, y);
       ctx.lineTo(x + arrowW / 2, y + arrowH / 2);
       ctx.lineTo(x + arrowW, y + arrowH);
-      ctx.stroke();
+      stitch();
 
       // Horizontal lines within arrow
       const numLines = 3;
@@ -263,7 +355,7 @@ function drawYabane(
         ctx.beginPath();
         ctx.moveTo(x + indent, ly);
         ctx.lineTo(x + arrowW - indent, ly);
-        ctx.stroke();
+        stitch();
       }
     }
   }
