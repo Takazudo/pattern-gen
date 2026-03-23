@@ -40,7 +40,7 @@ export const phyllotaxis: PatternGenerator = {
 
     // Random offset for variation
     const angleOffset = rand() * Math.PI * 2;
-    const colorModeValue = options.params?.colorMode ?? (rand() < 0.5 ? 0 : 1);
+    const colorModeValue = getParam(options, paramDefs, 'colorMode');
     const dotScale = getParam(options, paramDefs, 'dotScale');
 
     for (let n = 1; n <= numDots; n++) {

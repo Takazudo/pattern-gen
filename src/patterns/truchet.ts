@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { darken, lighten } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'slider', key: 'gridDivisions', label: 'Grid Divisions', min: 6, max: 24, step: 1, defaultValue: 12 },
@@ -36,15 +37,8 @@ export const truchet: PatternGenerator = {
 
     // Pick 2-3 arc colors from palette
     const numColors = 2 + Math.floor(rand() * 2);
-    const arcColors: string[] = [];
-    const shuffled = [...fgColors];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    for (let i = 0; i < numColors; i++) {
-      arcColors.push(shuffled[i]);
-    }
+    const shuffled = shuffleArray(fgColors, rand);
+    const arcColors = shuffled.slice(0, numColors);
 
     const cols = Math.ceil(width / tileSize) + 2;
     const rows = Math.ceil(height / tileSize) + 2;

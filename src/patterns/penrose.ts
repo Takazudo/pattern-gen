@@ -109,6 +109,10 @@ export const penrose: PatternGenerator = {
       triangles = newTriangles;
     }
 
+    // Pre-fetch constant params before loop
+    const edgeDarkness = getParam(options, paramDefs, 'edgeDarkness');
+    const penroseLineWidth = getParam(options, paramDefs, 'lineWidth');
+
     // Draw all triangles
     for (const tri of triangles) {
       const { type, a, b, c } = tri;
@@ -145,9 +149,8 @@ export const penrose: PatternGenerator = {
       ctx.fill();
 
       // Thin edge lines
-      const edgeDarkness = getParam(options, paramDefs, 'edgeDarkness');
       ctx.strokeStyle = darken(fillColor, edgeDarkness);
-      ctx.lineWidth = getParam(options, paramDefs, 'lineWidth');
+      ctx.lineWidth = penroseLineWidth;
       ctx.stroke();
     }
   },

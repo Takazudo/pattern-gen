@@ -2,9 +2,16 @@
  * Color manipulation utilities for pattern generators.
  */
 
-/** Parse a hex color string to [r, g, b] (0-255) */
+/** Parse a hex color string to [r, g, b] (0-255). Supports #rgb and #rrggbb. */
 export function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
+  let h = hex.replace('#', '');
+  // Expand 3-digit shorthand (#fff → ffffff)
+  if (/^[0-9a-fA-F]{3}$/.test(h)) {
+    h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  }
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) {
+    throw new Error(`Invalid hex color: "${hex}"`);
+  }
   return [
     parseInt(h.slice(0, 2), 16),
     parseInt(h.slice(2, 4), 16),

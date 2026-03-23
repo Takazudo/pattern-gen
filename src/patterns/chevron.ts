@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { lerpColor } from '../core/color-utils.js';
 import { getParam } from '../core/param-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 
 const paramDefs: ParamDef[] = [
   {
@@ -50,11 +51,7 @@ export const chevron: PatternGenerator = {
 
     // Build color sequence by cycling and shuffling palette colors
     const colorSequence: string[] = [];
-    const shuffled = [...fgColors];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+    const shuffled = shuffleArray(fgColors, rand);
     // Repeat enough to fill the canvas
     const rowCount = Math.ceil(height / rowHeight) + 4;
     for (let i = 0; i < rowCount; i++) {

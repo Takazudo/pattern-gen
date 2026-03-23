@@ -19,6 +19,7 @@ export type { PatternGenerator, PatternOptions, GenerateOptions, ParamDef, Slide
 
 // Param utilities
 export { getParam } from './core/param-utils.js';
+export { shuffleArray } from './core/array-utils.js';
 
 // Pattern registry
 export { patternRegistry, patternsByName, getPatternNames } from './patterns/index.js';

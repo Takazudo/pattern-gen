@@ -40,6 +40,9 @@ export const patchwork: PatternGenerator = {
     // Quilt sub-pattern functions
     const patterns = [drawLogCabin, drawNinePatch, drawPinwheel, drawHalfSquareTriangle];
 
+    const colorVariation = getParam(options, paramDefs, 'colorVariation');
+    const borderWidth = getParam(options, paramDefs, 'borderWidth');
+
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const x = col * blockSize;
@@ -56,14 +59,13 @@ export const patchwork: PatternGenerator = {
         ctx.rect(x, y, blockSize, blockSize);
         ctx.clip();
 
-        const colorVariation = getParam(options, paramDefs, 'colorVariation');
         patterns[patternIdx](ctx, x, y, blockSize, [bg, color1, color2, color3], rand, colorVariation);
 
         ctx.restore();
 
         // Block border (quilt stitching)
         ctx.strokeStyle = darken(bg, 0.8);
-        ctx.lineWidth = getParam(options, paramDefs, 'borderWidth');
+        ctx.lineWidth = borderWidth;
         ctx.strokeRect(x, y, blockSize, blockSize);
       }
     }

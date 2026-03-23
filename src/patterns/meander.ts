@@ -64,7 +64,7 @@ export const meander: PatternGenerator = {
     const lineWidth = Math.max(2, getParam(options, paramDefs, 'lineWidth'));
 
     // Number of concentric frames (1-3)
-    const numFrames = options.params?.frameCount ?? 1 + Math.floor(rand() * 3);
+    const numFrames = getParam(options, paramDefs, 'frameCount');
     const frameSpacing = unit * 5;
 
     ctx.lineCap = 'square';

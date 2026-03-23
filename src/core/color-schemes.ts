@@ -262,7 +262,7 @@ export const COLOR_SCHEMES: ColorScheme[] = [
   {
     name: 'Solarized Light',
     palette: [
-      '#073642',
+      '#fdf6e3',
       '#dc322f',
       '#859900',
       '#b58900',

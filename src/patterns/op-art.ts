@@ -1,4 +1,5 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'select', key: 'shapeType', label: 'Shape Type', options: [{ value: 0, label: 'Circles' }, { value: 1, label: 'Squares' }], defaultValue: 0 },
@@ -28,7 +29,7 @@ export const opArt: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Choose shape type: circles or squares
-    const shapeTypeValue = options.params?.shapeType ?? (rand() < 0.6 ? 0 : 1);
+    const shapeTypeValue = getParam(options, paramDefs, 'shapeType');
     const useCircles = shapeTypeValue === 0;
 
     // Center of the distortion (1-2 bump points)
@@ -38,14 +39,12 @@ export const opArt: PatternGenerator = {
       bumps.push({
         x: width * (0.2 + rand() * 0.6),
         y: height * (0.2 + rand() * 0.6),
-        strength: options.params?.bumpStrength ?? (0.3 + rand() * 0.5),
+        strength: getParam(options, paramDefs, 'bumpStrength'),
       });
     }
 
     const maxDim = Math.max(width, height);
-    const baseSpacing = options.params?.baseSpacing
-      ? options.params.baseSpacing / zoom
-      : (4 + rand() * 4) / zoom; // 4-8px
+    const baseSpacing = getParam(options, paramDefs, 'baseSpacing') / zoom;
     const numRings = Math.ceil(maxDim / baseSpacing) + 10;
 
     // Center of the concentric shapes

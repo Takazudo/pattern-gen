@@ -36,8 +36,8 @@ export const reactionDiffusion: PatternGenerator = {
     const gridH = Math.min(120, Math.round(baseGridSize * zoom));
 
     // Gray-Scott parameters — chosen for interesting patterns
-    const feed = options.params?.feedRate ?? (0.037 + rand() * 0.018); // 0.037-0.055
-    const kill = options.params?.killRate ?? (0.06 + rand() * 0.006);  // 0.06-0.066
+    const feed = getParam(options, paramDefs, 'feedRate');
+    const kill = getParam(options, paramDefs, 'killRate');
     const dA = 1.0;
     const dB = 0.5;
     const dt = 1.0;
