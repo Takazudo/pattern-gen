@@ -85,8 +85,7 @@ export const sashiko: PatternGenerator = {
 
     // Choose motif
     const motifs = ['asa-no-ha', 'nowaki', 'uroko', 'yabane'] as const;
-    const motifValue = getParam(options, paramDefs, 'motif');
-    const motifIndex = Math.max(0, Math.min(motifs.length - 1, Math.floor(motifValue)));
+    const motifIndex = getParam(options, paramDefs, 'motif');
     const motif = motifs[motifIndex];
 
     const cols = Math.ceil(width / cellSize) + 2;

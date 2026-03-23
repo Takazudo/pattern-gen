@@ -6,6 +6,7 @@ import { hexToRgb, rgbToHex, lerpColor, darken, lighten } from '../src/core/colo
 import { COLOR_SCHEMES, normalizeSchemeKey, colorSchemesByKey } from '../src/core/color-schemes.js';
 import { patternRegistry, patternsByName, getPatternNames } from '../src/patterns/index.js';
 import { getParam } from '../src/core/param-utils.js';
+import { shuffleArray } from '../src/core/array-utils.js';
 import type { ParamDef, PatternOptions } from '../src/core/types.js';
 
 describe('hashString', () => {
@@ -78,6 +79,18 @@ describe('color-utils', () => {
     expect(hexToRgb('#ff0000')).toEqual([255, 0, 0]);
     expect(hexToRgb('#00ff00')).toEqual([0, 255, 0]);
     expect(hexToRgb('#2d2d2d')).toEqual([45, 45, 45]);
+  });
+
+  it('hexToRgb supports 3-digit shorthand', () => {
+    expect(hexToRgb('#fff')).toEqual([255, 255, 255]);
+    expect(hexToRgb('#f00')).toEqual([255, 0, 0]);
+    expect(hexToRgb('#abc')).toEqual([170, 187, 204]);
+  });
+
+  it('hexToRgb throws on invalid hex', () => {
+    expect(() => hexToRgb('#xyz')).toThrow('Invalid hex color');
+    expect(() => hexToRgb('#12345')).toThrow('Invalid hex color');
+    expect(() => hexToRgb('not-a-color')).toThrow('Invalid hex color');
   });
 
   it('rgbToHex converts correctly', () => {
@@ -196,5 +209,54 @@ describe('getParam', () => {
 
   it('throws for unknown key', () => {
     expect(() => getParam(baseOptions, testDefs, 'nonexistent')).toThrow('Unknown param key');
+  });
+
+  it('clamps slider values to min/max bounds', () => {
+    const opts = { ...baseOptions, params: { size: 200 } };
+    expect(getParam(opts, testDefs, 'size')).toBe(100); // clamped to max
+    const opts2 = { ...baseOptions, params: { size: -10 } };
+    expect(getParam(opts2, testDefs, 'size')).toBe(1); // clamped to min
+  });
+
+  it('falls back to default for invalid select values', () => {
+    const opts = { ...baseOptions, params: { mode: 7 } };
+    expect(getParam(opts, testDefs, 'mode')).toBe(0); // default
+  });
+
+  it('accepts valid select values', () => {
+    const opts = { ...baseOptions, params: { mode: 1 } };
+    expect(getParam(opts, testDefs, 'mode')).toBe(1);
+  });
+
+  it('falls back to default for invalid toggle values', () => {
+    const toggleDefs: ParamDef[] = [
+      { key: 'flag', label: 'Flag', type: 'toggle', defaultValue: 0 },
+    ];
+    const opts = { ...baseOptions, params: { flag: 5 } };
+    expect(getParam(opts, toggleDefs, 'flag')).toBe(0); // default
+  });
+});
+
+describe('shuffleArray', () => {
+  it('returns a new array with the same elements', () => {
+    const rand = createRandom(42);
+    const input = [1, 2, 3, 4, 5];
+    const result = shuffleArray(input, rand);
+    expect(result).toHaveLength(5);
+    expect(result.sort()).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('does not modify the original array', () => {
+    const rand = createRandom(42);
+    const input = [1, 2, 3, 4, 5];
+    shuffleArray(input, rand);
+    expect(input).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('is deterministic with same seed', () => {
+    const r1 = createRandom(42);
+    const r2 = createRandom(42);
+    const input = [1, 2, 3, 4, 5];
+    expect(shuffleArray(input, r1)).toEqual(shuffleArray(input, r2));
   });
 });

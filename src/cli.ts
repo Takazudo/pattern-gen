@@ -50,13 +50,16 @@ function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir
         if (options.zoom <= 0 || options.zoom > 100) fail('--zoom must be between 0 and 100');
         break;
       case '--bg': {
-        options.bg = args[++i];
-        if (!options.bg) fail('--bg requires a color value');
+        let bgInput = args[++i];
+        if (!bgInput) fail('--bg requires a color value');
+        // Normalize: ensure # prefix
+        if (!bgInput.startsWith('#')) bgInput = '#' + bgInput;
         // Validate hex color format
-        const bgHex = options.bg.replace('#', '');
+        const bgHex = bgInput.slice(1);
         if (!/^[0-9a-fA-F]{3}$/.test(bgHex) && !/^[0-9a-fA-F]{6}$/.test(bgHex)) {
           fail('--bg must be a valid hex color (e.g., #ff0000 or #f00)');
         }
+        options.bg = bgInput;
         break;
       }
       case '--color-scheme':

@@ -2,8 +2,10 @@ import type { ParamDef, PatternOptions } from './types.js';
 
 /**
  * Read a parameter value from options.params, falling back to the paramDef default.
- * Clamps slider values to their min/max bounds.
- * Patterns call this instead of reading hardcoded constants.
+ * Validates and clamps values based on param type:
+ * - slider: clamps to min/max bounds
+ * - select: falls back to default if value isn't a valid option
+ * - toggle: falls back to default if value isn't 0 or 1
  */
 export function getParam(
   options: PatternOptions,
@@ -17,10 +19,16 @@ export function getParam(
     ? options.params[key]
     : def.defaultValue;
 
-  // Clamp slider values to defined bounds
-  if (def.type === 'slider') {
-    return Math.max(def.min, Math.min(def.max, value));
+  switch (def.type) {
+    case 'slider':
+      return Math.max(def.min, Math.min(def.max, value));
+    case 'select': {
+      const validValues = def.options.map((o) => o.value);
+      return validValues.includes(value) ? value : def.defaultValue;
+    }
+    case 'toggle':
+      return (value === 0 || value === 1) ? value : def.defaultValue;
+    default:
+      return value;
   }
-
-  return value;
 }
