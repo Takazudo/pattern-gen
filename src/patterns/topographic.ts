@@ -42,11 +42,11 @@ export const topographic: PatternGenerator = {
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
-    for (let y = 0; y < height - 1; y++) {
-      for (let x = 0; x < width - 1; x++) {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
         const val = heightField[y * width + x];
-        const valRight = heightField[y * width + x + 1];
-        const valDown = heightField[(y + 1) * width + x];
+        const valRight = x < width - 1 ? heightField[y * width + x + 1] : val;
+        const valDown = y < height - 1 ? heightField[(y + 1) * width + x] : val;
 
         // Check for contour crossings with neighbors
         const levelVal = Math.floor((val + 1) / contourStep);

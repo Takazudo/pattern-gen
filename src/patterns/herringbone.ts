@@ -26,14 +26,10 @@ export const herringbone: PatternGenerator = {
     const brickH = brickW / 3;
 
     // Pre-generate per-brick color assignments for determinism
-    // Need enough for all bricks: 4 bricks per unit cell, (cols+4)*(rows+4) cells
-    const baseBrickW2 = Math.max(width, height) / 10;
-    const brickW2 = baseBrickW2 / zoom;
-    const brickH2 = brickW2 / 3;
-    const unitW2 = brickW2 + brickH2;
-    const unitH2 = brickH2 * 2;
-    const estCols = Math.ceil(width / unitW2) + 6;
-    const estRows = Math.ceil(height / unitH2) + 6;
+    const unitW = brickW + brickH;
+    const unitH = brickH * 2;
+    const estCols = Math.ceil(width / unitW) + 6;
+    const estRows = Math.ceil(height / unitH) + 6;
     const numColorVariations = estCols * estRows * 4 + 64;
     const colorVariations: string[] = [];
     for (let i = 0; i < numColorVariations; i++) {
@@ -46,10 +42,6 @@ export const herringbone: PatternGenerator = {
 
     // Gap between bricks
     const gap = brickH * 0.08;
-
-    // The herringbone unit: two bricks making a V
-    const unitW = brickW + brickH;
-    const unitH = brickH * 2;
 
     const cols = Math.ceil(width / unitW) + 3;
     const rows = Math.ceil(height / unitH) + 3;

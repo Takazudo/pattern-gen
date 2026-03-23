@@ -33,12 +33,12 @@ export const reactionDiffusion: PatternGenerator = {
     const dB = 0.5;
     const dt = 1.0;
 
-    // Initialize grids
+    // Initialize grids (use let for swapping)
     const size = gridW * gridH;
-    const a = new Float32Array(size).fill(1);
-    const b = new Float32Array(size).fill(0);
-    const nextA = new Float32Array(size);
-    const nextB = new Float32Array(size);
+    let a = new Float32Array(size).fill(1);
+    let b = new Float32Array(size).fill(0);
+    let nextA = new Float32Array(size);
+    let nextB = new Float32Array(size);
 
     // Seed random areas with chemical B
     const numSeeds = 3 + Math.floor(rand() * 5);
@@ -88,9 +88,9 @@ export const reactionDiffusion: PatternGenerator = {
           nextB[idx] = Math.max(0, Math.min(1, nextB[idx]));
         }
       }
-      // Swap
-      a.set(nextA);
-      b.set(nextB);
+      // Swap references instead of copying
+      [a, nextA] = [nextA, a];
+      [b, nextB] = [nextB, b];
     }
 
     // Render: map concentration of B to colors

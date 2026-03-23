@@ -123,21 +123,21 @@ export const celticKnot: PatternGenerator = {
     }
 
     function drawStrandHighlight(s: CurveSegment): void {
-      // Edge highlight
-      ctx.beginPath();
-      ctx.moveTo(s.x1, s.y1);
-      ctx.bezierCurveTo(s.cx1, s.cy1, s.cx2, s.cy2, s.x2, s.y2);
-      ctx.strokeStyle = withAlpha(lighten(s.color, 0.4), 0.3);
-      ctx.lineWidth = strandWidth * 0.3;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      // Dark border
+      // Dark border (drawn first, thicker, underneath)
       ctx.beginPath();
       ctx.moveTo(s.x1, s.y1);
       ctx.bezierCurveTo(s.cx1, s.cy1, s.cx2, s.cy2, s.x2, s.y2);
       ctx.strokeStyle = withAlpha(darken(s.color, 0.5), 0.2);
       ctx.lineWidth = strandWidth + 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Edge highlight (drawn second, thinner, on top)
+      ctx.beginPath();
+      ctx.moveTo(s.x1, s.y1);
+      ctx.bezierCurveTo(s.cx1, s.cy1, s.cx2, s.cy2, s.x2, s.y2);
+      ctx.strokeStyle = withAlpha(lighten(s.color, 0.4), 0.3);
+      ctx.lineWidth = strandWidth * 0.3;
       ctx.lineCap = 'round';
       ctx.stroke();
     }
