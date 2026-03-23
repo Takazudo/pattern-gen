@@ -7,6 +7,30 @@ import { patternsByName } from './patterns/index.js';
 import type { ColorScheme } from './core/color-schemes.js';
 import type { PatternOptions, GenerateOptions } from './core/types.js';
 
+/** Resolve a color scheme from name/seed, optionally overriding the background. */
+function resolveColorScheme(
+  schemeName: string | undefined,
+  seed: number,
+  bg?: string,
+): ColorScheme {
+  let scheme: ColorScheme;
+  if (schemeName) {
+    if (schemeName === 'random') {
+      scheme = COLOR_SCHEMES[seed % COLOR_SCHEMES.length];
+    } else {
+      const found = colorSchemesByKey.get(normalizeSchemeKey(schemeName));
+      if (!found) throw new Error(`Unknown color scheme: "${schemeName}"`);
+      scheme = found;
+    }
+  } else {
+    scheme = COLOR_SCHEMES[seed % COLOR_SCHEMES.length];
+  }
+  if (bg) {
+    scheme = { ...scheme, palette: [bg, ...scheme.palette.slice(1)] as ColorScheme['palette'] };
+  }
+  return scheme;
+}
+
 export interface RenderResult {
   /** PNG buffer of the rendered pattern */
   buffer: Buffer;
@@ -38,25 +62,7 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
 
   const seed = hashString(options.slug);
   const rand = createRandom(seed);
-
-  // Resolve color scheme
-  let scheme: ColorScheme;
-  if (options.colorScheme) {
-    if (options.colorScheme === 'random') {
-      scheme = COLOR_SCHEMES[seed % COLOR_SCHEMES.length];
-    } else {
-      const found = colorSchemesByKey.get(normalizeSchemeKey(options.colorScheme));
-      if (!found) throw new Error(`Unknown color scheme: "${options.colorScheme}"`);
-      scheme = found;
-    }
-  } else {
-    scheme = COLOR_SCHEMES[seed % COLOR_SCHEMES.length];
-  }
-
-  // Override bg if specified
-  if (options.bg) {
-    scheme = { ...scheme, palette: [options.bg, ...scheme.palette.slice(1)] as ColorScheme['palette'] };
-  }
+  const scheme = resolveColorScheme(options.colorScheme, seed, options.bg);
 
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');
@@ -115,23 +121,7 @@ export function renderPatternToCanvas(
 
   const seed = hashString(slug);
   const rand = createRandom(seed);
-
-  let scheme: ColorScheme;
-  if (options?.colorScheme) {
-    if (options.colorScheme === 'random') {
-      scheme = COLOR_SCHEMES[seed % COLOR_SCHEMES.length];
-    } else {
-      const found = colorSchemesByKey.get(normalizeSchemeKey(options.colorScheme));
-      if (!found) throw new Error(`Unknown color scheme: "${options.colorScheme}"`);
-      scheme = found;
-    }
-  } else {
-    scheme = COLOR_SCHEMES[seed % COLOR_SCHEMES.length];
-  }
-
-  if (options?.bg) {
-    scheme = { ...scheme, palette: [options.bg, ...scheme.palette.slice(1)] as ColorScheme['palette'] };
-  }
+  const scheme = resolveColorScheme(options?.colorScheme, seed, options?.bg);
 
   const patternOptions: PatternOptions = {
     width,

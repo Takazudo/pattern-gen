@@ -28,7 +28,7 @@ export const waveInterference: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Generate wave sources
-    const sourceCount = options.params?.sourceCount ?? (4 + Math.floor(rand() * 4));
+    const sourceCount = getParam(options, paramDefs, 'sourceCount');
     const baseFreq = getParam(options, paramDefs, 'frequency');
     const sources: { x: number; y: number; freq: number; phase: number }[] = [];
     for (let i = 0; i < sourceCount; i++) {

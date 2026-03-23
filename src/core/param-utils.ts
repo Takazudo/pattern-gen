@@ -9,7 +9,7 @@ export function getParam(
   paramDefs: ParamDef[],
   key: string,
 ): number {
-  if (options.params && key in options.params) {
+  if (options.params && Object.hasOwn(options.params, key)) {
     return options.params[key];
   }
   const def = paramDefs.find((d) => d.key === key);

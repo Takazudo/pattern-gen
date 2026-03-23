@@ -1,5 +1,6 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 
 /**
  * Equilateral triangle grid — ported from kumiko-gen's grid.ts
@@ -186,12 +187,8 @@ export const kumiko: PatternGenerator = {
     const canvasSize = Math.max(width, height) * 1.5; // overflow for rotation
     const triangles = generateGrid(canvasSize, divisions);
 
-    // Pick distinct sub-patterns (Fisher-Yates shuffle)
-    const shuffled = [...KUMIKO_SUB_PATTERNS];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+    // Pick distinct sub-patterns
+    const shuffled = shuffleArray(KUMIKO_SUB_PATTERNS, rand);
     const layers = shuffled.slice(0, layerCount);
 
     // Pick colors per layer

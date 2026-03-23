@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { withAlpha, lighten } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 
 const paramDefs: ParamDef[] = [
   {
@@ -56,15 +57,10 @@ export const islamicStar: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Choose star type: 6, 8, or 12 points
-    const starTypes = [6, 8, 12];
-    const points = options.params?.starPoints ?? starTypes[Math.floor(rand() * starTypes.length)];
+    const points = getParam(options, paramDefs, 'starPoints');
 
     // Pick 2-3 strand colors
-    const shuffled = [...fgColors];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+    const shuffled = shuffleArray(fgColors, rand);
     const numColors = 2 + Math.floor(rand() * 2);
     const strandColors = shuffled.slice(0, numColors);
 

@@ -1,6 +1,7 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
 import { getParam } from '../core/param-utils.js';
 import { withAlpha, darken, lighten } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 
 const paramDefs: ParamDef[] = [
   {
@@ -64,11 +65,7 @@ export const celticKnot: PatternGenerator = {
     const gapWidth = strandWidth + gapSize; // gap for under-crossings
 
     // Pick 2-3 knot colors
-    const shuffled = [...fgColors];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+    const shuffled = shuffleArray(fgColors, rand);
     const knotColors = shuffled.slice(0, 2 + Math.floor(rand() * 2));
 
     const cols = Math.ceil(width / cellSize) + 2;

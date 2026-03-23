@@ -34,7 +34,7 @@ export const guilloche: PatternGenerator = {
     const maxRadius = Math.min(width, height) * 0.4;
 
     // Number of overlaid curves
-    const numCurves = options.params?.curveCount ?? (2 + Math.floor(rand() * 2)); // 2-3
+    const numCurves = getParam(options, paramDefs, 'curveCount');
 
     for (let c = 0; c < numCurves; c++) {
       const color = fgColors[c % fgColors.length];
@@ -45,7 +45,7 @@ export const guilloche: PatternGenerator = {
       const R = maxRadius * (0.6 + rand() * 0.4); // Outer radius
       const rDivisor = 2 + Math.floor(rand() * 8);  // Makes r a rational fraction of R
       const r = R / rDivisor;
-      const penDistanceFactor = options.params?.penDistance ?? (0.4 + rand() * 0.8);
+      const penDistanceFactor = getParam(options, paramDefs, 'penDistance');
       const d = r * penDistanceFactor; // Pen distance from center of inner circle
 
       // Number of revolutions needed to complete the pattern

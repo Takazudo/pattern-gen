@@ -33,15 +33,13 @@ export const halftone: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Dot grid spacing
-    const dotSpacing = options.params?.dotSpacing
-      ? options.params.dotSpacing / zoom
-      : (8 + rand() * 6) / zoom; // 8-14px
+    const dotSpacing = getParam(options, paramDefs, 'dotSpacing') / zoom;
     const maxDotRadius = dotSpacing * 0.45;
     const noiseScale = 0.004 * zoom;
     const noiseOctaves = getParam(options, paramDefs, 'noiseOctaves');
 
     // Use 2-3 palette colors as channels, each with a slight rotation
-    const numChannels = options.params?.channelCount ?? (2 + Math.floor(rand() * 2));
+    const numChannels = getParam(options, paramDefs, 'channelCount');
     const channels: { color: string; angle: number }[] = [];
     const baseAngle = rand() * Math.PI;
     for (let i = 0; i < numChannels; i++) {

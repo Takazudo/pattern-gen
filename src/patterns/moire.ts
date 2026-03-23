@@ -1,4 +1,5 @@
 import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.js';
+import { getParam } from '../core/param-utils.js';
 import { withAlpha } from '../core/color-utils.js';
 
 const paramDefs: ParamDef[] = [
@@ -29,15 +30,11 @@ export const moire: PatternGenerator = {
     ctx.fillRect(0, 0, width, height);
 
     // Number of grid layers: 2 or 3
-    const numLayers = options.params?.layerCount ?? (2 + Math.floor(rand() * 2));
+    const numLayers = getParam(options, paramDefs, 'layerCount');
 
     // Line spacing and base angle
-    const baseSpacing = options.params?.lineSpacing
-      ? options.params.lineSpacing / zoom
-      : (6 + rand() * 6) / zoom; // 6-12px base spacing
-    const lineWidth = options.params?.lineWidth
-      ? Math.max(0.5, options.params.lineWidth / zoom)
-      : Math.max(0.5, (1 + rand() * 1.5) / zoom);
+    const baseSpacing = getParam(options, paramDefs, 'lineSpacing') / zoom;
+    const lineWidth = Math.max(0.5, getParam(options, paramDefs, 'lineWidth') / zoom);
     const baseAngle = rand() * Math.PI;
 
     // Diagonal of canvas for calculating line extent

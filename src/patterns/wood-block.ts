@@ -2,6 +2,7 @@ import type { ParamDef, PatternGenerator, PatternOptions } from '../core/types.j
 import { getParam } from '../core/param-utils.js';
 import { createNoise2D, fbm } from '../core/noise.js';
 import { hexToRgb, rgbToHex, darken } from '../core/color-utils.js';
+import { shuffleArray } from '../core/array-utils.js';
 
 const paramDefs: ParamDef[] = [
   { type: 'slider', key: 'gridDivisions', label: 'Grid Divisions', min: 10, max: 40, step: 1, defaultValue: 20 },
@@ -46,13 +47,9 @@ export const woodBlock: PatternGenerator = {
     const noiseScale = getParam(options, paramDefs, 'noiseScale') * zoom;
 
     // Choose gradient colors from palette for the mountain shapes
-    const numGradientColors = options.params?.gradientColors ?? (2 + Math.floor(rand() * 2));
+    const numGradientColors = getParam(options, paramDefs, 'gradientColors');
     const gradientColors: string[] = [];
-    const shuffled = [...fgColors];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+    const shuffled = shuffleArray(fgColors, rand);
     for (let i = 0; i < numGradientColors; i++) {
       gradientColors.push(shuffled[i]);
     }

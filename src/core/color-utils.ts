@@ -5,6 +5,9 @@
 /** Parse a hex color string to [r, g, b] (0-255) */
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) {
+    throw new Error(`Invalid hex color: "${hex}"`);
+  }
   return [
     parseInt(h.slice(0, 2), 16),
     parseInt(h.slice(2, 4), 16),
