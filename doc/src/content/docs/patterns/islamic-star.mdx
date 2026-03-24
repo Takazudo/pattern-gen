@@ -1,0 +1,38 @@
+---
+title: Islamic Star
+sidebar_position: 40
+---
+
+# Islamic Star
+
+Geometric star pattern with interlacing strands and over-under crossings, inspired by traditional Islamic geometric art.
+
+## Algorithm
+
+Islamic geometric art has been a defining feature of mosque architecture, tilework, and manuscript illumination for over a millennium. The patterns are constructed from pure geometric principles — circles, polygons, and their intersections — reflecting the Islamic tradition of expressing the infinite through mathematical beauty.
+
+The algorithm works as follows:
+
+1. **Grid construction**: A regular square grid is laid out across the canvas. Each cell contains one star centered at the cell midpoint. Cell size is derived from `gridDivisions` and adjusted by the zoom factor.
+
+2. **Star point generation**: For each cell center, N points (6, 8, or 12) are placed at equal angular intervals around a circle of radius `cellSize * 0.42`, starting from the top (−π/2 offset).
+
+3. **Strand connection by skip**: Points are connected by "skipping" — each point connects to the one `skip` positions away. The skip value depends on the star type: skip 2 for 6-pointed, skip 3 for 8-pointed, skip 5 for 12-pointed. This skip-connection is what creates the recognizable star shape rather than a simple polygon.
+
+4. **Over-under interlacing**: Strands alternate between "over" (odd index) and "under" (even index) layers. All under-strands are drawn first, then over-strands are drawn on top with a background-colored gap cut beneath them, creating the classic woven interlacing effect.
+
+5. **Visual refinements**: Each strand receives a lighter edge highlight for a 3D ribbon appearance. Decorative rosette outlines and small circles at star centers add finishing detail.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Star Points | 6, 8, 12 | 8 | Number of points per star. Higher counts produce denser, more intricate geometry. |
+| Grid Divisions | 4–20 | 8 | Number of cells across the longest canvas dimension. Lower values produce larger, fewer stars. |
+| Strand Width | 0.1–0.3 | 0.18 | Width of each strand as a fraction of the star radius. |
+
+## Visual Characteristics
+
+The pattern produces a field of interlocking star rosettes with a distinctly architectural quality. 6-pointed stars yield a simpler, more open hexagonal feel reminiscent of early Islamic tilework. 8-pointed stars (the default) produce the most recognizable form found in Alhambra-style decoration. 12-pointed stars create dense, intricate fields where strands overlap extensively.
+
+Strand width controls the visual weight — thin strands emphasize the geometric skeleton while thick strands fill the space and make the interlacing more prominent. The over-under rendering with background-colored gaps gives the pattern a convincing woven appearance. Colors are drawn from the palette with 2–3 strand colors shuffled randomly, producing subtle variation across the field.
