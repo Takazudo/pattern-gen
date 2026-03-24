@@ -55,6 +55,7 @@ function renderWithOffscreenTranslate(
   // Render pattern onto offscreen canvas
   const offscreen = createCanvas(SIZE, SIZE);
   const offCtx = offscreen.getContext('2d');
+  offCtx.clearRect(0, 0, SIZE, SIZE);
   pattern.generate(offCtx as unknown as CanvasRenderingContext2D, options);
 
   // Draw offscreen result onto main canvas with translate
@@ -90,10 +91,7 @@ function pixelsEqual(a: Uint8ClampedArray, b: Uint8ClampedArray): boolean {
 }
 
 /** Count how many pixels differ between two image data arrays */
-function countDifferentPixels(
-  a: Uint8ClampedArray,
-  b: Uint8ClampedArray,
-): number {
+function countDifferentPixels(a: Uint8ClampedArray, b: Uint8ClampedArray): number {
   let count = 0;
   for (let i = 0; i < a.length; i += 4) {
     if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) {
@@ -149,19 +147,14 @@ describe('zoom scales across multiple patterns', () => {
 // ---------------------------------------------------------------------------
 describe('translate shifts canvas-drawn patterns', () => {
   it('chevron shifted by (50,0) moves pixel content rightward', () => {
-    const opts = makeOptions();
-    const noTranslate = renderWithOffscreenTranslate('chevron', opts, 0, 0);
-
-    // Use a fresh PRNG for the translated render to keep it deterministic
-    const optsForTranslated = makeOptions();
+    const noTranslate = renderWithOffscreenTranslate('chevron', makeOptions(), 0, 0);
     const translated = renderWithOffscreenTranslate(
       'chevron',
-      optsForTranslated,
+      makeOptions(),
       50,
       0,
     );
 
-    // The images should differ overall (shifted content)
     expect(pixelsEqual(noTranslate, translated)).toBe(false);
 
     // Pixel at (50,0) in the translated image should match pixel at (0,0)
@@ -223,18 +216,10 @@ describe('translate shifts canvas-drawn patterns', () => {
 // ---------------------------------------------------------------------------
 describe('putImageData patterns respond to offscreen+drawImage translate', () => {
   it('domain-warp shifted by (50,0) via offscreen canvas moves content right', () => {
-    const opts = makeOptions();
-    const noTranslate = renderWithOffscreenTranslate(
-      'domain-warp',
-      opts,
-      0,
-      0,
-    );
-
-    const optsForTranslated = makeOptions();
+    const noTranslate = renderWithOffscreenTranslate('domain-warp', makeOptions(), 0, 0);
     const translated = renderWithOffscreenTranslate(
       'domain-warp',
-      optsForTranslated,
+      makeOptions(),
       50,
       0,
     );
