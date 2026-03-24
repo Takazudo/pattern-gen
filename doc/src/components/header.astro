@@ -47,9 +47,14 @@ const activeNavPath = settings.headerNav
 
   <a
     href={withBase(isNonDefaultLocale ? `/${lang}/` : "/")}
-    class="whitespace-nowrap text-subheading font-bold text-fg hover:underline focus:underline shrink-0"
+    class="flex items-center gap-hsp-2xs whitespace-nowrap text-subheading font-normal font-futura text-fg hover:underline focus:underline shrink-0"
     data-header-logo
   >
+    <span
+      class="inline-block h-7 w-7 shrink-0"
+      style={`background-color: currentColor; -webkit-mask-image: url(${withBase("/img/logo.svg")}); mask-image: url(${withBase("/img/logo.svg")}); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;`}
+      aria-hidden="true"
+    ></span>
     {settings.siteName}
   </a>
 
@@ -73,7 +78,7 @@ const activeNavPath = settings.headerNav
             aria-current={isActive ? "page" : undefined}
             data-nav-item
             class:list={[
-              "px-hsp-md py-vsp-2xs text-small font-medium transition-colors shrink-0",
+              "px-hsp-md py-vsp-2xs text-small font-medium font-futura transition-colors shrink-0",
               isActive
                 ? "bg-fg text-bg"
                 : "text-muted hover:underline focus:underline",
@@ -88,7 +93,7 @@ const activeNavPath = settings.headerNav
     <div class="relative shrink-0" data-nav-more style="display:none">
       <button
         type="button"
-        class="px-hsp-md py-vsp-2xs text-small font-medium text-muted hover:underline cursor-pointer"
+        class="px-hsp-md py-vsp-2xs text-small font-medium font-futura text-muted hover:underline cursor-pointer"
         data-nav-more-toggle
         aria-expanded="false"
       >

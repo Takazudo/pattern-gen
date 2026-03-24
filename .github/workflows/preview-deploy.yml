@@ -68,9 +68,9 @@ jobs:
 
       - name: Prepare deploy directory
         run: |
-          mkdir -p deploy/pj/pattern-gen
-          cp -r packages/pattern-gen-viewer/dist/. deploy/pj/pattern-gen/
-          cp -r doc/dist/. deploy/pj/pattern-gen/doc/
+          mkdir -p deploy/pj/pattern-gen/app
+          cp -r doc/dist/. deploy/pj/pattern-gen/
+          cp -r packages/pattern-gen-viewer/dist/. deploy/pj/pattern-gen/app/
           echo '/ /pj/pattern-gen/ 302' > deploy/_redirects
 
       - name: Deploy to Cloudflare Pages
@@ -145,8 +145,8 @@ jobs:
               '',
               `| Site | URL |`,
               `|---|---|`,
-              `| Viewer | ${deployUrl}/pj/pattern-gen/ |`,
-              `| Doc | ${deployUrl}/pj/pattern-gen/doc/ |`,
+              `| Doc | ${deployUrl}/pj/pattern-gen/ |`,
+              `| Viewer | ${deployUrl}/pj/pattern-gen/app/ |`,
               '',
               `Built from \`${branch}\` @ \`${shortSha}\``,
             ].join('\n');
