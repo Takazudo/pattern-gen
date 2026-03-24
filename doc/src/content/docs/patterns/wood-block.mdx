@@ -1,0 +1,35 @@
+---
+title: Wood Block
+sidebar_position: 10
+---
+
+# Wood Block
+
+Diamond-rotated square grid with noise-driven color gradients forming mountain-like color fields, inspired by wooden block wall art.
+
+## Algorithm
+
+The pattern creates a grid of diamond-shaped blocks (squares rotated 45 degrees) colored by a noise-based gradient field:
+
+1. **Diamond grid layout**: A regular square grid is rotated 45 degrees so each cell appears as a diamond. Grid coordinates are transformed using cos(45°) and sin(45°) rotation, centered on the canvas. The grid extends beyond canvas bounds to ensure full coverage after rotation.
+
+2. **Gradient color field**: Multiple "gradient centers" are placed at random positions on the canvas, each assigned a color from the palette. For every block, the algorithm finds the two nearest centers and blends their colors using an FBM (fractal Brownian motion) noise value sampled at the block's position. This creates smooth, flowing color transitions across the surface — the "mountain" shapes.
+
+3. **Distance-based brightness**: Blocks farther from their nearest gradient center fade toward the background color. A brightness factor (0.3 to 1.0) is computed from the distance ratio, and distant blocks are additionally blended with the background to create natural falloff.
+
+4. **Per-block wood grain variation**: Each block receives a small random brightness multiplier (0.9–1.1) to simulate the subtle uniqueness of individual wooden blocks.
+
+5. **3D depth effect**: Each diamond is drawn with a slight offset shadow behind it, edge highlights on the top-left edges (lighter), and darkened strokes on the bottom-right edges, creating a relief-like 3D appearance.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Grid Divisions | 10–40 | 20 | Number of blocks across the longest canvas dimension. Higher values produce smaller, more numerous blocks. |
+| Noise Scale | 0.001–0.01 | 0.003 | Scale of the FBM noise field controlling color blending. Lower values create broader, smoother gradient regions. |
+| Gradient Colors | 2–4 | 2 | Number of distinct color centers (mountains). More centers produce more varied color regions. |
+| Shadow Intensity | 0.2–1.0 | 0.6 | How dark the shadow behind each block is. Higher values create stronger 3D depth. |
+
+## Visual Characteristics
+
+The pattern produces a mosaic of diamond tiles with smooth, organic color gradients flowing across the surface — reminiscent of wooden block wall installations where individual blocks are stained in coordinated color waves. At low Grid Divisions, the diamonds are large and the gradient structure is clearly visible as broad color sweeps. At high divisions, the texture becomes finer and the overall gradient field dominates over individual block shapes. Increasing Gradient Colors adds more distinct color peaks, creating a richer, more complex color landscape. The Shadow Intensity parameter controls the perceived depth — at maximum the blocks appear to pop out significantly from the surface, while at minimum the pattern flattens to a nearly 2D mosaic.
