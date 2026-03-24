@@ -1,0 +1,42 @@
+---
+title: Celtic Knot
+sidebar_position: 42
+---
+
+# Celtic Knot
+
+Interlacing knotwork with smooth Bézier curves and over-under crossings on a regular grid.
+
+## Algorithm
+
+Celtic knotwork is a form of ornamental art developed in the early medieval period across the British Isles and Ireland, found extensively in illuminated manuscripts like the Book of Kells and on carved stone crosses. The patterns feature continuous interlacing bands that weave over and under each other with no beginning or end.
+
+The algorithm works as follows:
+
+1. **Grid layout**: A regular square grid is established across the canvas. Each cell is sized by dividing the longest canvas dimension by `gridDivisions`, then adjusting for zoom.
+
+2. **Crossing map generation**: For each grid intersection, a boolean value is randomly assigned — `true` means the horizontal strand crosses over the vertical one at that point, `false` means the vertical strand is on top. This random assignment creates the varied weaving pattern.
+
+3. **Bézier curve segments**: Through each cell, two curves pass — one horizontal-dominant and one vertical-dominant. Each curve is a cubic Bézier with control points offset by 30% of the half-cell size, introducing a gentle S-curve wobble that gives the strands their organic, flowing quality rather than rigid straight lines.
+
+4. **Three-pass rendering**: The interlacing effect is achieved through careful draw order:
+   - **Under-strands** are drawn first with a dark border highlight (wider stroke) and a lighter edge highlight, then the colored strand itself.
+   - **Over-strands** first draw a background-colored gap (wider than the strand) to cut through the under-strands, then the border highlights, then the colored strand on top.
+
+5. **Decorative details**: Small semi-transparent circles are drawn at grid intersections as ornamental knot points. Colors alternate by grid position using a checkerboard-like scheme with 2–3 randomly selected knot colors.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Grid Divisions | 5–30 | 10 | Number of cells across the longest axis. More divisions create finer, denser knotwork. |
+| Strand Width | 0.1–0.3 | 0.15 | Width of each strand as a fraction of cell size. |
+| Gap Size | 2–15 | 4 | Pixel clearance added around over-strands where they cross under-strands. Larger gaps make crossings more visible. |
+
+## Visual Characteristics
+
+The pattern produces an endless field of interwoven ribbon-like strands with a distinctly Celtic character. The Bézier curves give the strands a smooth, flowing quality that avoids the rigid angularity of grid-based patterns, while the consistent over-under crossings create a convincing woven textile appearance.
+
+Strand width is the primary visual lever — thin strands create delicate lacework, while thick strands produce bold, dense knotwork. The gap size parameter controls how clearly the over-under crossings read; larger gaps separate the layers more dramatically. Color alternation by grid position creates a natural visual rhythm, and the dark border / light edge highlights give each strand a subtle 3D ribbon effect.
+
+Lower grid divisions (5–8) produce large-scale, easily readable knots suitable for backgrounds, while higher values (20–30) create intricate, carpet-like density.
