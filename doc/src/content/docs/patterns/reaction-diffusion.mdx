@@ -1,0 +1,47 @@
+---
+title: Reaction Diffusion
+sidebar_position: 60
+---
+
+# Reaction Diffusion
+
+Gray-Scott reaction-diffusion simulation that creates organic spots, stripes, and maze-like Turing patterns by simulating two chemical species reacting and diffusing on a grid.
+
+## Algorithm
+
+The pattern implements the Gray-Scott model, a well-known reaction-diffusion system that produces a wide variety of self-organizing patterns from simple rules.
+
+### Initialization
+
+1. A 2D grid is created with two chemical concentrations: substance **A** (initialized to 1.0 everywhere) and substance **B** (initialized to 0.0).
+2. Several circular seed regions (3–7 seeds, radius 2–5 cells) are placed at random positions with **B** set to 1.0. The grid uses toroidal (wrap-around) boundary conditions.
+
+### Simulation Loop
+
+For each iteration (up to 5000 steps), every cell is updated using the Gray-Scott equations:
+
+- **Laplacian** (5-point stencil): For each cell, the discrete Laplacian is computed from its four orthogonal neighbors: `∇²A = A_left + A_right + A_up + A_down − 4·A_center` (same for B).
+- **Reaction-diffusion update**:
+  - `A' = A + (dA·∇²A − A·B² + f·(1 − A))·dt`
+  - `B' = B + (dB·∇²B + A·B² − (k + f)·B)·dt`
+- Constants: diffusion rates `dA = 1.0`, `dB = 0.5`, time step `dt = 1.0`.
+- Values are clamped to [0, 1] after each step. Grid buffers are swapped (double-buffering) to avoid allocation overhead.
+
+The **feed rate** (f) controls how quickly substance A is replenished, while the **kill rate** (k) controls how quickly substance B is removed. Together, they determine whether the pattern forms spots, stripes, waves, or labyrinthine structures.
+
+### Rendering
+
+The final concentration of **B** at each grid cell is mapped to colors. Values below 0.05 render as background. Higher values are mapped across the palette with linear interpolation between adjacent colors, producing smooth color gradients that highlight the pattern structure.
+
+## Parameters
+
+| Parameter  | Range        | Default | Description                                               |
+| ---------- | ------------ | ------- | --------------------------------------------------------- |
+| Feed Rate  | 0.01 – 0.08 | 0.046   | Rate at which substance A is replenished                  |
+| Kill Rate  | 0.03 – 0.08 | 0.063   | Rate at which substance B decays                          |
+| Iterations | 500 – 5000  | 2500    | Number of simulation steps — more iterations = finer form |
+| Grid Size  | 40 – 120    | 100     | Resolution of the simulation grid (capped at 120)         |
+
+## Visual Characteristics
+
+Produces organic, nature-inspired patterns reminiscent of animal coat markings (leopard spots, zebra stripes), coral formations, and bacterial colony growth. The feed/kill parameter space contains distinct regions that produce qualitatively different outputs — from isolated spots to branching worms to labyrinthine mazes. These are known as Turing patterns, first theorized by Alan Turing in 1952 as a mechanism for biological morphogenesis.
