@@ -32,6 +32,7 @@ function generateOnCanvas(
   translateX: number,
   translateY: number,
   userOverrides: Record<string, number>,
+  useTranslate: boolean,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -56,28 +57,33 @@ function generateOnCanvas(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Render pattern on a 3x larger offscreen canvas so panning reveals
-  // continuous content at any translate position (±100% range).
-  const scale = 3;
-  const ow = canvas.width * scale;
-  const oh = canvas.height * scale;
-  const offscreen = new OffscreenCanvas(ow, oh);
-  const offCtx = offscreen.getContext('2d');
-  if (!offCtx) return;
-  pattern.generate(offCtx as unknown as CanvasRenderingContext2D, {
-    ...options,
-    width: ow,
-    height: oh,
-  });
+  if (useTranslate) {
+    // Render pattern on a 3x larger offscreen canvas so panning reveals
+    // continuous content at any translate position (±100% range).
+    const scale = 3;
+    const ow = canvas.width * scale;
+    const oh = canvas.height * scale;
+    const offscreen = new OffscreenCanvas(ow, oh);
+    const offCtx = offscreen.getContext('2d');
+    if (!offCtx) return;
+    pattern.generate(offCtx as unknown as CanvasRenderingContext2D, {
+      ...options,
+      width: ow,
+      height: oh,
+    });
 
-  // Center the oversized canvas, then apply translate offset
-  const tx = translateX * canvas.width;
-  const ty = translateY * canvas.height;
-  const baseOffset = -canvas.width * (scale - 1) / 2; // center: -(scale-1)/2 * size
-  ctx.save();
-  ctx.translate(baseOffset + tx, baseOffset + ty);
-  ctx.drawImage(offscreen, 0, 0);
-  ctx.restore();
+    // Center the oversized canvas, then apply translate offset
+    const tx = translateX * canvas.width;
+    const ty = translateY * canvas.height;
+    const baseOffset = -canvas.width * (scale - 1) / 2; // center: -(scale-1)/2 * size
+    ctx.save();
+    ctx.translate(baseOffset + tx, baseOffset + ty);
+    ctx.drawImage(offscreen, 0, 0);
+    ctx.restore();
+  } else {
+    // Direct render — no offscreen canvas, much faster
+    pattern.generate(ctx, options);
+  }
 }
 
 export function App() {
@@ -87,6 +93,7 @@ export function App() {
   const [zoomSlider, setZoomSlider] = useState(50);
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
+  const [useTranslate, setUseTranslate] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
@@ -133,18 +140,19 @@ export function App() {
     setZoomSlider(50);
     setTranslateX(0);
     setTranslateY(0);
+    setUseTranslate(false);
   }, [patternType, slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generate pattern (without HSL) and cache the result
   const generateAndCache = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides);
+    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
     const ctx = canvas.getContext('2d');
     if (ctx) {
       cachedImageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
-  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides]);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate]);
 
   // Apply HSL adjustment from cached ImageData (fast — no re-generation)
   const applyHsl = useCallback(() => {
@@ -197,6 +205,14 @@ export function App() {
     setZoomSlider(zs);
     setTranslateX(tx);
     setTranslateY(ty);
+  }, []);
+
+  const handleUseTranslateChange = useCallback((enabled: boolean) => {
+    setUseTranslate(enabled);
+    if (!enabled) {
+      setTranslateX(0);
+      setTranslateY(0);
+    }
   }, []);
 
   // Randomize only changes slug (seed) — keeps current pattern type
@@ -253,7 +269,7 @@ export function App() {
       </a>
 
       <div className="controls">
-        <h1>pattern-gen</h1>
+        <h1>zudo-pattern-gen</h1>
 
         <div className="control-group">
           <label htmlFor="type-select">Pattern Type</label>
@@ -299,7 +315,9 @@ export function App() {
               zoomSlider={zoomSlider}
               translateX={translateX}
               translateY={translateY}
+              useTranslate={useTranslate}
               onChange={handleTransformChange}
+              onUseTranslateChange={handleUseTranslateChange}
             />
 
             <ParamControls

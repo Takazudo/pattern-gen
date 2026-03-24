@@ -45,7 +45,9 @@ export const domainWarp: PatternGenerator = {
     // Pre-parse palette colors
     const parsedColors = [bg, ...fgColors].map((hex) => hexToRgb(hex));
 
-    const step = 2;
+    // Adaptive step: larger canvases use bigger steps for performance
+    // At 1200px: step=2 (original quality), at 3600px: step=6, at 7200px: step=12
+    const step = Math.max(2, Math.round(Math.min(width, height) / 600));
 
     for (let y = 0; y < height; y += step) {
       for (let x = 0; x < width; x += step) {

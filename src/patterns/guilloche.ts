@@ -57,9 +57,9 @@ export const guilloche: PatternGenerator = {
       const revolutions = Math.round(r * 100) / gcdVal;
       const totalAngle = revolutions * Math.PI * 2;
 
-      // Step size — scale with canvas size, not just zoom/angle
-      // At 1200px canvas, ~8000 segments is visually indistinguishable from 50000
-      const sizeScale = Math.min(width, height) / 800;
+      // Step size — scale modestly with canvas size, capped to avoid CPU spikes
+      // on large canvases (HiDPI 3x). 15000 steps is visually smooth at any size.
+      const sizeScale = Math.min(Math.min(width, height) / 800, 2);
       const steps = Math.min(Math.floor(8000 * sizeScale), Math.max(1000, Math.floor(totalAngle * 20 * zoom)));
       const dt = totalAngle / steps;
 

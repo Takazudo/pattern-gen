@@ -50,8 +50,12 @@ export const marble: PatternGenerator = {
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
+    // Adaptive step: larger canvases use bigger steps for performance
+    // At 1200px: step=1 (original quality), at 2400px: step=2, at 7200px: step=6
+    const step = Math.max(1, Math.round(Math.min(width, height) / 1200));
+
+    for (let y = 0; y < height; y += step) {
+      for (let x = 0; x < width; x += step) {
         const nx = x * noiseScale;
         const ny = y * noiseScale;
 
@@ -79,11 +83,16 @@ export const marble: PatternGenerator = {
         const g = Math.round(parsedBg[1] + (fg - parsedBg[1]) * veinIntensity);
         const b = Math.round(parsedBg[2] + (fb - parsedBg[2]) * veinIntensity);
 
-        const idx = (y * width + x) * 4;
-        data[idx] = r;
-        data[idx + 1] = g;
-        data[idx + 2] = b;
-        data[idx + 3] = 255;
+        // Fill the step x step block
+        for (let dy = 0; dy < step && y + dy < height; dy++) {
+          for (let dx = 0; dx < step && x + dx < width; dx++) {
+            const idx = ((y + dy) * width + (x + dx)) * 4;
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+          }
+        }
       }
     }
 

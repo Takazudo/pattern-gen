@@ -57,8 +57,12 @@ export const waveInterference: PatternGenerator = {
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
+    // Adaptive step: larger canvases use bigger steps for performance
+    // At 1200px: step=1 (original quality), at 2400px: step=2, at 7200px: step=6
+    const step = Math.max(1, Math.round(Math.min(width, height) / 1200));
+
+    for (let y = 0; y < height; y += step) {
+      for (let x = 0; x < width; x += step) {
         // Sum sine waves from all sources (with per-source amplitude)
         let sum = 0;
         for (const src of sources) {
@@ -76,11 +80,16 @@ export const waveInterference: PatternGenerator = {
         const clampedIdx = Math.max(0, Math.min(allColors.length - 1, colorIdx));
         const [r, g, b] = allColors[clampedIdx];
 
-        const idx = (y * width + x) * 4;
-        data[idx] = r;
-        data[idx + 1] = g;
-        data[idx + 2] = b;
-        data[idx + 3] = 255;
+        // Fill the step x step block
+        for (let dy = 0; dy < step && y + dy < height; dy++) {
+          for (let dx = 0; dx < step && x + dx < width; dx++) {
+            const idx = ((y + dy) * width + (x + dx)) * 4;
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+          }
+        }
       }
     }
 

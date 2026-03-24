@@ -4,7 +4,9 @@ interface ViewTransformPanelProps {
   zoomSlider: number; // 0-100 slider value
   translateX: number; // -100 to 100
   translateY: number; // -100 to 100
+  useTranslate: boolean;
   onChange: (zoomSlider: number, translateX: number, translateY: number) => void;
+  onUseTranslateChange: (enabled: boolean) => void;
 }
 
 /** Snap to center if within ±2 of 50 */
@@ -16,9 +18,14 @@ export function ViewTransformPanel({
   zoomSlider,
   translateX,
   translateY,
+  useTranslate,
   onChange,
+  onUseTranslateChange,
 }: ViewTransformPanelProps) {
-  const handleReset = () => onChange(50, 0, 0);
+  const handleReset = () => {
+    onChange(50, 0, 0);
+    onUseTranslateChange(false);
+  };
 
   const handleZoomChange = (raw: number) => {
     onChange(snapCenter(raw), translateX, translateY);
@@ -47,6 +54,15 @@ export function ViewTransformPanel({
         <span className="view-transform-value">{zoomDisplay}x</span>
       </div>
 
+      <label className="view-transform-checkbox-row">
+        <input
+          type="checkbox"
+          checked={useTranslate}
+          onChange={(e) => onUseTranslateChange(e.target.checked)}
+        />
+        <span>Use Translate</span>
+      </label>
+
       <div className="view-transform-slider-row">
         <span className="view-transform-label">X</span>
         <input
@@ -55,6 +71,7 @@ export function ViewTransformPanel({
           max={100}
           step={1}
           value={translateX}
+          disabled={!useTranslate}
           onChange={(e) => onChange(zoomSlider, parseInt(e.target.value), translateY)}
           aria-label="Translate X"
         />
@@ -69,6 +86,7 @@ export function ViewTransformPanel({
           max={100}
           step={1}
           value={translateY}
+          disabled={!useTranslate}
           onChange={(e) => onChange(zoomSlider, translateX, parseInt(e.target.value))}
           aria-label="Translate Y"
         />

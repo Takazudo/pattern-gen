@@ -1,5 +1,5 @@
 {
-  "name": "@takazudo/pattern-gen",
+  "name": "@takazudo/zudo-pattern-gen",
   "version": "0.1.0",
   "description": "Generate deterministic visual patterns from text seeds — 30 algorithms from geometric tiles to noise-based textures",
   "type": "module",
