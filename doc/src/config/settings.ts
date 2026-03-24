@@ -25,7 +25,7 @@ export const settings = {
   } as ColorModeConfig | false,
   siteName: "zudo-pattern-gen",
   siteDescription: "Generate deterministic visual patterns from text seeds — 30 algorithms from geometric tiles to noise-based textures" as string,
-  base: "/pj/pattern-gen/",
+  base: "/pj/pattern-gen/doc/",
   trailingSlash: false as boolean,
   noindex: false as boolean,
   editUrl: false as string | false,

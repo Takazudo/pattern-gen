@@ -95,8 +95,8 @@ jobs:
       - name: Prepare deploy directory
         run: |
           mkdir -p deploy/pj/pattern-gen
-          cp -r dist-doc/. deploy/pj/pattern-gen/
           cp -r dist-viewer/. deploy/pj/pattern-gen/
+          cp -r dist-doc/. deploy/pj/pattern-gen/doc/
           echo '/ /pj/pattern-gen/ 302' > deploy/_redirects
 
       - name: Deploy to Cloudflare Pages (production)
