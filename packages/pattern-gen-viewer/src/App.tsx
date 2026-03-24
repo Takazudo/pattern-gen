@@ -223,6 +223,31 @@ export function App() {
         <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} />
       </div>
 
+      {/* Site logo link (top-right) */}
+      <a
+        className="floating-link site-link"
+        href="https://takazudomodular.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img src={`${import.meta.env.BASE_URL}takazudo.svg`} alt="Takazudo Modular" className="site-logo" />
+        <span>Takazudo Modular</span>
+      </a>
+
+      {/* Doc link (bottom-right) */}
+      <a
+        className="floating-link doc-link"
+        href="https://zudo-pattern-gen.pages.dev/pj/pattern-gen/doc/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+        <span>Doc</span>
+      </a>
+
       <div className="controls">
         <h1>pattern-gen</h1>
 
