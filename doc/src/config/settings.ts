@@ -39,7 +39,10 @@ export const settings = {
   htmlPreview: undefined as HtmlPreviewConfig | undefined,
   versions: false as VersionConfig[] | false,
   claudeResources: false as { claudeDir: string; projectRoot?: string } | false,
-  footer: false as FooterConfig | false,
+  footer: {
+    links: [],
+    copyright: '&copy; 2025 <a href="https://takazudomodular.com/">Takazudo Modular</a>. All rights reserved.',
+  } satisfies FooterConfig as FooterConfig | false,
   headerNav: [
     { label: "Getting Started", path: "/docs/getting-started", categoryMatch: "getting-started" },
     { label: "Patterns", path: "/docs/patterns", categoryMatch: "patterns" },
