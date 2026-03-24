@@ -8,7 +8,8 @@ import { getEffectiveParams } from 'pattern-gen/core/randomize-defaults';
 import type { PatternOptions, ParamDef } from 'pattern-gen/core/types';
 import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
-import { ViewTransformPanel, sliderToZoom } from './components/view-transform-panel.js';
+import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
+import { ViewTransformPanel } from './components/view-transform-panel.js';
 
 const CANVAS_SIZE = 1200;
 
@@ -95,7 +96,7 @@ export function App() {
   }), [seedRandomizedParams, userOverrides]);
 
   // Compute actual zoom from slider: center-detent exponential curve
-  const zoom = useMemo(() => sliderToZoom(zoomSlider), [zoomSlider]);
+  const zoom = useMemo(() => centerDetentToZoom(zoomSlider), [zoomSlider]);
   const txVal = translateX / 100;
   const tyVal = translateY / 100;
 

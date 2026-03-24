@@ -76,8 +76,6 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
     rand,
     colorScheme: scheme,
     zoom,
-    translateX,
-    translateY,
     params: options.params,
   };
 
@@ -143,8 +141,6 @@ export function renderPatternToCanvas(
     rand,
     colorScheme: scheme,
     zoom,
-    translateX,
-    translateY,
     params: options?.params,
   };
 

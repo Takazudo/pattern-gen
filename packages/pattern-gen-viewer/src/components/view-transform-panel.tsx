@@ -1,13 +1,10 @@
+import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
+
 interface ViewTransformPanelProps {
   zoomSlider: number; // 0-100 slider value
   translateX: number; // -100 to 100
   translateY: number; // -100 to 100
   onChange: (zoomSlider: number, translateX: number, translateY: number) => void;
-}
-
-/** Map slider (0-100) → zoom factor via exponential curve */
-export function sliderToZoom(slider: number): number {
-  return 0.2 * Math.pow(25, slider / 100);
 }
 
 /** Snap to center if within ±2 of 50 */
@@ -27,7 +24,7 @@ export function ViewTransformPanel({
     onChange(snapCenter(raw), translateX, translateY);
   };
 
-  const zoomDisplay = sliderToZoom(zoomSlider).toFixed(1);
+  const zoomDisplay = centerDetentToZoom(zoomSlider).toFixed(1);
 
   return (
     <div className="view-transform-section">
