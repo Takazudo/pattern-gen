@@ -181,7 +181,7 @@ export const kumiko: PatternGenerator = {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
-    const divisions = getParam(options, paramDefs, 'divisions');
+    const divisions = getParam(options, paramDefs, 'divisions') / zoom;
     const layerCount = Math.round(getParam(options, paramDefs, 'layerCount'));
     const strokeWidth = getParam(options, paramDefs, 'strokeWidth') / zoom;
     const overlapCount = Math.round(getParam(options, paramDefs, 'overlapCount'));
