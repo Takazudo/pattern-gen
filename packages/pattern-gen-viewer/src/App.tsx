@@ -59,7 +59,7 @@ function generateOnCanvas(
   const offscreen = new OffscreenCanvas(canvas.width, canvas.height);
   const offCtx = offscreen.getContext('2d');
   if (!offCtx) return;
-  pattern.generate(offCtx, options);
+  pattern.generate(offCtx as unknown as CanvasRenderingContext2D, options);
 
   const tx = translateX * canvas.width;
   const ty = translateY * canvas.height;
