@@ -8,7 +8,7 @@ import { randomizeDefaults } from '../core/randomize-defaults.js';
 const paramDefs: ParamDef[] = [
   { key: 'noiseScale', label: 'Noise Scale', type: 'slider', min: 0.001, max: 0.01, step: 0.001, defaultValue: 0.003 },
   { key: 'lineCount', label: 'Line Count', type: 'slider', min: 500, max: 5000, step: 100, defaultValue: 2000 },
-  { key: 'stepsPerLine', label: 'Steps per Line', type: 'slider', min: 5, max: 80, step: 1, defaultValue: 35 },
+  { key: 'stepsPerLine', label: 'Steps per Line', type: 'slider', min: 5, max: 500, step: 5, defaultValue: 120 },
   { key: 'lineWidth', label: 'Line Width', type: 'slider', min: 0.3, max: 3, step: 0.1, defaultValue: 1 },
 ];
 
@@ -37,7 +37,7 @@ export const flowField: PatternGenerator = {
 
     const noiseScale = getParam(options, paramDefs, 'noiseScale') * zoom;
     const lineCount = getParam(options, paramDefs, 'lineCount');
-    const stepLength = 2;
+    const stepLength = Math.max(2, Math.min(width, height) / 600);
     const stepsPerLine = getParam(options, paramDefs, 'stepsPerLine');
     const maxLineWidth = getParam(options, paramDefs, 'lineWidth');
 
