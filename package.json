@@ -52,7 +52,8 @@
     "@types/node": "^22.0.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "wrangler": "^4.0.0"
   },
   "pnpm": {
     "overrides": {
@@ -61,7 +62,8 @@
     },
     "onlyBuiltDependencies": [
       "canvas",
-      "esbuild"
+      "esbuild",
+      "workerd"
     ]
   }
 }
