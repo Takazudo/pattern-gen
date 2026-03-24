@@ -25,7 +25,7 @@ export const settings = {
   } as ColorModeConfig | false,
   siteName: "zudo-pattern-gen",
   siteDescription: "Generate deterministic visual patterns from text seeds — 30 algorithms from geometric tiles to noise-based textures" as string,
-  base: "/pj/pattern-gen/doc/",
+  base: "/pj/pattern-gen/",
   trailingSlash: false as boolean,
   noindex: false as boolean,
   editUrl: false as string | false,
@@ -49,7 +49,7 @@ export const settings = {
     copyright: 'Copyright &copy; 2026 <a href="https://x.com/Takazudo">Takazudo</a>. Built with <a href="https://takazudomodular.com/pj/zudo-doc">zudo-doc</a>.',
   } satisfies FooterConfig as FooterConfig | false,
   githubUrl: "https://github.com/Takazudo/zudo-pattern-gen" as string | false,
-  appUrl: "https://zudo-pattern-gen.pages.dev/pj/pattern-gen/" as string | false,
+  appUrl: "https://zudo-pattern-gen.pages.dev/pj/pattern-gen/app/" as string | false,
   headerNav: [
     { label: "Getting Started", path: "/docs/getting-started", categoryMatch: "getting-started" },
     { label: "Patterns", path: "/docs/patterns", categoryMatch: "patterns" },

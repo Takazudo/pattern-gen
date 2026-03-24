@@ -257,7 +257,7 @@ export function App() {
       {/* Doc link (bottom-right) */}
       <a
         className="floating-link doc-link"
-        href="https://zudo-pattern-gen.pages.dev/pj/pattern-gen/doc/"
+        href="https://zudo-pattern-gen.pages.dev/pj/pattern-gen/"
         target="_blank"
         rel="noopener noreferrer"
       >
