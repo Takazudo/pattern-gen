@@ -55,16 +55,26 @@ function generateOnCanvas(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Render to offscreen canvas so putImageData-based patterns also respect translate
-  const offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+  // Render pattern on a 3x larger offscreen canvas so panning reveals
+  // continuous content instead of empty edges
+  const scale = 3;
+  const ow = canvas.width * scale;
+  const oh = canvas.height * scale;
+  const offscreen = new OffscreenCanvas(ow, oh);
   const offCtx = offscreen.getContext('2d');
   if (!offCtx) return;
-  pattern.generate(offCtx as unknown as CanvasRenderingContext2D, options);
+  pattern.generate(offCtx as unknown as CanvasRenderingContext2D, {
+    ...options,
+    width: ow,
+    height: oh,
+  });
 
+  // Center the oversized canvas, then apply translate offset
   const tx = translateX * canvas.width;
   const ty = translateY * canvas.height;
+  const baseOffset = -canvas.width; // center the 3x canvas: -(3-1)/2 * size
   ctx.save();
-  ctx.translate(tx, ty);
+  ctx.translate(baseOffset + tx, baseOffset + ty);
   ctx.drawImage(offscreen, 0, 0);
   ctx.restore();
 }
