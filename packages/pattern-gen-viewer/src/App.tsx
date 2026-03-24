@@ -79,6 +79,8 @@ export function App() {
   const [showDetails, setShowDetails] = useState(false);
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
+  // Params locked to their current value across seed changes
+  const [fixedParams, setFixedParams] = useState<Set<string>>(new Set());
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
@@ -108,13 +110,19 @@ export function App() {
   const txVal = translateX / 100;
   const tyVal = translateY / 100;
 
-  // Reset user overrides and transform when pattern type or slug changes
+  // Reset non-fixed user overrides and transform when pattern type or slug changes
   useEffect(() => {
-    setUserOverrides({});
+    setUserOverrides((prev) => {
+      const kept: Record<string, number> = {};
+      for (const key of fixedParams) {
+        if (key in prev) kept[key] = prev[key];
+      }
+      return kept;
+    });
     setZoomSlider(50);
     setTranslateX(0);
     setTranslateY(0);
-  }, [patternType, slug]);
+  }, [patternType, slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generate pattern (without HSL) and cache the result
   const generateAndCache = useCallback(() => {
@@ -154,6 +162,20 @@ export function App() {
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleFixToggle = useCallback((key: string, fixed: boolean, currentValue: number) => {
+    setFixedParams((prev) => {
+      const next = new Set(prev);
+      if (fixed) {
+        next.add(key);
+        // Ensure the current value is stored as an override so it persists
+        setUserOverrides((p) => ({ ...p, [key]: currentValue }));
+      } else {
+        next.delete(key);
+      }
+      return next;
+    });
   }, []);
 
   const handleHslChange = useCallback((h: number, s: number, l: number) => {
@@ -244,7 +266,9 @@ export function App() {
             <ParamControls
               paramDefs={currentParamDefs}
               values={displayParams}
+              fixedParams={fixedParams}
               onChange={handleParamChange}
+              onFixToggle={handleFixToggle}
             />
 
             <div className="control-group">

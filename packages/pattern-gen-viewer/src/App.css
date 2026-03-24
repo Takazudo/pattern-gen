@@ -276,8 +276,32 @@ select:focus {
   margin-bottom: var(--spacing-sp-sm);
 }
 
+.param-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .param-control label {
   font-size: var(--font-size-2xs);
+}
+
+.fix-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-2xs);
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.fix-toggle:has(input:checked) {
+  opacity: 1;
+}
+
+.fix-toggle input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--color-accent);
 }
 
 .param-control .range-value {
