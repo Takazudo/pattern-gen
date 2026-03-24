@@ -1,0 +1,45 @@
+---
+title: Halftone
+sidebar_position: 64
+---
+
+# Halftone
+
+CMYK-style halftone dot rendering where a noise-generated image is reproduced as grids of variably-sized dots, with each color channel rotated at a different angle to mimic commercial printing.
+
+## Algorithm
+
+Halftone printing represents continuous-tone images using dots of varying size on a fixed grid. This implementation generates a synthetic "image" from fractal noise, then renders it through multiple rotated dot grids.
+
+### Noise Image Generation
+
+Rather than halftoning a photograph, the pattern creates an abstract source image using **fractal Brownian motion** (fBm) — layered 2D simplex noise sampled at each dot position. The number of octaves (1–6) controls the complexity of the underlying image, from smooth gradients to detailed turbulence.
+
+### Channel Setup
+
+2 or 3 color channels are created, each assigned:
+
+- A **color** from the palette.
+- A **rotation angle**: Starting from a random base angle, each channel is offset by `i · π / (numChannels · 2.5)` plus a small random jitter (±0.05 rad). In real CMYK printing, channel angles are carefully chosen to minimize moiré interference between dot grids; this implementation approximates that principle.
+
+### Dot Grid Rendering
+
+For each channel, a regular grid of dots is drawn:
+
+1. **Grid traversal**: The grid extends across the canvas diagonal to ensure full coverage after rotation. Grid points are spaced at `dotSpacing` intervals.
+2. **Coordinate transform**: Each grid point `(gx, gy)` is rotated into canvas space: `canvasX = cx + gx·cos(θ) − gy·sin(θ)`, `canvasY = cy + gx·sin(θ) + gy·cos(θ)`.
+3. **Brightness sampling**: fBm noise is sampled at the canvas-space position. The result is normalized from [-1, 1] to [0, 1] as a brightness value.
+4. **Dot sizing**: `dotRadius = maxDotRadius · brightness`, where `maxDotRadius = dotSpacing · 0.45`. Dots smaller than 0.3px are skipped.
+5. **Rendering**: Each dot is drawn as a filled circle with 60% opacity, allowing channels to visually blend where they overlap.
+
+## Parameters
+
+| Parameter     | Range  | Default    | Description                                       |
+| ------------- | ------ | ---------- | ------------------------------------------------- |
+| Dot Spacing   | 3 – 20 | 11         | Distance between dot centers in the grid (px)     |
+| Channel Count | 2 or 3 | 2          | Number of overlaid color channels                 |
+| Noise Octaves | 1 – 6  | 3          | fBm octave count — higher = more image detail     |
+
+## Visual Characteristics
+
+Reproduces the look of color offset printing or pop art halftone effects. At normal viewing distance, the variably-sized dots blend into smooth tonal gradients. Up close, the individual dot grids and their angular offsets become visible, revealing the mechanical printing structure. With 3 channels, the overlapping rotated grids can produce subtle secondary moiré patterns, adding visual complexity. The noise-based source image creates organic, cloud-like tonal regions rather than the hard edges of a photograph.

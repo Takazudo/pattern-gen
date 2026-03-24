@@ -1,0 +1,35 @@
+---
+title: Truchet
+sidebar_position: 11
+---
+
+# Truchet
+
+Quarter-circle arc tiles arranged in a square grid with random orientations, creating flowing organic curves that connect seamlessly across tile boundaries.
+
+## Algorithm
+
+The pattern implements a multi-scale Truchet tiling using quarter-circle arcs:
+
+1. **Tile structure**: The canvas is divided into a square grid. Each tile contains two quarter-circle arcs drawn from opposite corners with a radius of half the tile size. This ensures arcs from adjacent tiles always connect, regardless of orientation.
+
+2. **Random orientation**: Each tile is randomly assigned one of two orientations. In one orientation, arcs are drawn from the top-left and bottom-right corners. In the other, arcs are drawn from the top-right and bottom-left corners. This binary choice per tile creates the characteristic flowing, maze-like curves.
+
+3. **Color assignment**: 2–3 colors are randomly selected from the palette. Each tile's arcs are drawn in one of these colors, chosen randomly per tile. Line width is proportional to the tile size, controlled by the Line Width parameter.
+
+4. **Depth shadows**: Each arc is accompanied by a slightly offset, thinner, darker arc drawn just outside it. This subtle shadow effect adds visual depth to the curves.
+
+5. **Multi-scale overlay**: A second pass draws smaller tiles at half the size of the main grid. These overlay tiles are drawn semi-transparently (controlled by Overlay Alpha) and only at a fraction of positions (controlled by Overlay Density). The smaller arcs use slightly lightened colors, adding complexity and visual richness without overwhelming the main pattern.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Grid Divisions | 6–24 | 12 | Number of tiles across the longest dimension. More divisions create finer, more intricate curves. |
+| Line Width | 0.05–0.35 | 0.15 | Arc stroke width as a fraction of tile size. Thicker lines create bolder, more graphic results. |
+| Overlay Alpha | 0–0.8 | 0.3 | Opacity of the smaller overlay tiles. Set to 0 for a clean single-scale pattern. |
+| Overlay Density | 0–1 | 0.3 | Fraction of small tile positions that are drawn. Higher values add more fine detail. |
+
+## Visual Characteristics
+
+Truchet tilings produce mesmerizing, continuously flowing curves that appear organic despite their grid-based construction. The curves form loops, meanders, and channels of varying sizes. At low Grid Divisions, the pattern shows bold, sweeping arcs with clearly visible tile structure. At high divisions, the curves become intricate and maze-like. The multi-scale overlay adds a layered quality — the smaller arcs break up uniform areas and create visual texture within the main curves. With Overlay Alpha and Overlay Density both at 0, the result is a classic single-scale Truchet pattern; increasing both parameters progressively adds complexity and depth. Thick line widths produce a bold, graphic look, while thin lines create a delicate, web-like appearance.

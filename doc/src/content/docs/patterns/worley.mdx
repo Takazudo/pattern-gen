@@ -1,0 +1,36 @@
+---
+title: Worley
+sidebar_position: 31
+---
+
+# Worley
+
+Cellular noise pattern that renders distance-based gradients from grid-distributed seed points, creating textures resembling stone walls and cracked earth.
+
+## Algorithm
+
+1. **Grid-based seed placement**: Divide the canvas into a grid of cells sized `cellSize / zoom`. Place one seed point per grid cell with random jitter within the cell bounds. The grid extends one cell beyond each edge to avoid boundary artifacts.
+2. **Nearest-neighbor search (3×3 neighborhood)**: For each pixel, determine which grid cell it falls into, then search the surrounding 3×3 neighborhood of grid cells. Compute the Euclidean distance to each of the (up to) 9 seed points and track the two shortest distances: F1 (nearest) and F2 (second-nearest).
+3. **Distance value computation**:
+   - **Edge value**: `(F2 − F1) / maxDist`, clamped to [0, 1]. This highlights cell boundaries where F1 and F2 converge.
+   - **Distance value**: `F1 / maxDist`, clamped to [0, 1]. This creates a radial gradient within each cell.
+4. **Blending**: Combine the two values as `t = edgeValue × f2Weight + distValue × f1Weight`, where the weights are user-configurable parameters.
+5. **Gradient color mapping**: Map the blended value `t` to a multi-stop color gradient built from the background color and up to 4 foreground palette colors. Linear RGB interpolation is performed between adjacent stops.
+
+The grid-based approach is significantly faster than brute-force: instead of checking all seed points, each pixel only examines 9 candidates.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+| --- | --- | --- | --- |
+| Cell Size | 10–150 | 80 | Size of the spatial grid cells (controls density) |
+| F1 Weight | 0–1 | 0.4 | Influence of nearest-distance (inner cell shading) |
+| F2 Weight | 0–1 | 0.6 | Influence of edge distance (border prominence) |
+
+## Visual Characteristics
+
+- Organic cellular texture with soft gradient transitions, unlike the hard-edged Voronoi pattern
+- Higher F2 Weight emphasizes crevice-like borders between cells, resembling stone walls or dried mud cracks
+- Higher F1 Weight creates rounded bumps within each cell, evoking a bubbly or cobblestone look
+- Colors flow smoothly through the palette gradient based on distance values
+- Smaller cell sizes produce finer, more detailed textures; larger cells give a coarser, more geological appearance
