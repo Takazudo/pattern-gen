@@ -12,6 +12,7 @@ import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
 
 const CANVAS_SIZE = 1200;
+const DPR = window.devicePixelRatio || 1;
 
 function randomSlug(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -55,9 +56,10 @@ function generateOnCanvas(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Render pattern on a 3x larger offscreen canvas so panning reveals
-  // continuous content instead of empty edges
-  const scale = 3;
+  // Render pattern on a 2x larger offscreen canvas so panning reveals
+  // continuous content instead of empty edges.
+  // (Reduced from 3x to 2x to keep memory reasonable at high devicePixelRatio.)
+  const scale = 2;
   const ow = canvas.width * scale;
   const oh = canvas.height * scale;
   const offscreen = new OffscreenCanvas(ow, oh);
@@ -72,7 +74,7 @@ function generateOnCanvas(
   // Center the oversized canvas, then apply translate offset
   const tx = translateX * canvas.width;
   const ty = translateY * canvas.height;
-  const baseOffset = -canvas.width; // center the 3x canvas: -(3-1)/2 * size
+  const baseOffset = -canvas.width * (scale - 1) / 2; // center: -(scale-1)/2 * size
   ctx.save();
   ctx.translate(baseOffset + tx, baseOffset + ty);
   ctx.drawImage(offscreen, 0, 0);
@@ -203,6 +205,9 @@ export function App() {
     setSlug(randomSlug());
   }, []);
 
+  // Downloads at the full buffer resolution (CANVAS_SIZE * dpr).
+  // To get a fixed 1200×1200 PNG regardless of dpr, draw onto a temporary
+  // 1200×1200 canvas before calling toDataURL.
   const download = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -220,7 +225,7 @@ export function App() {
   return (
     <div className="app">
       <div className="canvas-layer">
-        <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} />
+        <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
       </div>
 
       <div className="controls">
