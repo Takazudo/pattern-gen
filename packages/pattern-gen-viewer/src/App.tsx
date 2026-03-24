@@ -53,6 +53,9 @@ function generateOnCanvas(
     params: Object.keys(userOverrides).length > 0 ? userOverrides : undefined,
   };
 
+  // Clear entire canvas before drawing so translated regions don't leave stale pixels
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   const tx = translateX * canvas.width;
   const ty = translateY * canvas.height;
   ctx.save();
