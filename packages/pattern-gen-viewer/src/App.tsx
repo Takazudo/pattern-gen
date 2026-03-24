@@ -56,10 +56,9 @@ function generateOnCanvas(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Render pattern on a 2x larger offscreen canvas so panning reveals
-  // continuous content instead of empty edges.
-  // (Reduced from 3x to 2x to keep memory reasonable at high devicePixelRatio.)
-  const scale = 2;
+  // Render pattern on a 3x larger offscreen canvas so panning reveals
+  // continuous content at any translate position (±100% range).
+  const scale = 3;
   const ow = canvas.width * scale;
   const oh = canvas.height * scale;
   const offscreen = new OffscreenCanvas(ow, oh);
