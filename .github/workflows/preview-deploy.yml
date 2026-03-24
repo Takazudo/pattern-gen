@@ -1,7 +1,7 @@
 # Preview deployment for preview and expreview/* branches.
 #
 # Triggered on pushes to `preview` and `expreview/**` branches.
-# Builds the viewer app and deploys to Cloudflare Pages with a branch name
+# Builds the viewer app and doc site and deploys to Cloudflare Pages with a branch name
 # so the preview URL is predictable (e.g. preview.zudo-pattern-gen.pages.dev).
 #
 # This is separate from PR preview deploys (handled by pr-checks.yml).
@@ -54,6 +54,9 @@ jobs:
       - name: Build viewer
         run: pnpm run viewer:build
 
+      - name: Build doc site
+        run: pnpm run doc:build
+
       - name: Determine branch name
         id: branch
         run: |
@@ -67,6 +70,7 @@ jobs:
         run: |
           mkdir -p deploy/pj/pattern-gen
           cp -r packages/pattern-gen-viewer/dist/. deploy/pj/pattern-gen/
+          cp -r doc/dist/. deploy/pj/pattern-gen/doc/
           echo '/ /pj/pattern-gen/ 302' > deploy/_redirects
 
       - name: Deploy to Cloudflare Pages
@@ -139,9 +143,10 @@ jobs:
               '',
               `Preview deployment is ready.`,
               '',
-              `| | URL |`,
+              `| Site | URL |`,
               `|---|---|`,
-              `| Preview | ${deployUrl} |`,
+              `| Viewer | ${deployUrl}/pj/pattern-gen/ |`,
+              `| Doc | ${deployUrl}/pj/pattern-gen/doc/ |`,
               '',
               `Built from \`${branch}\` @ \`${shortSha}\``,
             ].join('\n');

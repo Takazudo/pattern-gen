@@ -1,7 +1,7 @@
 # Pull request quality checks and preview deployment.
 #
 # Triggered on PRs targeting `main`. The pipeline:
-#   1. Build the viewer app
+#   1. Build the viewer app and doc site
 #   2. Deploy a preview to Cloudflare Pages
 #   3. Post the preview URL as a PR comment
 #
@@ -27,7 +27,7 @@ jobs:
   # Job 1: Build the viewer app
   # ---------------------------------------------------------------------------
   build:
-    name: Build Viewer
+    name: Build Viewer & Doc
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -53,11 +53,21 @@ jobs:
       - name: Build viewer
         run: pnpm run viewer:build
 
-      - name: Upload build artifact
+      - name: Build doc site
+        run: pnpm run doc:build
+
+      - name: Upload viewer artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
-          name: dist-out
+          name: dist-viewer
           path: packages/pattern-gen-viewer/dist/
+          retention-days: 1
+
+      - name: Upload doc artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: dist-doc
+          path: doc/dist/
           retention-days: 1
 
   # ---------------------------------------------------------------------------
@@ -70,16 +80,23 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Download build artifact
+      - name: Download viewer artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: dist-out
-          path: dist-out/
+          name: dist-viewer
+          path: dist-viewer/
+
+      - name: Download doc artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: dist-doc
+          path: dist-doc/
 
       - name: Prepare deploy directory
         run: |
           mkdir -p deploy/pj/pattern-gen
-          cp -r dist-out/. deploy/pj/pattern-gen/
+          cp -r dist-viewer/. deploy/pj/pattern-gen/
+          cp -r dist-doc/. deploy/pj/pattern-gen/doc/
           echo '/ /pj/pattern-gen/ 302' > deploy/_redirects
 
       - name: Deploy preview to Cloudflare Pages
@@ -116,9 +133,10 @@ jobs:
               '',
               `Preview deployment is ready.`,
               '',
-              `| | URL |`,
+              `| Site | URL |`,
               `|---|---|`,
-              `| Preview | ${deployUrl} |`,
+              `| Viewer | ${deployUrl}/pj/pattern-gen/ |`,
+              `| Doc | ${deployUrl}/pj/pattern-gen/doc/ |`,
               '',
               `Built from commit: \`${context.sha.substring(0, 7)}\``,
             ].join('\n');
