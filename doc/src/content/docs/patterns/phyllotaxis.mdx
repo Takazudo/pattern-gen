@@ -1,0 +1,46 @@
+---
+title: Phyllotaxis
+sidebar_position: 61
+---
+
+# Phyllotaxis
+
+Fibonacci spiral dot arrangement that reproduces the sunflower seed head pattern using the golden angle.
+
+## Algorithm
+
+Phyllotaxis (from Greek _phyllon_ "leaf" + _taxis_ "arrangement") describes the mathematical pattern governing how leaves, seeds, and florets are arranged in plants. This implementation uses Vogel's model to place dots in a spiral.
+
+### Placement Formula
+
+For each dot index `n` (from 1 to the total count):
+
+- **Radius**: `r = c · √n`, where `c = maxRadius / √numDots` is a spacing constant. The square root ensures uniform area density — dots are evenly distributed across the disc rather than crowding at the center.
+- **Angle**: `θ = n · φ + offset`, where `φ` is the **golden angle** ≈ 137.508° (or `π · (3 − √5)` radians). A random angular offset is added for variation.
+
+The golden angle is the key to the pattern: because it is an irrational fraction of a full turn (related to the golden ratio), successive dots never align into simple radial rows, instead forming the characteristic interlocking spirals visible in sunflowers.
+
+### Dot Sizing
+
+Dot radius scales with distance from center: `dotRadius = (1.5 + normalizedR · 4) · (dotScale / 2)`, where `normalizedR = r / maxRadius`. This creates smaller dots near the center and larger ones toward the edges, mimicking natural seed packing.
+
+### Coloring
+
+Two modes are available:
+
+- **By Angle**: Color is determined by the dot's angular position (normalized to [0, 2π]), cycling through palette colors around the spiral.
+- **By Radius**: Color is determined by distance from center, creating concentric color bands.
+
+Alpha varies from 0.7 (center) to 1.0 (edge) for subtle depth.
+
+## Parameters
+
+| Parameter  | Range      | Default  | Description                                     |
+| ---------- | ---------- | -------- | ----------------------------------------------- |
+| Dot Count  | 100 – 3000 | 800      | Number of dots in the spiral                     |
+| Dot Scale  | 0.5 – 5    | 2        | Multiplier for dot radius                        |
+| Color Mode | —          | By Angle | How colors are assigned: by angle or by radius   |
+
+## Visual Characteristics
+
+Creates the unmistakable spiraling pattern seen in sunflower heads, pinecones, and pineapple scales. The pattern exhibits Fibonacci spirals — counting the visible spirals in either direction yields consecutive Fibonacci numbers (e.g., 13 and 21). The irrational golden angle ensures optimal packing with no gaps or overlaps, making it one of nature's most efficient spatial arrangements.
