@@ -67,6 +67,9 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');
 
+  const translateX = options.translateX ?? 0;
+  const translateY = options.translateY ?? 0;
+
   const patternOptions: PatternOptions = {
     width: size,
     height: size,
@@ -76,7 +79,12 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
     params: options.params,
   };
 
+  const tx = translateX * size;
+  const ty = translateY * size;
+  ctx.save();
+  ctx.translate(tx, ty);
   pattern.generate(ctx as unknown as CanvasRenderingContext2D, patternOptions);
+  ctx.restore();
 
   if (options.hsl) {
     applyHslAdjust(ctx as unknown as CanvasRenderingContext2D, size, size, options.hsl);
@@ -104,6 +112,8 @@ export function renderPatternToCanvas(
   options?: {
     size?: number;
     zoom?: number;
+    translateX?: number;
+    translateY?: number;
     bg?: string;
     colorScheme?: string;
     params?: Record<string, number>;
@@ -111,6 +121,8 @@ export function renderPatternToCanvas(
   },
 ): { colorSchemeName: string } {
   const zoom = options?.zoom ?? 1;
+  const translateX = options?.translateX ?? 0;
+  const translateY = options?.translateY ?? 0;
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
 
@@ -132,7 +144,12 @@ export function renderPatternToCanvas(
     params: options?.params,
   };
 
+  const tx = translateX * width;
+  const ty = translateY * height;
+  ctx.save();
+  ctx.translate(tx, ty);
   pattern.generate(ctx, patternOptions);
+  ctx.restore();
 
   if (options?.hsl) {
     applyHslAdjust(ctx, width, height, options.hsl);

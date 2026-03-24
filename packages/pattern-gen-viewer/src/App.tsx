@@ -8,6 +8,8 @@ import { getEffectiveParams } from 'pattern-gen/core/randomize-defaults';
 import type { PatternOptions, ParamDef } from 'pattern-gen/core/types';
 import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
+import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
+import { ViewTransformPanel } from './components/view-transform-panel.js';
 
 const CANVAS_SIZE = 1200;
 
@@ -26,6 +28,8 @@ function generateOnCanvas(
   patternType: string,
   colorSchemeIndex: number,
   zoom: number,
+  translateX: number,
+  translateY: number,
   userOverrides: Record<string, number>,
 ) {
   const ctx = canvas.getContext('2d');
@@ -49,14 +53,21 @@ function generateOnCanvas(
     params: Object.keys(userOverrides).length > 0 ? userOverrides : undefined,
   };
 
+  const tx = translateX * canvas.width;
+  const ty = translateY * canvas.height;
+  ctx.save();
+  ctx.translate(tx, ty);
   pattern.generate(ctx, options);
+  ctx.restore();
 }
 
 export function App() {
   const [slug, setSlug] = useState(randomSlug);
   const [patternType, setPatternType] = useState(patternRegistry[0].name);
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
-  const [zoom, setZoom] = useState(1);
+  const [zoomSlider, setZoomSlider] = useState(50);
+  const [translateX, setTranslateX] = useState(0);
+  const [translateY, setTranslateY] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
@@ -84,26 +95,29 @@ export function App() {
     ...userOverrides,
   }), [seedRandomizedParams, userOverrides]);
 
-  // Reset user overrides when pattern type changes
-  useEffect(() => {
-    setUserOverrides({});
-  }, [patternType]);
+  // Compute actual zoom from slider: center-detent exponential curve
+  const zoom = useMemo(() => centerDetentToZoom(zoomSlider), [zoomSlider]);
+  const txVal = translateX / 100;
+  const tyVal = translateY / 100;
 
-  // Also reset user overrides when slug changes (new seed = fresh randomization)
+  // Reset user overrides and transform when pattern type or slug changes
   useEffect(() => {
     setUserOverrides({});
-  }, [slug]);
+    setZoomSlider(50);
+    setTranslateX(0);
+    setTranslateY(0);
+  }, [patternType, slug]);
 
   // Generate pattern (without HSL) and cache the result
   const generateAndCache = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, userOverrides);
+    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides);
     const ctx = canvas.getContext('2d');
     if (ctx) {
       cachedImageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
-  }, [slug, patternType, colorSchemeIndex, zoom, userOverrides]);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides]);
 
   // Apply HSL adjustment from cached ImageData (fast — no re-generation)
   const applyHsl = useCallback(() => {
@@ -136,6 +150,12 @@ export function App() {
 
   const handleHslChange = useCallback((h: number, s: number, l: number) => {
     setHslAdjust({ h, s, l });
+  }, []);
+
+  const handleTransformChange = useCallback((zs: number, tx: number, ty: number) => {
+    setZoomSlider(zs);
+    setTranslateX(tx);
+    setTranslateY(ty);
   }, []);
 
   // Randomize only changes slug (seed) — keeps current pattern type
@@ -206,21 +226,12 @@ export function App() {
 
         {showDetails && (
           <div className="details-section">
-            <div className="control-group">
-              <label htmlFor="zoom-input">Zoom</label>
-              <div className="range-row">
-                <input
-                  id="zoom-input"
-                  type="range"
-                  min="0.5"
-                  max="5"
-                  step="0.1"
-                  value={zoom}
-                  onChange={(e) => setZoom(parseFloat(e.target.value))}
-                />
-                <span className="range-value">{zoom.toFixed(1)}</span>
-              </div>
-            </div>
+            <ViewTransformPanel
+              zoomSlider={zoomSlider}
+              translateX={translateX}
+              translateY={translateY}
+              onChange={handleTransformChange}
+            />
 
             <ParamControls
               paramDefs={currentParamDefs}

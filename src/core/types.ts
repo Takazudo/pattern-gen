@@ -80,6 +80,10 @@ export interface GenerateOptions {
   size?: number;
   /** Zoom factor */
   zoom?: number;
+  /** Horizontal translation (-1 to 1, fraction of canvas width) */
+  translateX?: number;
+  /** Vertical translation (-1 to 1, fraction of canvas height) */
+  translateY?: number;
   /** Override background color */
   bg?: string;
   /** Color scheme name or "random" */
