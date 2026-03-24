@@ -345,6 +345,89 @@ select:focus {
   background: var(--color-control-bg-hover);
 }
 
+/* ── View Transform sliders ── */
+
+.view-transform-section {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-md);
+}
+
+.view-transform-section .section-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-fg-faint);
+  margin-bottom: var(--spacing-sp-sm);
+}
+
+.view-transform-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-xs);
+}
+
+.view-transform-slider-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--color-accent);
+}
+
+.view-transform-label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-fg-subtle);
+  width: 1rem; /* ARBITRARY: single-char label width */
+  flex-shrink: 0;
+}
+
+.view-transform-value {
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5rem; /* ARBITRARY: value display width */
+  text-align: right;
+  color: var(--color-fg-muted);
+  flex-shrink: 0;
+}
+
+.view-transform-zoom-track {
+  flex: 1;
+  position: relative;
+}
+
+.view-transform-zoom-track input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+
+.view-transform-zoom-tick {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 6px; /* ARBITRARY: tick height */
+  background: var(--color-fg-faint);
+  pointer-events: none;
+}
+
+.btn-view-transform-reset {
+  padding: var(--spacing-sp-2xs) var(--spacing-sp-md);
+  border: 1px solid var(--color-border-hover);
+  border-radius: var(--radius-md);
+  background: var(--color-control-bg);
+  color: var(--color-fg);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  margin-top: var(--spacing-sp-2xs);
+}
+
+.btn-view-transform-reset:hover {
+  background: var(--color-control-bg-hover);
+}
+
 /* ── Button row ── */
 
 .button-row {
