@@ -5,7 +5,7 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: "/pj/pattern-gen/app/",
+  base: "/pj/pattern-gen/",
   server: {
     host: "patterngen.localhost",
     port: 14362,

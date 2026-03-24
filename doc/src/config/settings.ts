@@ -49,7 +49,7 @@ export const settings = {
     copyright: 'Copyright &copy; 2026 <a href="https://x.com/Takazudo">Takazudo</a>. Built with <a href="https://takazudomodular.com/pj/zudo-doc">zudo-doc</a>.',
   } satisfies FooterConfig as FooterConfig | false,
   githubUrl: "https://github.com/Takazudo/zudo-pattern-gen" as string | false,
-  appUrl: "https://zudo-pattern-gen.pages.dev/pj/pattern-gen/app/" as string | false,
+  appUrl: "https://zudo-pattern-gen.pages.dev/pj/pattern-gen/" as string | false,
   headerNav: [
     { label: "Getting Started", path: "/docs/getting-started", categoryMatch: "getting-started" },
     { label: "Patterns", path: "/docs/patterns", categoryMatch: "patterns" },
