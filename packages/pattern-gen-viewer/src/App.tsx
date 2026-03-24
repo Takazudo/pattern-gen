@@ -269,7 +269,7 @@ export function App() {
       </a>
 
       <div className="controls">
-        <h1>pattern-gen</h1>
+        <h1>zudo-pattern-gen</h1>
 
         <div className="control-group">
           <label htmlFor="type-select">Pattern Type</label>
