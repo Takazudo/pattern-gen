@@ -42,6 +42,7 @@
   "bugs": {
     "url": "https://github.com/Takazudo/pattern-gen/issues"
   },
+  "packageManager": "pnpm@10.32.0",
   "engines": {
     "node": ">=18.0.0"
   },
