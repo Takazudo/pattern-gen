@@ -110,12 +110,59 @@ body {
   object-fit: cover;
 }
 
+/* ── Floating overlay links ── */
+
+.floating-link {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: oklch(0% 0 0 / 60%);
+  backdrop-filter: blur(12px);
+  border-radius: 8px;
+  border: 1px solid oklch(100% 0 0 / 10%);
+  text-decoration: none;
+  color: oklch(75% 0 0);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  transition: background 0.15s, color 0.15s;
+}
+
+.floating-link:hover {
+  background: oklch(0% 0 0 / 80%);
+  color: oklch(100% 0 0);
+}
+
+.site-link {
+  top: 16px;
+  right: 16px;
+}
+
+.site-logo {
+  width: 26px;
+  height: 26px;
+  filter: brightness(0) invert(1);
+}
+
+.doc-link {
+  bottom: 16px;
+  right: 16px;
+  gap: 6px;
+}
+
+.doc-link svg {
+  flex-shrink: 0;
+}
+
 /* ── Controls panel (glass) ── */
 
 .controls {
   position: fixed;
   top: var(--spacing-sp-lg);
-  right: var(--spacing-sp-lg);
+  left: var(--spacing-sp-lg);
   width: 280px; /* ARBITRARY: panel-specific width */
   background: var(--color-surface-glass);
   backdrop-filter: blur(12px); /* ARBITRARY: glass effect */
