@@ -14,6 +14,8 @@ export type { ColorScheme, Palette } from './core/color-schemes.js';
 export { applyHslAdjust } from './core/hsl-adjust.js';
 export type { HslAdjust } from './core/hsl-adjust.js';
 
+export { centerDetentToZoom, zoomToCenterDetent } from './core/center-detent.js';
+
 // Types
 export type { PatternGenerator, PatternOptions, GenerateOptions, ParamDef, SliderParamDef, SelectParamDef, ToggleParamDef } from './core/types.js';
 

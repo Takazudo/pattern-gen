@@ -15,6 +15,10 @@ export interface PatternOptions {
   colorScheme: ColorScheme;
   /** Zoom factor (>1 = closer, <1 = farther) */
   zoom: number;
+  /** Horizontal translation (-1 to 1, fraction of canvas width) */
+  translateX?: number;
+  /** Vertical translation (-1 to 1, fraction of canvas height) */
+  translateY?: number;
   /** Pattern-specific numeric parameters */
   params?: Record<string, number>;
 }
@@ -80,6 +84,10 @@ export interface GenerateOptions {
   size?: number;
   /** Zoom factor */
   zoom?: number;
+  /** Horizontal translation (-1 to 1, fraction of canvas width) */
+  translateX?: number;
+  /** Vertical translation (-1 to 1, fraction of canvas height) */
+  translateY?: number;
   /** Override background color */
   bg?: string;
   /** Color scheme name or "random" */
