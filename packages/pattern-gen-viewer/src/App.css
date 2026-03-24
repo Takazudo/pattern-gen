@@ -441,9 +441,28 @@ select:focus {
   margin-bottom: var(--spacing-sp-xs);
 }
 
+.view-transform-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg);
+  cursor: pointer;
+  margin-bottom: var(--spacing-sp-xs);
+}
+
+.view-transform-checkbox-row input[type="checkbox"] {
+  accent-color: var(--color-accent);
+}
+
 .view-transform-slider-row input[type="range"] {
   flex: 1;
   accent-color: var(--color-accent);
+}
+
+.view-transform-slider-row input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .view-transform-label {
