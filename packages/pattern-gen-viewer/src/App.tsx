@@ -53,14 +53,19 @@ function generateOnCanvas(
     params: Object.keys(userOverrides).length > 0 ? userOverrides : undefined,
   };
 
-  // Clear entire canvas before drawing so translated regions don't leave stale pixels
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Render to offscreen canvas so putImageData-based patterns also respect translate
+  const offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+  const offCtx = offscreen.getContext('2d');
+  if (!offCtx) return;
+  pattern.generate(offCtx as unknown as CanvasRenderingContext2D, options);
 
   const tx = translateX * canvas.width;
   const ty = translateY * canvas.height;
   ctx.save();
   ctx.translate(tx, ty);
-  pattern.generate(ctx, options);
+  ctx.drawImage(offscreen, 0, 0);
   ctx.restore();
 }
 
