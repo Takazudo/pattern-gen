@@ -10,6 +10,7 @@ import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
 import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
+import { OgpSelectionOverlay } from './components/ogp-selection-overlay.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -95,6 +96,7 @@ export function App() {
   const [translateY, setTranslateY] = useState(0);
   const [useTranslate, setUseTranslate] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [ogpMode, setOgpMode] = useState(false);
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   // Params locked to their current value across seed changes
@@ -220,6 +222,15 @@ export function App() {
     setSlug(randomSlug());
   }, []);
 
+  const triggerDownload = useCallback((dataUrl: string, filename: string) => {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, []);
+
   // Downloads at the full buffer resolution (CANVAS_SIZE * dpr).
   // To get a fixed 1200×1200 PNG regardless of dpr, draw onto a temporary
   // 1200×1200 canvas before calling toDataURL.
@@ -227,13 +238,32 @@ export function App() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pattern-${patternType}-${slug}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }, [patternType, slug]);
+    triggerDownload(url, `pattern-${patternType}-${slug}.png`);
+  }, [patternType, slug, triggerDownload]);
+
+  const handleOgpGenerate = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      const scale = canvas.width / canvasRect.width;
+      const srcX = (rect.x - canvasRect.left) * scale;
+      const srcY = (rect.y - canvasRect.top) * scale;
+      const srcW = rect.width * scale;
+      const srcH = rect.height * scale;
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 1200;
+      tempCanvas.height = 630;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) return;
+      tempCtx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, 1200, 630);
+      const url = tempCanvas.toDataURL('image/png');
+      triggerDownload(url, `ogp-${patternType}-${slug}.png`);
+    },
+    [patternType, slug, triggerDownload],
+  );
+
+  const exitOgpMode = useCallback(() => setOgpMode(false), []);
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
@@ -243,32 +273,43 @@ export function App() {
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
       </div>
 
-      {/* Site logo link (top-right) */}
-      <a
-        className="floating-link site-link"
-        href="https://takazudomodular.com/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <img src={`${import.meta.env.BASE_URL}takazudo.svg`} alt="Takazudo Modular" className="site-logo" />
-        <span>Takazudo Modular</span>
-      </a>
+      {!ogpMode && (
+        <>
+          {/* Site logo link (top-right) */}
+          <a
+            className="floating-link site-link"
+            href="https://takazudomodular.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src={`${import.meta.env.BASE_URL}takazudo.svg`} alt="Takazudo Modular" className="site-logo" />
+            <span>Takazudo Modular</span>
+          </a>
 
-      {/* Doc link (bottom-right) */}
-      <a
-        className="floating-link doc-link"
-        href="https://zudo-pattern-gen.pages.dev/pj/pattern-gen/doc/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        </svg>
-        <span>Doc</span>
-      </a>
+          {/* Doc link (bottom-right) */}
+          <a
+            className="floating-link doc-link"
+            href="https://zudo-pattern-gen.pages.dev/pj/pattern-gen/doc/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            <span>Doc</span>
+          </a>
+        </>
+      )}
 
-      <div className="controls">
+      {ogpMode && (
+        <OgpSelectionOverlay
+          onGenerate={handleOgpGenerate}
+          onExit={exitOgpMode}
+        />
+      )}
+
+      {!ogpMode && <div className="controls">
         <h1>zudo-pattern-gen</h1>
 
         <div className="control-group">
@@ -300,6 +341,10 @@ export function App() {
             </button>
           </div>
         </div>
+
+        <button className="btn btn-ogp-mode" onClick={() => setOgpMode(true)}>
+          OGP Mode
+        </button>
 
         <button
           className="btn-toggle-details"
@@ -367,7 +412,7 @@ export function App() {
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

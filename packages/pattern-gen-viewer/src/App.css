@@ -529,3 +529,10 @@ select:focus {
 .btn-download {
   flex: 1;
 }
+
+/* ── OGP Mode ── */
+
+.btn-ogp-mode {
+  width: 100%;
+  margin-bottom: var(--spacing-sp-sm);
+}
