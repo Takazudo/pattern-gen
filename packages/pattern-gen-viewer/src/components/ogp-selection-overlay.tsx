@@ -25,6 +25,10 @@ interface Rect {
   height: number;
 }
 
+type DragState =
+  | { type: 'move'; startMouseX: number; startMouseY: number; startRect: Rect }
+  | { type: 'resize'; handle: HandleId; startMouseX: number; startMouseY: number; startRect: Rect };
+
 interface HandleDef {
   id: HandleId;
   cursor: string;
@@ -187,6 +191,10 @@ function resizeFromHandle(
         height: h,
       };
     }
+    default: {
+      const _exhaustive: never = handle;
+      return _exhaustive;
+    }
   }
 }
 
@@ -198,13 +206,7 @@ export function OgpSelectionOverlay({
   const rectRef = useRef(rect);
   rectRef.current = rect;
 
-  const dragRef = useRef<{
-    type: 'move' | 'resize';
-    handle?: HandleId;
-    startMouseX: number;
-    startMouseY: number;
-    startRect: Rect;
-  } | null>(null);
+  const dragRef = useRef<DragState | null>(null);
 
   // Keyboard handlers
   useEffect(() => {
@@ -244,7 +246,9 @@ export function OgpSelectionOverlay({
         return;
       }
 
-      setRect(clampRect(resizeFromHandle(drag.handle!, sr, dx, dy)));
+      if (drag.type === 'resize') {
+        setRect(clampRect(resizeFromHandle(drag.handle, sr, dx, dy)));
+      }
     };
 
     const handleMouseUp = () => {
@@ -267,10 +271,10 @@ export function OgpSelectionOverlay({
         type: 'move',
         startMouseX: e.clientX,
         startMouseY: e.clientY,
-        startRect: { ...rect },
+        startRect: { ...rectRef.current },
       };
     },
-    [rect],
+    [],
   );
 
   const handleResizeStart = useCallback(
@@ -282,10 +286,10 @@ export function OgpSelectionOverlay({
         handle,
         startMouseX: e.clientX,
         startMouseY: e.clientY,
-        startRect: { ...rect },
+        startRect: { ...rectRef.current },
       };
     },
-    [rect],
+    [],
   );
 
   const { x, y, width, height } = rect;
