@@ -88,6 +88,16 @@ function clampRect(rect: Rect): Rect {
     height = width / OGP_ASPECT;
   }
 
+  // Cap dimensions to viewport so x/y clamping can't go negative
+  if (width > vw) {
+    width = vw;
+    height = width / OGP_ASPECT;
+  }
+  if (height > vh) {
+    height = vh;
+    width = height * OGP_ASPECT;
+  }
+
   if (x < 0) x = 0;
   if (y < 0) y = 0;
   if (x + width > vw) x = vw - width;

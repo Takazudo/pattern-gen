@@ -14,6 +14,17 @@ import { OgpSelectionOverlay } from './components/ogp-selection-overlay.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
+const OGP_WIDTH = 1200;
+const OGP_HEIGHT = 630;
+
+function triggerDownload(dataUrl: string, filename: string) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 function randomSlug(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -222,15 +233,6 @@ export function App() {
     setSlug(randomSlug());
   }, []);
 
-  const triggerDownload = useCallback((dataUrl: string, filename: string) => {
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }, []);
-
   // Downloads at the full buffer resolution (CANVAS_SIZE * dpr).
   // To get a fixed 1200×1200 PNG regardless of dpr, draw onto a temporary
   // 1200×1200 canvas before calling toDataURL.
@@ -239,28 +241,50 @@ export function App() {
     if (!canvas) return;
     const url = canvas.toDataURL('image/png');
     triggerDownload(url, `pattern-${patternType}-${slug}.png`);
-  }, [patternType, slug, triggerDownload]);
+  }, [patternType, slug]);
 
   const handleOgpGenerate = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const canvasRect = canvas.getBoundingClientRect();
-      const scale = canvas.width / canvasRect.width;
-      const srcX = (rect.x - canvasRect.left) * scale;
-      const srcY = (rect.y - canvasRect.top) * scale;
-      const srcW = rect.width * scale;
-      const srcH = rect.height * scale;
+      const bufW = canvas.width;
+      const bufH = canvas.height;
+      const elemW = canvasRect.width;
+      const elemH = canvasRect.height;
+
+      // Account for object-fit: cover on the square canvas.
+      // The canvas content is square but the element fills the viewport,
+      // so the visible area is cropped on one axis.
+      let renderSize: number;
+      let offsetX: number;
+      let offsetY: number;
+      if (elemW > elemH) {
+        renderSize = elemW;
+        offsetX = 0;
+        offsetY = (elemH - elemW) / 2;
+      } else {
+        renderSize = elemH;
+        offsetX = (elemW - elemH) / 2;
+        offsetY = 0;
+      }
+
+      const scale = bufW / renderSize;
+      const srcX = Math.max(0, (rect.x - canvasRect.left - offsetX) * scale);
+      const srcY = Math.max(0, (rect.y - canvasRect.top - offsetY) * scale);
+      const srcW = Math.min(rect.width * scale, bufW - srcX);
+      const srcH = Math.min(rect.height * scale, bufH - srcY);
+
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = 1200;
-      tempCanvas.height = 630;
+      tempCanvas.width = OGP_WIDTH;
+      tempCanvas.height = OGP_HEIGHT;
       const tempCtx = tempCanvas.getContext('2d');
       if (!tempCtx) return;
-      tempCtx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, 1200, 630);
+      tempCtx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, OGP_WIDTH, OGP_HEIGHT);
       const url = tempCanvas.toDataURL('image/png');
       triggerDownload(url, `ogp-${patternType}-${slug}.png`);
     },
-    [patternType, slug, triggerDownload],
+    [patternType, slug],
   );
 
   const exitOgpMode = useCallback(() => setOgpMode(false), []);
@@ -309,7 +333,8 @@ export function App() {
         />
       )}
 
-      {!ogpMode && <div className="controls">
+      {!ogpMode && (
+        <div className="controls">
         <h1>zudo-pattern-gen</h1>
 
         <div className="control-group">
@@ -412,7 +437,8 @@ export function App() {
             </div>
           </div>
         )}
-      </div>}
+        </div>
+      )}
     </div>
   );
 }
