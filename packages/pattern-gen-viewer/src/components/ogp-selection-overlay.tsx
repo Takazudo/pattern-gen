@@ -274,10 +274,15 @@ export function OgpSelectionOverlay({
     };
   }, []);
 
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => () => clearTimeout(copyTimerRef.current), []);
+
   const handleCopy = useCallback((r: OgpRect) => {
     onCopyJson(r).then(() => {
       setCopyFeedback(true);
-      setTimeout(() => setCopyFeedback(false), 1500);
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopyFeedback(false), 1500);
     }).catch(() => { /* clipboard denied */ });
   }, [onCopyJson]);
 

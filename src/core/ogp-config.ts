@@ -94,16 +94,15 @@ export function parseOgpConfig(json: string): OgpConfig {
   if (!raw.crop || typeof raw.crop !== 'object') {
     throw new Error('OGP config: crop must be an object with x, y, width, height');
   }
-  for (const key of ['x', 'y', 'width', 'height'] as const) {
+  for (const key of ['x', 'y'] as const) {
     if (typeof raw.crop[key] !== 'number' || !Number.isFinite(raw.crop[key]) || raw.crop[key] < 0 || raw.crop[key] > 1) {
       throw new Error(`OGP config: crop.${key} must be a finite number in [0, 1]`);
     }
   }
-  if (raw.crop.width <= 0) {
-    throw new Error('OGP config: crop.width must be greater than 0');
-  }
-  if (raw.crop.height <= 0) {
-    throw new Error('OGP config: crop.height must be greater than 0');
+  for (const key of ['width', 'height'] as const) {
+    if (typeof raw.crop[key] !== 'number' || !Number.isFinite(raw.crop[key]) || raw.crop[key] <= 0 || raw.crop[key] > 1) {
+      throw new Error(`OGP config: crop.${key} must be a finite number in (0, 1]`);
+    }
   }
   if (raw.crop.x + raw.crop.width > 1 + FLOAT_EPSILON) {
     throw new Error('OGP config: crop.x + crop.width must be <= 1');

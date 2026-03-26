@@ -334,10 +334,10 @@ export function App() {
 
   const exitOgpMode = useCallback(() => setOgpMode(false), []);
 
-  const handleOgpDownloadJson = useCallback(
-    (rect: { x: number; y: number; width: number; height: number }) => {
+  const getOgpJson = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }): string | null => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      if (!canvas) return null;
       const config = buildOgpConfig(rect, canvas, {
         slug,
         patternType,
@@ -349,34 +349,30 @@ export function App() {
         displayParams,
         hslAdjust,
       });
-      const json = serializeOgpConfig(config);
+      return serializeOgpConfig(config);
+    },
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
+  );
+
+  const handleOgpDownloadJson = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }) => {
+      const json = getOgpJson(rect);
+      if (!json) return;
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       triggerDownload(url, `ogp-config-${patternType}-${slug}.json`);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
+    [getOgpJson, patternType, slug],
   );
 
   const handleOgpCopyJson = useCallback(
     async (rect: { x: number; y: number; width: number; height: number }) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const config = buildOgpConfig(rect, canvas, {
-        slug,
-        patternType,
-        colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
-        zoom,
-        txVal,
-        tyVal,
-        useTranslate,
-        displayParams,
-        hslAdjust,
-      });
-      const json = serializeOgpConfig(config);
+      const json = getOgpJson(rect);
+      if (!json) return;
       await navigator.clipboard.writeText(json);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
+    [getOgpJson],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;

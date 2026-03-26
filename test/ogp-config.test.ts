@@ -92,7 +92,7 @@ describe('parseOgpConfig validation', () => {
     const config = makeValidConfig();
     config.crop = { x: 0.1, y: 0.1, width: -0.5, height: 0.5 };
     const json = JSON.stringify(config);
-    expect(() => parseOgpConfig(json)).toThrow('crop.width must be a finite number in [0, 1]');
+    expect(() => parseOgpConfig(json)).toThrow('crop.width must be a finite number in (0, 1]');
   });
 
   it('defaults missing params to {}', () => {
