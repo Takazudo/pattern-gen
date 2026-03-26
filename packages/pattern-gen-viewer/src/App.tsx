@@ -11,6 +11,7 @@ import { HslTweakPanel } from './components/hsl-tweak-panel.js';
 import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { OgpSelectionOverlay } from './components/ogp-selection-overlay.js';
+import { OgpEditor } from './components/ogp-editor.js';
 import { serializeOgpConfig, OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 
@@ -180,6 +181,9 @@ export function App() {
   const [useTranslate, setUseTranslate] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [ogpMode, setOgpMode] = useState(false);
+  const [ogpEditMode, setOgpEditMode] = useState(false);
+  const [editorBgImage, setEditorBgImage] = useState<ImageBitmap | null>(null);
+  const [editorBgConfig, setEditorBgConfig] = useState<OgpConfig | null>(null);
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   // Params locked to their current value across seed changes
@@ -411,6 +415,67 @@ export function App() {
     [getOgpJson],
   );
 
+  const handleEnterOgpEdit = useCallback(
+    async (rect: { x: number; y: number; width: number; height: number }) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const config = buildOgpConfig(rect, canvas, {
+        slug,
+        patternType,
+        colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
+        zoom,
+        txVal,
+        tyVal,
+        useTranslate,
+        displayParams,
+        hslAdjust,
+      });
+      const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(rect, canvas);
+      const bufW = canvas.width;
+      const bufH = canvas.height;
+      const cropX = srcX / bufW;
+      const cropY = srcY / bufH;
+      const cropW = srcW / bufW;
+      const cropH = srcH / bufH;
+
+      const renderSize = Math.min(4000, Math.max(
+        CANVAS_SIZE,
+        Math.ceil(OGP_WIDTH / cropW),
+        Math.ceil(OGP_HEIGHT / cropH),
+      ));
+
+      const hiResCanvas = document.createElement('canvas');
+      hiResCanvas.width = renderSize;
+      hiResCanvas.height = renderSize;
+      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+
+      const hiResCtx = hiResCanvas.getContext('2d');
+      if (!hiResCtx) return;
+      if (hslAdjust.h !== 0 || hslAdjust.s !== 0 || hslAdjust.l !== 0) {
+        applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
+      }
+
+      const cx = Math.round(cropX * renderSize);
+      const cy = Math.round(cropY * renderSize);
+      const cw = Math.min(Math.round(cropW * renderSize), renderSize - cx);
+      const ch = Math.min(Math.round(cropH * renderSize), renderSize - cy);
+
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.width = OGP_WIDTH;
+      bgCanvas.height = OGP_HEIGHT;
+      const bgCtx = bgCanvas.getContext('2d');
+      if (!bgCtx) return;
+      bgCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+
+      const bitmap = await createImageBitmap(bgCanvas);
+      setEditorBgImage(bitmap);
+      setEditorBgConfig(config);
+      setOgpEditMode(true);
+    },
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams],
+  );
+
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
   return (
@@ -448,12 +513,21 @@ export function App() {
         </>
       )}
 
-      {ogpMode && (
+      {ogpMode && !ogpEditMode && (
         <OgpSelectionOverlay
           onGenerate={handleOgpGenerate}
           onExit={exitOgpMode}
           onDownloadJson={handleOgpDownloadJson}
           onCopyJson={handleOgpCopyJson}
+          onEdit={handleEnterOgpEdit}
+        />
+      )}
+
+      {ogpEditMode && (
+        <OgpEditor
+          backgroundImage={editorBgImage}
+          backgroundConfig={editorBgConfig}
+          onExit={() => setOgpEditMode(false)}
         />
       )}
 
