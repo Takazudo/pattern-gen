@@ -11,13 +11,11 @@ import { HslTweakPanel } from './components/hsl-tweak-panel.js';
 import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { OgpSelectionOverlay } from './components/ogp-selection-overlay.js';
-import { serializeOgpConfig } from 'pattern-gen/core/ogp-config';
+import { serializeOgpConfig, OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
-const OGP_WIDTH = 1200;
-const OGP_HEIGHT = 630;
 
 function triggerDownload(dataUrl: string, filename: string) {
   const a = document.createElement('a');

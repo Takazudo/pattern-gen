@@ -1,3 +1,6 @@
+export const OGP_WIDTH = 1200;
+export const OGP_HEIGHT = 630;
+
 export interface OgpCropRegion {
   x: number;      // 0-1 fraction of canvas buffer width
   y: number;      // 0-1 fraction of canvas buffer height
@@ -109,5 +112,17 @@ export function parseOgpConfig(json: string): OgpConfig {
     throw new Error('OGP config: crop.y + crop.height must be <= 1');
   }
 
-  return raw as OgpConfig;
+  return {
+    version: 1 as const,
+    slug: raw.slug,
+    type: raw.type,
+    colorScheme: raw.colorScheme,
+    zoom: raw.zoom,
+    translateX: raw.translateX,
+    translateY: raw.translateY,
+    useTranslate: raw.useTranslate,
+    params: raw.params,
+    hsl: { h: raw.hsl.h, s: raw.hsl.s, l: raw.hsl.l },
+    crop: { x: raw.crop.x, y: raw.crop.y, width: raw.crop.width, height: raw.crop.height },
+  };
 }

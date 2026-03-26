@@ -5,6 +5,7 @@ import { applyHslAdjust } from './core/hsl-adjust.js';
 import type { HslAdjust } from './core/hsl-adjust.js';
 import { patternsByName } from './patterns/index.js';
 import type { ColorScheme } from './core/color-schemes.js';
+import { OGP_WIDTH, OGP_HEIGHT } from './core/ogp-config.js';
 import type { OgpConfig } from './core/ogp-config.js';
 import type { PatternOptions, GenerateOptions } from './core/types.js';
 
@@ -102,9 +103,6 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
   };
 }
 
-const OGP_OUTPUT_WIDTH = 1200;
-const OGP_OUTPUT_HEIGHT = 630;
-
 /**
  * Render an OGP image from a serialized OgpConfig.
  * Generates the pattern at a size large enough for the crop region,
@@ -118,8 +116,8 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
     4000,
     Math.max(
       800,
-      Math.ceil(OGP_OUTPUT_WIDTH / config.crop.width),
-      Math.ceil(OGP_OUTPUT_HEIGHT / config.crop.height),
+      Math.ceil(OGP_WIDTH / config.crop.width),
+      Math.ceil(OGP_HEIGHT / config.crop.height),
     ),
   );
 
@@ -193,16 +191,16 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
   const cropW = Math.round(config.crop.width * renderSize);
   const cropH = Math.round(config.crop.height * renderSize);
 
-  const ogpCanvas = createCanvas(OGP_OUTPUT_WIDTH, OGP_OUTPUT_HEIGHT);
+  const ogpCanvas = createCanvas(OGP_WIDTH, OGP_HEIGHT);
   const ogpCtx = ogpCanvas.getContext('2d');
-  ogpCtx.drawImage(patternCanvas, cropX, cropY, cropW, cropH, 0, 0, OGP_OUTPUT_WIDTH, OGP_OUTPUT_HEIGHT);
+  ogpCtx.drawImage(patternCanvas, cropX, cropY, cropW, cropH, 0, 0, OGP_WIDTH, OGP_HEIGHT);
 
   return {
     buffer: ogpCanvas.toBuffer('image/png'),
     patternName: pattern.name,
     colorSchemeName: scheme.name,
-    width: OGP_OUTPUT_WIDTH,
-    height: OGP_OUTPUT_HEIGHT,
+    width: OGP_WIDTH,
+    height: OGP_HEIGHT,
   };
 }
 

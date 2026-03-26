@@ -24,21 +24,14 @@ interface OgpSelectionOverlayProps {
 
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
-interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 type DragState =
-  | { type: 'move'; startMouseX: number; startMouseY: number; startRect: Rect }
-  | { type: 'resize'; handle: HandleId; startMouseX: number; startMouseY: number; startRect: Rect };
+  | { type: 'move'; startMouseX: number; startMouseY: number; startRect: OgpRect }
+  | { type: 'resize'; handle: HandleId; startMouseX: number; startMouseY: number; startRect: OgpRect };
 
 interface HandleDef {
   id: HandleId;
   cursor: string;
-  getPos: (r: Rect) => { left: number; top: number };
+  getPos: (r: OgpRect) => { left: number; top: number };
 }
 
 const HANDLES: HandleDef[] = [
@@ -84,7 +77,7 @@ const HANDLES: HandleDef[] = [
   },
 ];
 
-function clampRect(rect: Rect): Rect {
+function clampRect(rect: OgpRect): OgpRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   let { x, y, width, height } = rect;
@@ -94,14 +87,12 @@ function clampRect(rect: Rect): Rect {
     height = width / OGP_ASPECT;
   }
 
-  // Cap dimensions to viewport so x/y clamping can't go negative
-  if (width > vw) {
-    width = vw;
-    height = width / OGP_ASPECT;
-  }
-  if (height > vh) {
-    height = vh;
-    width = height * OGP_ASPECT;
+  // Cap dimensions to fit within viewport (both axes must satisfy)
+  const maxW = Math.min(vw, vh * OGP_ASPECT);
+  const maxH = maxW / OGP_ASPECT;
+  if (width > maxW) {
+    width = maxW;
+    height = maxH;
   }
 
   if (x < 0) x = 0;
@@ -112,7 +103,7 @@ function clampRect(rect: Rect): Rect {
   return { x, y, width, height };
 }
 
-function getInitialRect(): Rect {
+function getInitialRect(): OgpRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const width = vw * 0.6;
@@ -124,10 +115,10 @@ function getInitialRect(): Rect {
 
 function resizeFromHandle(
   handle: HandleId,
-  sr: Rect,
+  sr: OgpRect,
   dx: number,
   dy: number,
-): Rect {
+): OgpRect {
   switch (handle) {
     case 'se': {
       let w = sr.width + dx;
@@ -220,7 +211,7 @@ export function OgpSelectionOverlay({
   onDownloadJson,
   onCopyJson,
 }: OgpSelectionOverlayProps) {
-  const [rect, setRect] = useState<Rect>(getInitialRect);
+  const [rect, setRect] = useState<OgpRect>(getInitialRect);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const rectRef = useRef(rect);
   rectRef.current = rect;
@@ -282,7 +273,7 @@ export function OgpSelectionOverlay({
     };
   }, []);
 
-  const handleCopy = useCallback((r: Rect) => {
+  const handleCopy = useCallback((r: OgpRect) => {
     onCopyJson(r).then(() => {
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 1500);
