@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import type { EditorLayer, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
+import type { GridConfig } from './ogp-editor.js';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
 
 /* ── Props ── */
@@ -14,6 +15,8 @@ interface LayerPanelProps {
   onAddImage: () => void;
   onAddText: () => void;
   onImportJson: () => void;
+  gridConfig: GridConfig;
+  onGridConfigChange: (config: GridConfig) => void;
 }
 
 /* ── Component ── */
@@ -28,6 +31,8 @@ export function OgpEditorLayerPanel({
   onAddImage,
   onAddText,
   onImportJson,
+  gridConfig,
+  onGridConfigChange,
 }: LayerPanelProps) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
@@ -229,6 +234,65 @@ export function OgpEditorLayerPanel({
           )}
         </div>
       )}
+
+      {/* Grid panel — always visible */}
+      <div className="ogp-grid-panel">
+        <div className="ogp-grid-panel-title">Grid</div>
+        <div className="ogp-prop-grid">
+          <div className="ogp-prop-field">
+            <label className="ogp-prop-label">V Divide</label>
+            <input
+              type="number"
+              className="ogp-prop-input ogp-prop-num"
+              min={1}
+              max={12}
+              value={gridConfig.vDivide}
+              onChange={(e) =>
+                onGridConfigChange({
+                  ...gridConfig,
+                  vDivide: Math.max(1, Math.min(12, Number(e.target.value))),
+                })
+              }
+            />
+          </div>
+          <div className="ogp-prop-field">
+            <label className="ogp-prop-label">H Divide</label>
+            <input
+              type="number"
+              className="ogp-prop-input ogp-prop-num"
+              min={1}
+              max={12}
+              value={gridConfig.hDivide}
+              onChange={(e) =>
+                onGridConfigChange({
+                  ...gridConfig,
+                  hDivide: Math.max(1, Math.min(12, Number(e.target.value))),
+                })
+              }
+            />
+          </div>
+        </div>
+        <label className="ogp-prop-toggle-row">
+          <input
+            type="checkbox"
+            checked={gridConfig.snap}
+            onChange={(e) =>
+              onGridConfigChange({ ...gridConfig, snap: e.target.checked })
+            }
+          />
+          <span className="ogp-prop-label">Snap to Grid</span>
+        </label>
+        <label className="ogp-prop-toggle-row">
+          <input
+            type="checkbox"
+            checked={gridConfig.visible}
+            onChange={(e) =>
+              onGridConfigChange({ ...gridConfig, visible: e.target.checked })
+            }
+          />
+          <span className="ogp-prop-label">Show Grid</span>
+        </label>
+      </div>
     </div>
   );
 }
