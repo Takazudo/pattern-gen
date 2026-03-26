@@ -15,6 +15,7 @@ Generate deterministic visual patterns from text seeds. 30 algorithms spanning g
 - **CLI tool** — generate PNGs from the command line
 - **Library** — use programmatically in Node.js or browser
 - **Interactive viewer** — browse and customize patterns in real-time
+- **OGP image generator** — select and export 1200×630 OGP images from the viewer, with JSON config for CLI reproduction
 
 ## Quick Start
 
@@ -81,3 +82,32 @@ renderPatternToCanvas(ctx, 'hello-world', 'voronoi', {
 | `--color-scheme` | `-c` | Color scheme name or `random` | auto |
 | `--out` | `-o` | Output file path | `{slug}.png` |
 | `--out-dir` | | Output directory | cwd |
+| `--ogp-config` | | OGP config JSON file path | |
+| `--hue` | | Hue shift (-180 to 180) | `0` |
+| `--saturation` | | Saturation shift (-100 to 100) | `0` |
+| `--lightness` | | Lightness shift (-100 to 100) | `0` |
+
+## OGP Image Generator
+
+The interactive viewer includes an OGP mode for generating Open Graph images (1200×630).
+
+### Viewer Workflow
+
+1. Open the viewer and configure your pattern (type, seed, colors, zoom)
+2. Click **OGP Mode** to enter selection mode
+3. Drag and resize the selection rectangle (aspect ratio is locked to 1200:630)
+4. Use the action bar:
+   - **Generate OGP Image** — download the selected area as a high-res 1200×630 PNG
+   - **Download JSON** — save the full pattern config + crop region as a JSON file
+   - **Copy JSON** — copy the config to clipboard
+5. Press **Escape** or click **Exit** to return to normal mode
+
+### CLI Reproduction
+
+Use the exported JSON config to reproduce the exact same OGP image from the command line:
+
+```bash
+pattern-gen --ogp-config ogp-config.json --out ogp-image.png
+```
+
+The CLI re-renders the pattern at high resolution and crops to the same region, producing an identical 1200×630 PNG.

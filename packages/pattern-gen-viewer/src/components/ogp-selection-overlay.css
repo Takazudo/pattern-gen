@@ -1,0 +1,97 @@
+/* ── OGP Selection Overlay ── */
+
+.ogp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  user-select: none;
+}
+
+/* ── Dim regions (4 rects around selection) ── */
+
+.ogp-dim {
+  position: absolute;
+  background: oklch(0% 0 0 / 60%);
+}
+
+.ogp-dim-top {
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.ogp-dim-bottom {
+  left: 0;
+  right: 0;
+}
+
+.ogp-dim-left {
+  left: 0;
+}
+
+/* .ogp-dim-right uses inline styles for position/size */
+
+/* ── Selection rectangle ── */
+
+.ogp-selection {
+  position: absolute;
+  border: 2px dashed oklch(100% 0 0 / 70%);
+  cursor: move;
+  box-sizing: border-box;
+}
+
+/* ── Resize handles ── */
+
+.ogp-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: oklch(100% 0 0);
+  border: 1px solid oklch(0% 0 0 / 50%);
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  z-index: 101;
+  transition:
+    width 0.1s,
+    height 0.1s,
+    box-shadow 0.1s;
+}
+
+.ogp-handle:hover {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 6px oklch(100% 0 0 / 50%);
+}
+
+/* ── Action bar ── */
+
+.ogp-action-bar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  background: oklch(0% 0 0 / 75%);
+  backdrop-filter: blur(12px);
+  border-radius: 8px;
+  border: 1px solid oklch(100% 0 0 / 10%);
+  z-index: 101;
+  white-space: nowrap;
+}
+
+.ogp-btn-generate {
+  background: oklch(100% 0 0 / 12%);
+}
+
+.ogp-btn-generate:hover {
+  background: oklch(100% 0 0 / 20%);
+}
+
+.ogp-btn-json {
+  background: oklch(100% 0 0 / 8%);
+}
+
+.ogp-btn-json:hover {
+  background: oklch(100% 0 0 / 15%);
+}

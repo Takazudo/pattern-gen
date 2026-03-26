@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { renderPattern } from './renderer.js';
+import { renderPattern, renderOgpFromConfig, renderOgpEditorFromConfig } from './renderer.js';
+import { parseOgpConfig } from './core/ogp-config.js';
+import { parseOgpEditorConfig } from './core/ogp-editor-config.js';
 import { getPatternNames } from './patterns/index.js';
 import { getColorSchemeNames } from './core/color-schemes.js';
 import type { GenerateOptions } from './core/types.js';
@@ -114,6 +116,8 @@ Options:
   --lightness <number>        Lightness shift (-100 to 100)
   --out, -o <path>            Output file path
   --out-dir <dir>             Output directory
+  --ogp-config <path>         Render OGP image from config JSON file
+  --ogp-editor-config <path>  Render OGP editor config JSON file
   --list-types                List available pattern types
   --list-color-schemes        List available color schemes
   --help, -h                  Show this help`);
@@ -134,8 +138,56 @@ Options:
   return options;
 }
 
+function extractOutputFlags(args: string[], excludeIdx: number): { outPath?: string; outDir?: string } {
+  const flagArgs = args.filter((_, i) => i !== excludeIdx && i !== excludeIdx + 1);
+  let outPath: string | undefined;
+  let outDir: string | undefined;
+  for (let i = 0; i < flagArgs.length; i++) {
+    if ((flagArgs[i] === '--out' || flagArgs[i] === '-o') && flagArgs[i + 1]) outPath = flagArgs[++i];
+    else if (flagArgs[i] === '--out-dir' && flagArgs[i + 1]) outDir = flagArgs[++i];
+  }
+  return { outPath, outDir };
+}
+
 async function main() {
   const args = process.argv.slice(2);
+
+  // Handle --ogp-config mode (early exit, no positional slug required)
+  const ogpConfigIdx = args.indexOf('--ogp-config');
+  if (ogpConfigIdx !== -1) {
+    const configPath = args[ogpConfigIdx + 1];
+    if (!configPath || configPath.startsWith('-')) fail('--ogp-config requires a file path');
+
+    const jsonStr = readFileSync(resolve(configPath), 'utf-8');
+    const config = parseOgpConfig(jsonStr);
+    const result = await renderOgpFromConfig(config);
+
+    const { outPath, outDir } = extractOutputFlags(args, ogpConfigIdx);
+    const outputPath = outPath ?? resolve(outDir ?? process.cwd(), `ogp-${config.type}-${config.slug}.png`);
+    mkdirSync(dirname(outputPath), { recursive: true });
+    writeFileSync(outputPath, result.buffer);
+    console.log(`Generated OGP: ${outputPath} (${result.patternName}, ${result.colorSchemeName}, ${result.width}x${result.height})`);
+    return;
+  }
+
+  // Handle --ogp-editor-config mode (early exit, no positional slug required)
+  const editorConfigIdx = args.indexOf('--ogp-editor-config');
+  if (editorConfigIdx !== -1) {
+    const configPath = args[editorConfigIdx + 1];
+    if (!configPath || configPath.startsWith('-')) fail('--ogp-editor-config requires a file path');
+
+    const jsonStr = readFileSync(resolve(configPath), 'utf-8');
+    const config = parseOgpEditorConfig(jsonStr);
+    const result = await renderOgpEditorFromConfig(config);
+
+    const { outPath, outDir } = extractOutputFlags(args, editorConfigIdx);
+    const outputPath = outPath ?? resolve(outDir ?? process.cwd(), `ogp-editor-${config.background.type}-${config.background.slug}.png`);
+    mkdirSync(dirname(outputPath), { recursive: true });
+    writeFileSync(outputPath, result.buffer);
+    console.log(`Generated OGP Editor: ${outputPath} (${result.patternName}, ${result.width}x${result.height})`);
+    return;
+  }
+
   const { outPath, outDir, ...options } = parseArgs(args);
 
   const result = await renderPattern(options);

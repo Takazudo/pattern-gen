@@ -10,9 +10,94 @@ import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
 import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
+import { OgpSelectionOverlay } from './components/ogp-selection-overlay.js';
+import { OgpEditor } from './components/ogp-editor.js';
+import { serializeOgpConfig, OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
+import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
+
+function triggerDownload(dataUrl: string, filename: string) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/** Map a viewport rect to canvas buffer coordinates, accounting for object-fit: cover. */
+function viewportRectToBufferRect(
+  viewportRect: { x: number; y: number; width: number; height: number },
+  canvas: HTMLCanvasElement,
+): { srcX: number; srcY: number; srcW: number; srcH: number } {
+  const canvasRect = canvas.getBoundingClientRect();
+  const bufW = canvas.width;
+  const bufH = canvas.height;
+  const elemW = canvasRect.width;
+  const elemH = canvasRect.height;
+
+  let renderSize: number;
+  let offsetX: number;
+  let offsetY: number;
+  if (elemW > elemH) {
+    renderSize = elemW;
+    offsetX = 0;
+    offsetY = (elemH - elemW) / 2;
+  } else {
+    renderSize = elemH;
+    offsetX = (elemW - elemH) / 2;
+    offsetY = 0;
+  }
+
+  const scale = bufW / renderSize;
+  const srcX = Math.max(0, (viewportRect.x - canvasRect.left - offsetX) * scale);
+  const srcY = Math.max(0, (viewportRect.y - canvasRect.top - offsetY) * scale);
+  const srcW = Math.min(viewportRect.width * scale, bufW - srcX);
+  const srcH = Math.min(viewportRect.height * scale, bufH - srcY);
+
+  return { srcX, srcY, srcW, srcH };
+}
+
+function buildOgpConfig(
+  viewportRect: { x: number; y: number; width: number; height: number },
+  canvas: HTMLCanvasElement,
+  state: {
+    slug: string;
+    patternType: string;
+    colorSchemeName: string;
+    zoom: number;
+    txVal: number;
+    tyVal: number;
+    useTranslate: boolean;
+    displayParams: Record<string, number>;
+    hslAdjust: { h: number; s: number; l: number };
+  },
+): OgpConfig {
+  const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(viewportRect, canvas);
+  const bufW = canvas.width;
+  const bufH = canvas.height;
+
+  return {
+    version: 1,
+    slug: state.slug,
+    type: state.patternType,
+    colorScheme: state.colorSchemeName,
+    zoom: state.zoom,
+    translateX: state.txVal,
+    translateY: state.tyVal,
+    useTranslate: state.useTranslate,
+    params: { ...state.displayParams },
+    hsl: { ...state.hslAdjust },
+    crop: {
+      x: srcX / bufW,
+      y: srcY / bufH,
+      width: srcW / bufW,
+      height: srcH / bufH,
+    },
+  };
+}
 
 function randomSlug(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -95,6 +180,10 @@ export function App() {
   const [translateY, setTranslateY] = useState(0);
   const [useTranslate, setUseTranslate] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [ogpMode, setOgpMode] = useState(false);
+  const [ogpEditMode, setOgpEditMode] = useState(false);
+  const [editorBgImage, setEditorBgImage] = useState<ImageBitmap | null>(null);
+  const [editorBgConfig, setEditorBgConfig] = useState<OgpConfig | null>(null);
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   // Params locked to their current value across seed changes
@@ -227,13 +316,165 @@ export function App() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pattern-${patternType}-${slug}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    triggerDownload(url, `pattern-${patternType}-${slug}.png`);
   }, [patternType, slug]);
+
+  const handleOgpGenerate = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      // Compute normalized crop (0-1 fractions of canvas buffer)
+      const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(rect, canvas);
+      const bufW = canvas.width;
+      const bufH = canvas.height;
+      const cropX = srcX / bufW;
+      const cropY = srcY / bufH;
+      const cropW = srcW / bufW;
+      const cropH = srcH / bufH;
+
+      // Re-render at a resolution where the crop region has enough pixels
+      // for a sharp 1200x630 output (instead of upscaling from displayed canvas)
+      const renderSize = Math.min(4000, Math.max(
+        CANVAS_SIZE,
+        Math.ceil(OGP_WIDTH / cropW),
+        Math.ceil(OGP_HEIGHT / cropH),
+      ));
+
+      const hiResCanvas = document.createElement('canvas');
+      hiResCanvas.width = renderSize;
+      hiResCanvas.height = renderSize;
+      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+
+      // Apply HSL adjustments
+      const hiResCtx = hiResCanvas.getContext('2d');
+      if (!hiResCtx) return;
+      if (hslAdjust.h !== 0 || hslAdjust.s !== 0 || hslAdjust.l !== 0) {
+        applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
+      }
+
+      // Crop and scale to OGP dimensions
+      const cx = Math.round(cropX * renderSize);
+      const cy = Math.round(cropY * renderSize);
+      const cw = Math.min(Math.round(cropW * renderSize), renderSize - cx);
+      const ch = Math.min(Math.round(cropH * renderSize), renderSize - cy);
+
+      const ogpCanvas = document.createElement('canvas');
+      ogpCanvas.width = OGP_WIDTH;
+      ogpCanvas.height = OGP_HEIGHT;
+      const ogpCtx = ogpCanvas.getContext('2d');
+      if (!ogpCtx) return;
+      ogpCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+
+      const url = ogpCanvas.toDataURL('image/png');
+      triggerDownload(url, `ogp-${patternType}-${slug}.png`);
+    },
+    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust],
+  );
+
+  const exitOgpMode = useCallback(() => setOgpMode(false), []);
+
+  const getOgpJson = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }): string | null => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const config = buildOgpConfig(rect, canvas, {
+        slug,
+        patternType,
+        colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
+        zoom,
+        txVal,
+        tyVal,
+        useTranslate,
+        displayParams,
+        hslAdjust,
+      });
+      return serializeOgpConfig(config);
+    },
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
+  );
+
+  const handleOgpDownloadJson = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }) => {
+      const json = getOgpJson(rect);
+      if (!json) return;
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      triggerDownload(url, `ogp-config-${patternType}-${slug}.json`);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+    [getOgpJson, patternType, slug],
+  );
+
+  const handleOgpCopyJson = useCallback(
+    async (rect: { x: number; y: number; width: number; height: number }) => {
+      const json = getOgpJson(rect);
+      if (!json) return;
+      await navigator.clipboard.writeText(json);
+    },
+    [getOgpJson],
+  );
+
+  const handleEnterOgpEdit = useCallback(
+    async (rect: { x: number; y: number; width: number; height: number }) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const config = buildOgpConfig(rect, canvas, {
+        slug,
+        patternType,
+        colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
+        zoom,
+        txVal,
+        tyVal,
+        useTranslate,
+        displayParams,
+        hslAdjust,
+      });
+      const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(rect, canvas);
+      const bufW = canvas.width;
+      const bufH = canvas.height;
+      const cropX = srcX / bufW;
+      const cropY = srcY / bufH;
+      const cropW = srcW / bufW;
+      const cropH = srcH / bufH;
+
+      const renderSize = Math.min(4000, Math.max(
+        CANVAS_SIZE,
+        Math.ceil(OGP_WIDTH / cropW),
+        Math.ceil(OGP_HEIGHT / cropH),
+      ));
+
+      const hiResCanvas = document.createElement('canvas');
+      hiResCanvas.width = renderSize;
+      hiResCanvas.height = renderSize;
+      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+
+      const hiResCtx = hiResCanvas.getContext('2d');
+      if (!hiResCtx) return;
+      if (hslAdjust.h !== 0 || hslAdjust.s !== 0 || hslAdjust.l !== 0) {
+        applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
+      }
+
+      const cx = Math.round(cropX * renderSize);
+      const cy = Math.round(cropY * renderSize);
+      const cw = Math.min(Math.round(cropW * renderSize), renderSize - cx);
+      const ch = Math.min(Math.round(cropH * renderSize), renderSize - cy);
+
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.width = OGP_WIDTH;
+      bgCanvas.height = OGP_HEIGHT;
+      const bgCtx = bgCanvas.getContext('2d');
+      if (!bgCtx) return;
+      bgCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+
+      const bitmap = await createImageBitmap(bgCanvas);
+      setEditorBgImage(bitmap);
+      setEditorBgConfig(config);
+      setOgpEditMode(true);
+    },
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams],
+  );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
@@ -243,32 +484,55 @@ export function App() {
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
       </div>
 
-      {/* Site logo link (top-right) */}
-      <a
-        className="floating-link site-link"
-        href="https://takazudomodular.com/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <img src={`${import.meta.env.BASE_URL}takazudo.svg`} alt="Takazudo Modular" className="site-logo" />
-        <span>Takazudo Modular</span>
-      </a>
+      {!ogpMode && (
+        <>
+          {/* Site logo link (top-right) */}
+          <a
+            className="floating-link site-link"
+            href="https://takazudomodular.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src={`${import.meta.env.BASE_URL}takazudo.svg`} alt="Takazudo Modular" className="site-logo" />
+            <span>Takazudo Modular</span>
+          </a>
 
-      {/* Doc link (bottom-right) */}
-      <a
-        className="floating-link doc-link"
-        href="https://zudo-pattern-gen.pages.dev/pj/pattern-gen/doc/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        </svg>
-        <span>Doc</span>
-      </a>
+          {/* Doc link (bottom-right) */}
+          <a
+            className="floating-link doc-link"
+            href="https://zudo-pattern-gen.pages.dev/pj/pattern-gen/doc/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            <span>Doc</span>
+          </a>
+        </>
+      )}
 
-      <div className="controls">
+      {ogpMode && !ogpEditMode && (
+        <OgpSelectionOverlay
+          onGenerate={handleOgpGenerate}
+          onExit={exitOgpMode}
+          onDownloadJson={handleOgpDownloadJson}
+          onCopyJson={handleOgpCopyJson}
+          onEdit={handleEnterOgpEdit}
+        />
+      )}
+
+      {ogpEditMode && (
+        <OgpEditor
+          backgroundImage={editorBgImage}
+          backgroundConfig={editorBgConfig}
+          onExit={() => setOgpEditMode(false)}
+        />
+      )}
+
+      {!ogpMode && (
+        <div className="controls">
         <h1>zudo-pattern-gen</h1>
 
         <div className="control-group">
@@ -300,6 +564,10 @@ export function App() {
             </button>
           </div>
         </div>
+
+        <button className="btn btn-ogp-mode" onClick={() => setOgpMode(true)}>
+          OGP Mode
+        </button>
 
         <button
           className="btn-toggle-details"
@@ -367,7 +635,8 @@ export function App() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

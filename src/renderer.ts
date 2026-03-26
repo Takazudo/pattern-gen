@@ -5,6 +5,10 @@ import { applyHslAdjust } from './core/hsl-adjust.js';
 import type { HslAdjust } from './core/hsl-adjust.js';
 import { patternsByName } from './patterns/index.js';
 import type { ColorScheme } from './core/color-schemes.js';
+import { OGP_WIDTH, OGP_HEIGHT } from './core/ogp-config.js';
+import type { OgpConfig } from './core/ogp-config.js';
+import type { OgpEditorConfig } from './core/ogp-editor-config.js';
+import { ensureGoogleFont } from './core/google-fonts-loader.js';
 import type { PatternOptions, GenerateOptions } from './core/types.js';
 
 /** Resolve a color scheme from name/seed, optionally overriding the background. */
@@ -99,6 +103,249 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
     width: size,
     height: size,
   };
+}
+
+/**
+ * Render an OGP image from a serialized OgpConfig.
+ * Generates the pattern at a size large enough for the crop region,
+ * applies HSL adjustments, crops, and scales to 1200x630.
+ */
+export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResult> {
+  const { createCanvas } = await import('canvas');
+
+  // Cap at 4000 so the useTranslate 3x branch stays under 12000px
+  const renderSize = Math.min(
+    4000,
+    Math.max(
+      800,
+      Math.ceil(OGP_WIDTH / config.crop.width),
+      Math.ceil(OGP_HEIGHT / config.crop.height),
+    ),
+  );
+
+  const pattern = patternsByName.get(config.type);
+  if (!pattern) {
+    const available = [...patternsByName.keys()].join(', ');
+    throw new Error(`Unknown pattern type: "${config.type}". Available: ${available}`);
+  }
+
+  const seed = hashString(config.slug);
+  const rand = createRandom(seed);
+  const scheme = resolveColorScheme(config.colorScheme, seed);
+
+  // Create the pattern canvas
+  let patternCanvas: ReturnType<typeof createCanvas>;
+
+  if (config.useTranslate) {
+    // Replicate the viewer's 3x offscreen canvas approach
+    const scale = 3;
+    const bigSize = renderSize * scale;
+    const offscreen = createCanvas(bigSize, bigSize);
+    const offCtx = offscreen.getContext('2d');
+
+    pattern.generate(offCtx as unknown as CanvasRenderingContext2D, {
+      width: bigSize,
+      height: bigSize,
+      rand,
+      colorScheme: scheme,
+      zoom: config.zoom,
+      params: Object.keys(config.params).length > 0 ? config.params : undefined,
+    });
+
+    // Extract the visible portion with translate offset
+    patternCanvas = createCanvas(renderSize, renderSize);
+    const patCtx = patternCanvas.getContext('2d');
+    const baseOffset = -renderSize * (scale - 1) / 2;
+    const tx = config.translateX * renderSize;
+    const ty = config.translateY * renderSize;
+    patCtx.save();
+    patCtx.translate(baseOffset + tx, baseOffset + ty);
+    patCtx.drawImage(offscreen, 0, 0);
+    patCtx.restore();
+  } else {
+    // Simple render (no translate offscreen)
+    patternCanvas = createCanvas(renderSize, renderSize);
+    const patCtx = patternCanvas.getContext('2d');
+
+    const patternOptions: PatternOptions = {
+      width: renderSize,
+      height: renderSize,
+      rand,
+      colorScheme: scheme,
+      zoom: config.zoom,
+      params: Object.keys(config.params).length > 0 ? config.params : undefined,
+    };
+
+    // When useTranslate is false, the viewer skips translate entirely
+    // (translateX/Y are reset to 0), so we render directly without offset.
+    pattern.generate(patCtx as unknown as CanvasRenderingContext2D, patternOptions);
+  }
+
+  // Apply HSL adjustments
+  const patCtx = patternCanvas.getContext('2d');
+  if (config.hsl.h !== 0 || config.hsl.s !== 0 || config.hsl.l !== 0) {
+    applyHslAdjust(patCtx as unknown as CanvasRenderingContext2D, renderSize, renderSize, config.hsl);
+  }
+
+  // Crop to OGP region and scale to 1200x630
+  const cropX = Math.round(config.crop.x * renderSize);
+  const cropY = Math.round(config.crop.y * renderSize);
+  const cropW = Math.min(Math.round(config.crop.width * renderSize), renderSize - cropX);
+  const cropH = Math.min(Math.round(config.crop.height * renderSize), renderSize - cropY);
+
+  const ogpCanvas = createCanvas(OGP_WIDTH, OGP_HEIGHT);
+  const ogpCtx = ogpCanvas.getContext('2d');
+  ogpCtx.drawImage(patternCanvas, cropX, cropY, cropW, cropH, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+
+  return {
+    buffer: ogpCanvas.toBuffer('image/png'),
+    patternName: pattern.name,
+    colorSchemeName: scheme.name,
+    width: OGP_WIDTH,
+    height: OGP_HEIGHT,
+  };
+}
+
+/**
+ * Render an OGP image from an OgpEditorConfig (background pattern + layers).
+ */
+export async function renderOgpEditorFromConfig(
+  config: OgpEditorConfig,
+): Promise<RenderResult> {
+  const { createCanvas, loadImage } = await import('canvas');
+
+  // 1. Render pattern background using existing function
+  const bgResult = await renderOgpFromConfig(config.background);
+  const bgImage = await loadImage(bgResult.buffer);
+
+  // 2. Create final 1200x630 canvas
+  const canvas = createCanvas(OGP_WIDTH, OGP_HEIGHT);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bgImage, 0, 0);
+
+  // 3. Composite each layer
+  for (const layer of config.layers) {
+    ctx.save();
+    ctx.globalAlpha = layer.opacity;
+
+    if (layer.type === 'image') {
+      try {
+        const img = await loadImage(layer.src);
+        const t = layer.transform;
+        ctx.drawImage(img, t.x, t.y, t.width, t.height);
+      } catch (err) {
+        console.error(`Warning: failed to load image layer "${layer.name}":`, (err as Error).message);
+      }
+    }
+
+    if (layer.type === 'text') {
+      // Load font
+      const weightStr = layer.fontWeight === 'bold' ? '700' : '400';
+      try {
+        await ensureGoogleFont(layer.fontFamily, weightStr, layer.fontStyle);
+      } catch {
+        // Fall back to sans-serif if font can't be loaded
+      }
+
+      const t = layer.transform;
+      const fontStyle = layer.fontStyle === 'italic' ? 'italic ' : '';
+      const fontWeight = layer.fontWeight === 'bold' ? 'bold ' : '';
+      ctx.font = `${fontStyle}${fontWeight}${layer.fontSize}px "${layer.fontFamily}", sans-serif`;
+      ctx.fillStyle = layer.color;
+      ctx.textAlign = layer.textAlign;
+      ctx.textBaseline = 'top';
+
+      // Shadow
+      if (layer.shadow.enabled) {
+        ctx.shadowOffsetX = layer.shadow.offsetX;
+        ctx.shadowOffsetY = layer.shadow.offsetY;
+        ctx.shadowBlur = layer.shadow.blur;
+        ctx.shadowColor = layer.shadow.color;
+      }
+
+      // Multiline text rendering
+      const lines = layer.content.split('\n');
+      const lineHeightPx = layer.fontSize * layer.lineHeight;
+
+      let textX = t.x;
+      if (layer.textAlign === 'center') textX = t.x + t.width / 2;
+      else if (layer.textAlign === 'right') textX = t.x + t.width;
+
+      for (let i = 0; i < lines.length; i++) {
+        const lineY = t.y + i * lineHeightPx;
+
+        if (layer.stroke.enabled) {
+          // Save/restore to isolate stroke from shadow state
+          ctx.save();
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+          ctx.strokeStyle = layer.stroke.color;
+          ctx.lineWidth = layer.stroke.width;
+          ctx.lineJoin = 'round';
+
+          if (layer.letterSpacing !== 0) {
+            drawTextWithLetterSpacing(
+              ctx,
+              lines[i],
+              textX,
+              lineY,
+              layer.letterSpacing,
+              'stroke',
+            );
+          } else {
+            ctx.strokeText(lines[i], textX, lineY);
+          }
+          ctx.restore();
+        }
+
+        if (layer.letterSpacing !== 0) {
+          drawTextWithLetterSpacing(
+            ctx,
+            lines[i],
+            textX,
+            lineY,
+            layer.letterSpacing,
+            'fill',
+          );
+        } else {
+          ctx.fillText(lines[i], textX, lineY);
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
+  return {
+    buffer: canvas.toBuffer('image/png'),
+    patternName: config.background.type,
+    colorSchemeName: bgResult.colorSchemeName,
+    width: OGP_WIDTH,
+    height: OGP_HEIGHT,
+  };
+}
+
+function drawTextWithLetterSpacing(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  text: string,
+  x: number,
+  y: number,
+  spacing: number,
+  mode: 'fill' | 'stroke',
+): void {
+  // Override textAlign to prevent double-offset when caller uses center/right
+  const savedAlign = ctx.textAlign;
+  ctx.textAlign = 'left';
+  let currentX = x;
+  for (const char of text) {
+    if (mode === 'fill') ctx.fillText(char, currentX, y);
+    else ctx.strokeText(char, currentX, y);
+    currentX += ctx.measureText(char).width + spacing;
+  }
+  ctx.textAlign = savedAlign;
 }
 
 /**
