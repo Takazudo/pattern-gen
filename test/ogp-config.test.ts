@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   serializeOgpConfig,
   parseOgpConfig,
-  ogpConfigToGenerateOptions,
 } from '../src/core/ogp-config.js';
 import type { OgpConfig } from '../src/core/ogp-config.js';
 
@@ -106,31 +105,6 @@ describe('parseOgpConfig validation', () => {
 
   it('throws when params contains a non-number value', () => {
     const json = JSON.stringify({ ...makeValidConfig(), params: { size: 'big' } });
-    expect(() => parseOgpConfig(json)).toThrow('params.size must be a number');
-  });
-});
-
-describe('ogpConfigToGenerateOptions', () => {
-  it('maps all fields correctly', () => {
-    const config = makeValidConfig();
-    const opts = ogpConfigToGenerateOptions(config);
-    expect(opts).toEqual({
-      slug: 'my-test-slug',
-      type: 'wood-block',
-      colorScheme: 'Nord',
-      zoom: 1.5,
-      translateX: 0.2,
-      translateY: -0.3,
-      params: { size: 50, density: 0.8 },
-      hsl: { h: 10, s: -20, l: 5 },
-    });
-  });
-
-  it('does not include crop or useTranslate', () => {
-    const config = makeValidConfig();
-    const opts = ogpConfigToGenerateOptions(config);
-    expect(opts).not.toHaveProperty('crop');
-    expect(opts).not.toHaveProperty('useTranslate');
-    expect(opts).not.toHaveProperty('version');
+    expect(() => parseOgpConfig(json)).toThrow('params.size must be a finite number');
   });
 });

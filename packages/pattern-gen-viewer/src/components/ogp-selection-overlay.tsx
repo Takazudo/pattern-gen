@@ -4,20 +4,22 @@ import './ogp-selection-overlay.css';
 const OGP_ASPECT = 1200 / 630;
 const MIN_WIDTH = 100;
 
+export interface OgpRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface OgpSelectionOverlayProps {
   /** Callback when user clicks Generate or presses Enter */
-  onGenerate: (rect: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }) => void;
+  onGenerate: (rect: OgpRect) => void;
   /** Callback when user presses Escape or clicks Exit */
   onExit: () => void;
   /** Callback to download OGP config as JSON file */
-  onDownloadJson: (rect: Rect) => void;
-  /** Callback to copy OGP config JSON to clipboard */
-  onCopyJson: (rect: Rect) => void;
+  onDownloadJson: (rect: OgpRect) => void;
+  /** Callback to copy OGP config JSON to clipboard; resolves on success */
+  onCopyJson: (rect: OgpRect) => Promise<void>;
 }
 
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -281,9 +283,10 @@ export function OgpSelectionOverlay({
   }, []);
 
   const handleCopy = useCallback((r: Rect) => {
-    onCopyJson(r);
-    setCopyFeedback(true);
-    setTimeout(() => setCopyFeedback(false), 1500);
+    onCopyJson(r).then(() => {
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 1500);
+    }).catch(() => { /* clipboard denied */ });
   }, [onCopyJson]);
 
   const handleMoveStart = useCallback(

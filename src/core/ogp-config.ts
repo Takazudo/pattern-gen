@@ -1,5 +1,3 @@
-import type { GenerateOptions } from './types.js';
-
 export interface OgpCropRegion {
   x: number;      // 0-1 fraction of canvas buffer width
   y: number;      // 0-1 fraction of canvas buffer height
@@ -69,8 +67,8 @@ export function parseOgpConfig(json: string): OgpConfig {
     throw new Error('OGP config: params must be an object');
   } else {
     for (const [k, v] of Object.entries(raw.params)) {
-      if (typeof v !== 'number') {
-        throw new Error(`OGP config: params.${k} must be a number`);
+      if (typeof v !== 'number' || !Number.isFinite(v)) {
+        throw new Error(`OGP config: params.${k} must be a finite number`);
       }
     }
   }
@@ -79,14 +77,14 @@ export function parseOgpConfig(json: string): OgpConfig {
   if (!raw.hsl || typeof raw.hsl !== 'object') {
     throw new Error('OGP config: hsl must be an object with h, s, l');
   }
-  if (typeof raw.hsl.h !== 'number' || raw.hsl.h < -180 || raw.hsl.h > 180) {
-    throw new Error('OGP config: hsl.h must be a number in [-180, 180]');
+  if (typeof raw.hsl.h !== 'number' || !Number.isFinite(raw.hsl.h) || raw.hsl.h < -180 || raw.hsl.h > 180) {
+    throw new Error('OGP config: hsl.h must be a finite number in [-180, 180]');
   }
-  if (typeof raw.hsl.s !== 'number' || raw.hsl.s < -100 || raw.hsl.s > 100) {
-    throw new Error('OGP config: hsl.s must be a number in [-100, 100]');
+  if (typeof raw.hsl.s !== 'number' || !Number.isFinite(raw.hsl.s) || raw.hsl.s < -100 || raw.hsl.s > 100) {
+    throw new Error('OGP config: hsl.s must be a finite number in [-100, 100]');
   }
-  if (typeof raw.hsl.l !== 'number' || raw.hsl.l < -100 || raw.hsl.l > 100) {
-    throw new Error('OGP config: hsl.l must be a number in [-100, 100]');
+  if (typeof raw.hsl.l !== 'number' || !Number.isFinite(raw.hsl.l) || raw.hsl.l < -100 || raw.hsl.l > 100) {
+    throw new Error('OGP config: hsl.l must be a finite number in [-100, 100]');
   }
 
   // crop validation
@@ -112,17 +110,4 @@ export function parseOgpConfig(json: string): OgpConfig {
   }
 
   return raw as OgpConfig;
-}
-
-export function ogpConfigToGenerateOptions(config: OgpConfig): GenerateOptions {
-  return {
-    slug: config.slug,
-    type: config.type,
-    colorScheme: config.colorScheme,
-    zoom: config.zoom,
-    translateX: config.translateX,
-    translateY: config.translateY,
-    params: config.params,
-    hsl: config.hsl,
-  };
 }

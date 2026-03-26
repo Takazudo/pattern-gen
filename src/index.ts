@@ -32,5 +32,5 @@ export { renderPattern, renderPatternToCanvas } from './renderer.js';
 export type { RenderResult } from './renderer.js';
 
 // OGP config
-export { serializeOgpConfig, parseOgpConfig, ogpConfigToGenerateOptions } from './core/ogp-config.js';
+export { serializeOgpConfig, parseOgpConfig } from './core/ogp-config.js';
 export type { OgpConfig, OgpCropRegion } from './core/ogp-config.js';

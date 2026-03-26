@@ -113,8 +113,9 @@ const OGP_OUTPUT_HEIGHT = 630;
 export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResult> {
   const { createCanvas } = await import('canvas');
 
+  // Cap at 4000 so the useTranslate 3x branch stays under 12000px
   const renderSize = Math.min(
-    4800, // Cap to prevent memory exhaustion from very narrow crops
+    4000,
     Math.max(
       800,
       Math.ceil(OGP_OUTPUT_WIDTH / config.crop.width),

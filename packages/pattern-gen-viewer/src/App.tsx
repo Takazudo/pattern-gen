@@ -361,7 +361,7 @@ export function App() {
   );
 
   const handleOgpCopyJson = useCallback(
-    (rect: { x: number; y: number; width: number; height: number }) => {
+    async (rect: { x: number; y: number; width: number; height: number }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const config = buildOgpConfig(rect, canvas, {
@@ -376,9 +376,7 @@ export function App() {
         hslAdjust,
       });
       const json = serializeOgpConfig(config);
-      navigator.clipboard.writeText(json).catch(() => {
-        /* clipboard permission denied — feedback already shown by overlay */
-      });
+      await navigator.clipboard.writeText(json);
     },
     [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
   );
