@@ -45,7 +45,7 @@ export async function ensureGoogleFont(
 
   registerFont(ttfPath, {
     family,
-    weight: weight === 'bold' || weight === '700' ? 'bold' : 'normal',
+    weight,
     style: style === 'italic' ? 'italic' : 'normal',
   });
   registeredFonts.add(key);

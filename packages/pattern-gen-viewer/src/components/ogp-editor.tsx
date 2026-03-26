@@ -1,58 +1,16 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import { parseOgpEditorConfig } from 'pattern-gen/core/ogp-editor-config';
+import type {
+  OgpEditorConfig,
+  EditorLayer,
+  ImageLayerData,
+  TextLayerData,
+  LayerTransform,
+} from 'pattern-gen/core/ogp-editor-config';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
-
-/* ── Local type copies (canonical types live in src/core/ogp-editor-config.ts) ── */
-
-interface LayerTransform {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface ImageLayerData {
-  type: 'image';
-  name: string;
-  src: string;
-  transform: LayerTransform;
-  opacity: number;
-}
-
-interface TextLayerData {
-  type: 'text';
-  name: string;
-  content: string;
-  fontFamily: string;
-  fontSize: number;
-  fontWeight: 'normal' | 'bold';
-  fontStyle: 'normal' | 'italic';
-  color: string;
-  opacity: number;
-  textAlign: 'left' | 'center' | 'right';
-  letterSpacing: number;
-  lineHeight: number;
-  shadow: {
-    enabled: boolean;
-    offsetX: number;
-    offsetY: number;
-    blur: number;
-    color: string;
-  };
-  stroke: { enabled: boolean; color: string; width: number };
-  transform: LayerTransform;
-}
-
-type EditorLayer = ImageLayerData | TextLayerData;
-
-interface OgpEditorConfig {
-  version: 1;
-  background: unknown;
-  layers: EditorLayer[];
-}
 
 /* ── Props ── */
 

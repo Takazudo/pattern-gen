@@ -336,12 +336,16 @@ function drawTextWithLetterSpacing(
   spacing: number,
   mode: 'fill' | 'stroke',
 ): void {
+  // Override textAlign to prevent double-offset when caller uses center/right
+  const savedAlign = ctx.textAlign;
+  ctx.textAlign = 'left';
   let currentX = x;
   for (const char of text) {
     if (mode === 'fill') ctx.fillText(char, currentX, y);
     else ctx.strokeText(char, currentX, y);
     currentX += ctx.measureText(char).width + spacing;
   }
+  ctx.textAlign = savedAlign;
 }
 
 /**

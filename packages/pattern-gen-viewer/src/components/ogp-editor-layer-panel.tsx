@@ -1,48 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
+import type { EditorLayer, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
-
-/* ── Local type copies (canonical types live in src/core/ogp-editor-config.ts) ── */
-
-interface LayerTransform {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface ImageLayerData {
-  type: 'image';
-  name: string;
-  src: string;
-  transform: LayerTransform;
-  opacity: number;
-}
-
-interface TextLayerData {
-  type: 'text';
-  name: string;
-  content: string;
-  fontFamily: string;
-  fontSize: number;
-  fontWeight: 'normal' | 'bold';
-  fontStyle: 'normal' | 'italic';
-  color: string;
-  opacity: number;
-  textAlign: 'left' | 'center' | 'right';
-  letterSpacing: number;
-  lineHeight: number;
-  shadow: {
-    enabled: boolean;
-    offsetX: number;
-    offsetY: number;
-    blur: number;
-    color: string;
-  };
-  stroke: { enabled: boolean; color: string; width: number };
-  transform: LayerTransform;
-}
-
-type EditorLayer = ImageLayerData | TextLayerData;
 
 /* ── Props ── */
 
