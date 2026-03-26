@@ -307,7 +307,7 @@ export function OgpEditorLayerPanel({
 
       {/* Grid panel — always visible */}
       <div className="ogp-grid-panel">
-        <div className="ogp-grid-panel-title">Grid</div>
+        <div className="ogp-props-title">Grid</div>
         <div className="ogp-prop-grid">
           <div className="ogp-prop-field">
             <label className="ogp-prop-label">V Divide</label>
@@ -320,7 +320,7 @@ export function OgpEditorLayerPanel({
               onChange={(e) =>
                 onGridConfigChange({
                   ...gridConfig,
-                  vDivide: Math.max(1, Math.min(12, Number(e.target.value))),
+                  vDivide: Math.max(1, Math.min(12, Number(e.target.value) || 1)),
                 })
               }
             />
@@ -336,7 +336,7 @@ export function OgpEditorLayerPanel({
               onChange={(e) =>
                 onGridConfigChange({
                   ...gridConfig,
-                  hDivide: Math.max(1, Math.min(12, Number(e.target.value))),
+                  hDivide: Math.max(1, Math.min(12, Number(e.target.value) || 1)),
                 })
               }
             />
@@ -347,7 +347,12 @@ export function OgpEditorLayerPanel({
             type="checkbox"
             checked={gridConfig.snap}
             onChange={(e) =>
-              onGridConfigChange({ ...gridConfig, snap: e.target.checked })
+              onGridConfigChange({
+                ...gridConfig,
+                snap: e.target.checked,
+                // Auto-show grid when snap is enabled
+                visible: e.target.checked ? true : gridConfig.visible,
+              })
             }
           />
           <span className="ogp-prop-label">Snap to Grid</span>
@@ -455,6 +460,7 @@ function TextProps({
       <div className="ogp-prop-toggle-row">
         <button
           className={`btn ogp-prop-toggle ${layer.fontWeight === 'bold' ? 'active' : ''}`}
+          aria-pressed={layer.fontWeight === 'bold'}
           onClick={() =>
             onUpdate({
               fontWeight: layer.fontWeight === 'bold' ? 'normal' : 'bold',
@@ -465,6 +471,7 @@ function TextProps({
         </button>
         <button
           className={`btn ogp-prop-toggle ${layer.fontStyle === 'italic' ? 'active' : ''}`}
+          aria-pressed={layer.fontStyle === 'italic'}
           onClick={() =>
             onUpdate({
               fontStyle: layer.fontStyle === 'italic' ? 'normal' : 'italic',
@@ -499,6 +506,7 @@ function TextProps({
           <button
             key={a}
             className={`btn ogp-prop-toggle ${layer.textAlign === a ? 'active' : ''}`}
+            aria-pressed={layer.textAlign === a}
             onClick={() => onUpdate({ textAlign: a })}
           >
             {a.charAt(0).toUpperCase() + a.slice(1)}
@@ -513,6 +521,7 @@ function TextProps({
           <button
             key={a}
             className={`btn ogp-prop-toggle ${layer.textVAlign === a ? 'active' : ''}`}
+            aria-pressed={layer.textVAlign === a}
             onClick={() => onUpdate({ textVAlign: a })}
           >
             {a.charAt(0).toUpperCase() + a.slice(1)}

@@ -517,6 +517,7 @@ export function OgpEditor({
           ),
         );
       } else if (drag.type === 'resize' && drag.handle) {
+        const grid = gridConfigRef.current;
         setLayers((prev) =>
           prev.map((l) => {
             if (l.id !== drag.id) return l;
@@ -550,6 +551,36 @@ export function OgpEditor({
                 break;
               }
             }
+
+            // Snap resize edges to grid
+            if (grid.snap) {
+              const xPositions = getGridPositions(OGP_WIDTH, grid.vDivide);
+              const yPositions = getGridPositions(OGP_HEIGHT, grid.hDivide);
+              const handle = drag.handle!;
+
+              // Snap the edge being dragged
+              if (handle === 'se' || handle === 'ne') {
+                const snappedRight = snapToNearest(newT.x + newT.width, xPositions);
+                newT.width = Math.max(20, snappedRight - newT.x);
+              }
+              if (handle === 'sw' || handle === 'nw') {
+                const snappedLeft = snapToNearest(newT.x, xPositions);
+                const right = newT.x + newT.width;
+                newT.x = snappedLeft;
+                newT.width = Math.max(20, right - snappedLeft);
+              }
+              if (handle === 'se' || handle === 'sw') {
+                const snappedBottom = snapToNearest(newT.y + newT.height, yPositions);
+                newT.height = Math.max(20, snappedBottom - newT.y);
+              }
+              if (handle === 'ne' || handle === 'nw') {
+                const snappedTop = snapToNearest(newT.y, yPositions);
+                const bottom = newT.y + newT.height;
+                newT.y = snappedTop;
+                newT.height = Math.max(20, bottom - snappedTop);
+              }
+            }
+
             return { ...l, transform: newT };
           }),
         );

@@ -159,4 +159,24 @@ describe('parseOgpEditorConfig validation', () => {
     const parsed = parseOgpEditorConfig(json);
     expect(parsed.layers).toEqual([]);
   });
+
+  it('defaults textVAlign to top when omitted (backward compat)', () => {
+    const config = makeValidEditorConfig();
+    const raw = JSON.parse(JSON.stringify(config));
+    // Remove textVAlign from the text layer
+    delete raw.layers[1].textVAlign;
+    const parsed = parseOgpEditorConfig(JSON.stringify(raw));
+    const textLayer = parsed.layers[1] as TextLayerData;
+    expect(textLayer.textVAlign).toBe('top');
+  });
+
+  it('throws on text layer with invalid textVAlign', () => {
+    const config = makeValidEditorConfig();
+    const layer = config.layers[1] as Record<string, unknown>;
+    layer.textVAlign = 'center';
+    const json = JSON.stringify(config);
+    expect(() => parseOgpEditorConfig(json)).toThrow(
+      'textVAlign must be "top", "middle", or "bottom"',
+    );
+  });
 });
