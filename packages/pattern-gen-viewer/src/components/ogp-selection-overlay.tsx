@@ -274,7 +274,7 @@ export function OgpSelectionOverlay({
     };
   }, []);
 
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => () => clearTimeout(copyTimerRef.current), []);
 
