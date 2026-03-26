@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { renderPattern } from './renderer.js';
+import { renderPattern, renderOgpFromConfig } from './renderer.js';
+import { parseOgpConfig } from './core/ogp-config.js';
 import { getPatternNames } from './patterns/index.js';
 import { getColorSchemeNames } from './core/color-schemes.js';
 import type { GenerateOptions } from './core/types.js';
@@ -114,6 +115,7 @@ Options:
   --lightness <number>        Lightness shift (-100 to 100)
   --out, -o <path>            Output file path
   --out-dir <dir>             Output directory
+  --ogp-config <path>         Render OGP image from config JSON file
   --list-types                List available pattern types
   --list-color-schemes        List available color schemes
   --help, -h                  Show this help`);
@@ -136,6 +138,42 @@ Options:
 
 async function main() {
   const args = process.argv.slice(2);
+
+  // Handle --ogp-config mode (early exit, no positional slug required)
+  const ogpConfigIdx = args.indexOf('--ogp-config');
+  if (ogpConfigIdx !== -1) {
+    const configPath = args[ogpConfigIdx + 1];
+    if (!configPath || configPath.startsWith('-')) fail('--ogp-config requires a file path');
+
+    const jsonStr = readFileSync(resolve(configPath), 'utf-8');
+    const config = parseOgpConfig(jsonStr);
+    const result = await renderOgpFromConfig(config);
+
+    // Check for --out/-o flag
+    let outPath: string | undefined;
+    for (let i = 0; i < args.length; i++) {
+      if ((args[i] === '--out' || args[i] === '-o') && args[i + 1]) {
+        outPath = args[i + 1];
+        break;
+      }
+    }
+
+    // Check for --out-dir flag
+    let outDir: string | undefined;
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '--out-dir' && args[i + 1]) {
+        outDir = args[i + 1];
+        break;
+      }
+    }
+
+    const outputPath = outPath ?? resolve(outDir ?? process.cwd(), `ogp-${config.type}-${config.slug}.png`);
+    mkdirSync(dirname(outputPath), { recursive: true });
+    writeFileSync(outputPath, result.buffer);
+    console.log(`Generated OGP: ${outputPath} (${result.patternName}, ${result.colorSchemeName}, ${result.width}x${result.height})`);
+    return;
+  }
+
   const { outPath, outDir, ...options } = parseArgs(args);
 
   const result = await renderPattern(options);
