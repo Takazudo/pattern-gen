@@ -534,7 +534,9 @@ export function OgpEditor({
       }
 
       setLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+        prev.map((l) =>
+          l.id === id ? ({ ...l, ...updates } as EditorLayer & { id: string }) : l,
+        ),
       );
     },
     [],
