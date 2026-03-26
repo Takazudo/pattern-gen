@@ -319,17 +319,53 @@ export function App() {
     (rect: { x: number; y: number; width: number; height: number }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+
+      // Compute normalized crop (0-1 fractions of canvas buffer)
       const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(rect, canvas);
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = OGP_WIDTH;
-      tempCanvas.height = OGP_HEIGHT;
-      const tempCtx = tempCanvas.getContext('2d');
-      if (!tempCtx) return;
-      tempCtx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, OGP_WIDTH, OGP_HEIGHT);
-      const url = tempCanvas.toDataURL('image/png');
+      const bufW = canvas.width;
+      const bufH = canvas.height;
+      const cropX = srcX / bufW;
+      const cropY = srcY / bufH;
+      const cropW = srcW / bufW;
+      const cropH = srcH / bufH;
+
+      // Re-render at a resolution where the crop region has enough pixels
+      // for a sharp 1200x630 output (instead of upscaling from displayed canvas)
+      const renderSize = Math.min(4000, Math.max(
+        CANVAS_SIZE,
+        Math.ceil(OGP_WIDTH / cropW),
+        Math.ceil(OGP_HEIGHT / cropH),
+      ));
+
+      const hiResCanvas = document.createElement('canvas');
+      hiResCanvas.width = renderSize;
+      hiResCanvas.height = renderSize;
+      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+
+      // Apply HSL adjustments
+      const hiResCtx = hiResCanvas.getContext('2d');
+      if (!hiResCtx) return;
+      if (hslAdjust.h !== 0 || hslAdjust.s !== 0 || hslAdjust.l !== 0) {
+        applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
+      }
+
+      // Crop and scale to OGP dimensions
+      const cx = Math.round(cropX * renderSize);
+      const cy = Math.round(cropY * renderSize);
+      const cw = Math.min(Math.round(cropW * renderSize), renderSize - cx);
+      const ch = Math.min(Math.round(cropH * renderSize), renderSize - cy);
+
+      const ogpCanvas = document.createElement('canvas');
+      ogpCanvas.width = OGP_WIDTH;
+      ogpCanvas.height = OGP_HEIGHT;
+      const ogpCtx = ogpCanvas.getContext('2d');
+      if (!ogpCtx) return;
+      ogpCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+
+      const url = ogpCanvas.toDataURL('image/png');
       triggerDownload(url, `ogp-${patternType}-${slug}.png`);
     },
-    [patternType, slug],
+    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust],
   );
 
   const exitOgpMode = useCallback(() => setOgpMode(false), []);
