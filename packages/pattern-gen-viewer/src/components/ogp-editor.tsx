@@ -496,7 +496,7 @@ export function OgpEditor({
       transform: { x: 100, y: 200, width: 400, height: 100 },
     };
     setLayers((prev) => [...prev, newLayer]);
-    setSelectedId(id);
+    setSelectedIds([id]);
     loadGoogleFont('Inter');
   }, []);
 

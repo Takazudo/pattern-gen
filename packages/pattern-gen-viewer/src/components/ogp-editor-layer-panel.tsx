@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { EditorLayer, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
 import type { AlignmentType } from './ogp-editor.js';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
@@ -34,6 +34,8 @@ export function OgpEditorLayerPanel({
 }: LayerPanelProps) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
+
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   // Single selected layer for properties panel
   const selected =
@@ -89,13 +91,13 @@ export function OgpEditorLayerPanel({
         {layers.map((layer, idx) => (
           <div
             key={layer.id}
-            className={`ogp-layer-item ${selectedIds.includes(layer.id) ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
+            className={`ogp-layer-item ${selectedIdSet.has(layer.id) ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
             draggable
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey) {
                 // Toggle in multi-select
                 onSelect(
-                  selectedIds.includes(layer.id)
+                  selectedIdSet.has(layer.id)
                     ? selectedIds.filter((id) => id !== layer.id)
                     : [...selectedIds, layer.id],
                 );
