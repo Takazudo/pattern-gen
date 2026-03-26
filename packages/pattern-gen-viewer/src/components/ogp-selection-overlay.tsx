@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import './ogp-selection-overlay.css';
 
-const OGP_ASPECT = 1200 / 630;
+const OGP_ASPECT = OGP_WIDTH / OGP_HEIGHT;
 const MIN_WIDTH = 100;
 
 export interface OgpRect {

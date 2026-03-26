@@ -149,22 +149,13 @@ async function main() {
     const config = parseOgpConfig(jsonStr);
     const result = await renderOgpFromConfig(config);
 
-    // Check for --out/-o flag
+    // Reuse parseArgs for output flags (slug is dummy, only outPath/outDir matter)
+    const flagArgs = args.filter((_, i) => i !== ogpConfigIdx && i !== ogpConfigIdx + 1);
     let outPath: string | undefined;
-    for (let i = 0; i < args.length; i++) {
-      if ((args[i] === '--out' || args[i] === '-o') && args[i + 1]) {
-        outPath = args[i + 1];
-        break;
-      }
-    }
-
-    // Check for --out-dir flag
     let outDir: string | undefined;
-    for (let i = 0; i < args.length; i++) {
-      if (args[i] === '--out-dir' && args[i + 1]) {
-        outDir = args[i + 1];
-        break;
-      }
+    for (let i = 0; i < flagArgs.length; i++) {
+      if ((flagArgs[i] === '--out' || flagArgs[i] === '-o') && flagArgs[i + 1]) outPath = flagArgs[++i];
+      else if (flagArgs[i] === '--out-dir' && flagArgs[i + 1]) outDir = flagArgs[++i];
     }
 
     const outputPath = outPath ?? resolve(outDir ?? process.cwd(), `ogp-${config.type}-${config.slug}.png`);

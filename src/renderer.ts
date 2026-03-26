@@ -132,7 +132,7 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
   const scheme = resolveColorScheme(config.colorScheme, seed);
 
   // Create the pattern canvas
-  let patternCanvas;
+  let patternCanvas: ReturnType<typeof createCanvas>;
 
   if (config.useTranslate) {
     // Replicate the viewer's 3x offscreen canvas approach
@@ -188,8 +188,8 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
   // Crop to OGP region and scale to 1200x630
   const cropX = Math.round(config.crop.x * renderSize);
   const cropY = Math.round(config.crop.y * renderSize);
-  const cropW = Math.round(config.crop.width * renderSize);
-  const cropH = Math.round(config.crop.height * renderSize);
+  const cropW = Math.min(Math.round(config.crop.width * renderSize), renderSize - cropX);
+  const cropH = Math.min(Math.round(config.crop.height * renderSize), renderSize - cropY);
 
   const ogpCanvas = createCanvas(OGP_WIDTH, OGP_HEIGHT);
   const ogpCtx = ogpCanvas.getContext('2d');
