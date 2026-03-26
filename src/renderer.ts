@@ -233,8 +233,8 @@ export async function renderOgpEditorFromConfig(
         const img = await loadImage(layer.src);
         const t = layer.transform;
         ctx.drawImage(img, t.x, t.y, t.width, t.height);
-      } catch {
-        // Skip images that fail to load (broken URLs, etc.)
+      } catch (err) {
+        console.error(`Warning: failed to load image layer "${layer.name}":`, (err as Error).message);
       }
     }
 

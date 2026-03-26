@@ -138,6 +138,17 @@ Options:
   return options;
 }
 
+function extractOutputFlags(args: string[], excludeIdx: number): { outPath?: string; outDir?: string } {
+  const flagArgs = args.filter((_, i) => i !== excludeIdx && i !== excludeIdx + 1);
+  let outPath: string | undefined;
+  let outDir: string | undefined;
+  for (let i = 0; i < flagArgs.length; i++) {
+    if ((flagArgs[i] === '--out' || flagArgs[i] === '-o') && flagArgs[i + 1]) outPath = flagArgs[++i];
+    else if (flagArgs[i] === '--out-dir' && flagArgs[i + 1]) outDir = flagArgs[++i];
+  }
+  return { outPath, outDir };
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -151,15 +162,7 @@ async function main() {
     const config = parseOgpConfig(jsonStr);
     const result = await renderOgpFromConfig(config);
 
-    // Reuse parseArgs for output flags (slug is dummy, only outPath/outDir matter)
-    const flagArgs = args.filter((_, i) => i !== ogpConfigIdx && i !== ogpConfigIdx + 1);
-    let outPath: string | undefined;
-    let outDir: string | undefined;
-    for (let i = 0; i < flagArgs.length; i++) {
-      if ((flagArgs[i] === '--out' || flagArgs[i] === '-o') && flagArgs[i + 1]) outPath = flagArgs[++i];
-      else if (flagArgs[i] === '--out-dir' && flagArgs[i + 1]) outDir = flagArgs[++i];
-    }
-
+    const { outPath, outDir } = extractOutputFlags(args, ogpConfigIdx);
     const outputPath = outPath ?? resolve(outDir ?? process.cwd(), `ogp-${config.type}-${config.slug}.png`);
     mkdirSync(dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, result.buffer);
@@ -177,15 +180,7 @@ async function main() {
     const config = parseOgpEditorConfig(jsonStr);
     const result = await renderOgpEditorFromConfig(config);
 
-    // Parse output flags (same pattern as --ogp-config)
-    const flagArgs = args.filter((_, i) => i !== editorConfigIdx && i !== editorConfigIdx + 1);
-    let outPath: string | undefined;
-    let outDir: string | undefined;
-    for (let i = 0; i < flagArgs.length; i++) {
-      if ((flagArgs[i] === '--out' || flagArgs[i] === '-o') && flagArgs[i + 1]) outPath = flagArgs[++i];
-      else if (flagArgs[i] === '--out-dir' && flagArgs[i + 1]) outDir = flagArgs[++i];
-    }
-
+    const { outPath, outDir } = extractOutputFlags(args, editorConfigIdx);
     const outputPath = outPath ?? resolve(outDir ?? process.cwd(), `ogp-editor-${config.background.type}-${config.background.slug}.png`);
     mkdirSync(dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, result.buffer);

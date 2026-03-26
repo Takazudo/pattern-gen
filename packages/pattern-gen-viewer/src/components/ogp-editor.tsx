@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
+import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 import { parseOgpEditorConfig } from 'pattern-gen/core/ogp-editor-config';
 import type {
   OgpEditorConfig,
@@ -16,7 +17,7 @@ import './ogp-editor.css';
 
 interface OgpEditorProps {
   backgroundImage: ImageBitmap | null;
-  backgroundConfig: unknown;
+  backgroundConfig: OgpConfig | null;
   onExit: () => void;
 }
 
