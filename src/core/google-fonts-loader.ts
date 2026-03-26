@@ -21,8 +21,9 @@ export async function ensureGoogleFont(
   const ttfPath = join(fontDir, `${key}.ttf`);
 
   if (!existsSync(ttfPath)) {
-    // Fetch Google Fonts CSS with TTF user-agent
-    const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}&display=swap`;
+    // Fetch Google Fonts CSS with TTF user-agent, requesting specific weight+style
+    const italFlag = style === 'italic' ? 1 : 0;
+    const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:ital,wght@${italFlag},${weight}&display=swap`;
     const res = await fetch(cssUrl, {
       headers: { 'User-Agent': 'Mozilla/4.0 (compatible; MSIE 8.0)' }, // triggers TTF format
     });

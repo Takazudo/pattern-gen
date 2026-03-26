@@ -23,7 +23,6 @@ const CURATED_FONTS = [
 ];
 
 const EXTENDED_FONTS = [
-  ...CURATED_FONTS,
   'ABeeZee',
   'Abel',
   'Abril Fatface',
@@ -168,7 +167,8 @@ export function loadGoogleFont(family: string): Promise<void> {
   link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:ital,wght@0,400;0,700;1,400;1,700&display=swap`;
   document.head.appendChild(link);
 
-  const promise = document.fonts.ready.then(() => {});
+  // Wait for the specific font to load (not just document.fonts.ready which is one-shot)
+  const promise = document.fonts.load(`400 1em "${family}"`).then(() => {});
   fontLoadPromises.set(family, promise);
   return promise;
 }
@@ -182,11 +182,14 @@ export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
   const [showMore, setShowMore] = useState(false);
   const [search, setSearch] = useState('');
 
+  const allFonts = showMore
+    ? [...CURATED_FONTS, ...EXTENDED_FONTS]
+    : CURATED_FONTS;
   const filtered = showMore
-    ? EXTENDED_FONTS.filter((f) =>
+    ? allFonts.filter((f) =>
         f.toLowerCase().includes(search.toLowerCase()),
       )
-    : CURATED_FONTS;
+    : allFonts;
 
   return (
     <div className="ogp-font-picker">

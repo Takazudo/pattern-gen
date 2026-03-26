@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
+import { parseOgpEditorConfig } from 'pattern-gen/core/ogp-editor-config';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
@@ -608,13 +609,7 @@ export function OgpEditor({
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const raw = JSON.parse(reader.result as string);
-          // Validate structure (layers array, layer types, transforms)
-          if (!raw || !Array.isArray(raw.layers)) {
-            console.error('Invalid editor config: missing layers array');
-            return;
-          }
-          const config = raw as OgpEditorConfig;
+          const config = parseOgpEditorConfig(reader.result as string);
           const newLayers = config.layers.map((l) => ({
             ...l,
             id: crypto.randomUUID(),
