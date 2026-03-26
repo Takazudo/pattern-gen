@@ -58,7 +58,8 @@ function renderTextLayer(
 
   const lines = layer.content.split('\n');
   const lineHeightPx = layer.fontSize * layer.lineHeight;
-  const totalTextHeight = lines.length * lineHeightPx;
+  const totalTextHeight =
+    (lines.length - 1) * lineHeightPx + layer.fontSize;
 
   let textX = t.x;
   if (layer.textAlign === 'center') textX = t.x + t.width / 2;

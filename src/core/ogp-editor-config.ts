@@ -152,13 +152,11 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
     throw new Error(`${label}: textAlign must be "left", "center", or "right"`);
   }
   // Default textVAlign to 'top' for backwards compat
-  if (raw.textVAlign === undefined) {
-    raw.textVAlign = 'top';
-  }
+  const textVAlign = raw.textVAlign === undefined ? 'top' : raw.textVAlign;
   if (
-    raw.textVAlign !== 'top' &&
-    raw.textVAlign !== 'middle' &&
-    raw.textVAlign !== 'bottom'
+    textVAlign !== 'top' &&
+    textVAlign !== 'middle' &&
+    textVAlign !== 'bottom'
   ) {
     throw new Error(
       `${label}: textVAlign must be "top", "middle", or "bottom"`,
@@ -235,7 +233,7 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
     color: raw.color as string,
     opacity: raw.opacity as number,
     textAlign: raw.textAlign as 'left' | 'center' | 'right',
-    textVAlign: raw.textVAlign as 'top' | 'middle' | 'bottom',
+    textVAlign: textVAlign as 'top' | 'middle' | 'bottom',
     letterSpacing: raw.letterSpacing as number,
     lineHeight: raw.lineHeight as number,
     shadow: {
