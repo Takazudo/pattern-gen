@@ -5,6 +5,7 @@ import { applyHslAdjust } from './core/hsl-adjust.js';
 import type { HslAdjust } from './core/hsl-adjust.js';
 import { patternsByName } from './patterns/index.js';
 import type { ColorScheme } from './core/color-schemes.js';
+import type { OgpConfig } from './core/ogp-config.js';
 import type { PatternOptions, GenerateOptions } from './core/types.js';
 
 /** Resolve a color scheme from name/seed, optionally overriding the background. */
@@ -98,6 +99,109 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
     colorSchemeName: scheme.name,
     width: size,
     height: size,
+  };
+}
+
+const OGP_OUTPUT_WIDTH = 1200;
+const OGP_OUTPUT_HEIGHT = 630;
+
+/**
+ * Render an OGP image from a serialized OgpConfig.
+ * Generates the pattern at a size large enough for the crop region,
+ * applies HSL adjustments, crops, and scales to 1200x630.
+ */
+export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResult> {
+  const { createCanvas } = await import('canvas');
+
+  const renderSize = Math.max(
+    800,
+    Math.ceil(OGP_OUTPUT_WIDTH / config.crop.width),
+    Math.ceil(OGP_OUTPUT_HEIGHT / config.crop.height),
+  );
+
+  const pattern = patternsByName.get(config.type);
+  if (!pattern) {
+    const available = [...patternsByName.keys()].join(', ');
+    throw new Error(`Unknown pattern type: "${config.type}". Available: ${available}`);
+  }
+
+  const seed = hashString(config.slug);
+  const rand = createRandom(seed);
+  const scheme = resolveColorScheme(config.colorScheme, seed);
+
+  // Create the pattern canvas
+  let patternCanvas;
+
+  if (config.useTranslate) {
+    // Replicate the viewer's 3x offscreen canvas approach
+    const scale = 3;
+    const bigSize = renderSize * scale;
+    const offscreen = createCanvas(bigSize, bigSize);
+    const offCtx = offscreen.getContext('2d');
+
+    pattern.generate(offCtx as unknown as CanvasRenderingContext2D, {
+      width: bigSize,
+      height: bigSize,
+      rand,
+      colorScheme: scheme,
+      zoom: config.zoom,
+      params: Object.keys(config.params).length > 0 ? config.params : undefined,
+    });
+
+    // Extract the visible portion with translate offset
+    patternCanvas = createCanvas(renderSize, renderSize);
+    const patCtx = patternCanvas.getContext('2d');
+    const baseOffset = -renderSize * (scale - 1) / 2;
+    const tx = config.translateX * renderSize;
+    const ty = config.translateY * renderSize;
+    patCtx.save();
+    patCtx.translate(baseOffset + tx, baseOffset + ty);
+    patCtx.drawImage(offscreen, 0, 0);
+    patCtx.restore();
+  } else {
+    // Simple render (no translate offscreen)
+    patternCanvas = createCanvas(renderSize, renderSize);
+    const patCtx = patternCanvas.getContext('2d');
+
+    const patternOptions: PatternOptions = {
+      width: renderSize,
+      height: renderSize,
+      rand,
+      colorScheme: scheme,
+      zoom: config.zoom,
+      params: Object.keys(config.params).length > 0 ? config.params : undefined,
+    };
+
+    const tx = config.translateX * renderSize;
+    const ty = config.translateY * renderSize;
+    patCtx.save();
+    patCtx.translate(tx, ty);
+    pattern.generate(patCtx as unknown as CanvasRenderingContext2D, patternOptions);
+    patCtx.restore();
+  }
+
+  // Apply HSL adjustments
+  const patCtx = patternCanvas.getContext('2d');
+  if (config.hsl.h !== 0 || config.hsl.s !== 0 || config.hsl.l !== 0) {
+    applyHslAdjust(patCtx as unknown as CanvasRenderingContext2D, renderSize, renderSize, config.hsl);
+  }
+
+  // Crop to OGP region and scale to 1200x630
+  const cropX = Math.round(config.crop.x * renderSize);
+  const cropY = Math.round(config.crop.y * renderSize);
+  const cropW = Math.round(config.crop.width * renderSize);
+  const cropH = Math.round(config.crop.height * renderSize);
+
+  const ogpCanvas = createCanvas(OGP_OUTPUT_WIDTH, OGP_OUTPUT_HEIGHT);
+  const ogpCtx = ogpCanvas.getContext('2d');
+  ogpCtx.drawImage(patternCanvas, cropX, cropY, cropW, cropH, 0, 0, OGP_OUTPUT_WIDTH, OGP_OUTPUT_HEIGHT);
+
+  return {
+    buffer: ogpCanvas.toBuffer('image/png'),
+    patternName: pattern.name,
+    colorSchemeName: scheme.name,
+    width: OGP_OUTPUT_WIDTH,
+    height: OGP_OUTPUT_HEIGHT,
   };
 }
 
