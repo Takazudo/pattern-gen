@@ -190,6 +190,38 @@
   font-size: 12px;
 }
 
+/* ── Alignment panel ── */
+
+.ogp-align-panel {
+  border-top: 1px solid oklch(100% 0 0 / 8%);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ogp-align-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+}
+
+.ogp-align-btn {
+  font-size: 11px;
+  padding: 6px 4px;
+  text-align: center;
+  background: oklch(100% 0 0 / 6%);
+  border: 1px solid oklch(100% 0 0 / 10%);
+  border-radius: 4px;
+  color: oklch(80% 0 0);
+  cursor: pointer;
+}
+
+.ogp-align-btn:hover {
+  background: oklch(100% 0 0 / 14%);
+  color: oklch(95% 0 0);
+}
+
 /* ── Properties panel ── */
 
 .ogp-props {
