@@ -28,9 +28,13 @@ export { randomizeDefaults, getEffectiveParams } from './core/randomize-defaults
 export { patternRegistry, patternsByName, getPatternNames } from './patterns/index.js';
 
 // Renderer
-export { renderPattern, renderPatternToCanvas, renderOgpFromConfig } from './renderer.js';
+export { renderPattern, renderPatternToCanvas, renderOgpFromConfig, renderOgpEditorFromConfig } from './renderer.js';
 export type { RenderResult } from './renderer.js';
 
 // OGP config
 export { serializeOgpConfig, parseOgpConfig, OGP_WIDTH, OGP_HEIGHT } from './core/ogp-config.js';
 export type { OgpConfig, OgpCropRegion } from './core/ogp-config.js';
+
+// OGP editor config
+export { serializeOgpEditorConfig, parseOgpEditorConfig } from './core/ogp-editor-config.js';
+export type { OgpEditorConfig, EditorLayer, ImageLayerData, TextLayerData, LayerTransform } from './core/ogp-editor-config.js';

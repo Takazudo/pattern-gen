@@ -7,6 +7,8 @@ import { patternsByName } from './patterns/index.js';
 import type { ColorScheme } from './core/color-schemes.js';
 import { OGP_WIDTH, OGP_HEIGHT } from './core/ogp-config.js';
 import type { OgpConfig } from './core/ogp-config.js';
+import type { OgpEditorConfig } from './core/ogp-editor-config.js';
+import { ensureGoogleFont } from './core/google-fonts-loader.js';
 import type { PatternOptions, GenerateOptions } from './core/types.js';
 
 /** Resolve a color scheme from name/seed, optionally overriding the background. */
@@ -202,6 +204,141 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
     width: OGP_WIDTH,
     height: OGP_HEIGHT,
   };
+}
+
+/**
+ * Render an OGP image from an OgpEditorConfig (background pattern + layers).
+ */
+export async function renderOgpEditorFromConfig(
+  config: OgpEditorConfig,
+): Promise<RenderResult> {
+  const { createCanvas, loadImage } = await import('canvas');
+
+  // 1. Render pattern background using existing function
+  const bgResult = await renderOgpFromConfig(config.background);
+  const bgImage = await loadImage(bgResult.buffer);
+
+  // 2. Create final 1200x630 canvas
+  const canvas = createCanvas(OGP_WIDTH, OGP_HEIGHT);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bgImage, 0, 0);
+
+  // 3. Composite each layer
+  for (const layer of config.layers) {
+    ctx.save();
+    ctx.globalAlpha = layer.opacity;
+
+    if (layer.type === 'image') {
+      try {
+        const img = await loadImage(layer.src);
+        const t = layer.transform;
+        ctx.drawImage(img, t.x, t.y, t.width, t.height);
+      } catch {
+        // Skip images that fail to load (broken URLs, etc.)
+      }
+    }
+
+    if (layer.type === 'text') {
+      // Load font
+      const weightStr = layer.fontWeight === 'bold' ? '700' : '400';
+      try {
+        await ensureGoogleFont(layer.fontFamily, weightStr, layer.fontStyle);
+      } catch {
+        // Fall back to sans-serif if font can't be loaded
+      }
+
+      const t = layer.transform;
+      const fontStyle = layer.fontStyle === 'italic' ? 'italic ' : '';
+      const fontWeight = layer.fontWeight === 'bold' ? 'bold ' : '';
+      ctx.font = `${fontStyle}${fontWeight}${layer.fontSize}px "${layer.fontFamily}", sans-serif`;
+      ctx.fillStyle = layer.color;
+      ctx.textAlign = layer.textAlign;
+      ctx.textBaseline = 'top';
+
+      // Shadow
+      if (layer.shadow.enabled) {
+        ctx.shadowOffsetX = layer.shadow.offsetX;
+        ctx.shadowOffsetY = layer.shadow.offsetY;
+        ctx.shadowBlur = layer.shadow.blur;
+        ctx.shadowColor = layer.shadow.color;
+      }
+
+      // Multiline text rendering
+      const lines = layer.content.split('\n');
+      const lineHeightPx = layer.fontSize * layer.lineHeight;
+
+      let textX = t.x;
+      if (layer.textAlign === 'center') textX = t.x + t.width / 2;
+      else if (layer.textAlign === 'right') textX = t.x + t.width;
+
+      for (let i = 0; i < lines.length; i++) {
+        const lineY = t.y + i * lineHeightPx;
+
+        if (layer.stroke.enabled) {
+          // Reset shadow for stroke to avoid double shadow
+          const savedShadow = ctx.shadowColor;
+          ctx.shadowColor = 'transparent';
+          ctx.strokeStyle = layer.stroke.color;
+          ctx.lineWidth = layer.stroke.width;
+          ctx.lineJoin = 'round';
+
+          if (layer.letterSpacing !== 0) {
+            drawTextWithLetterSpacing(
+              ctx,
+              lines[i],
+              textX,
+              lineY,
+              layer.letterSpacing,
+              'stroke',
+            );
+          } else {
+            ctx.strokeText(lines[i], textX, lineY);
+          }
+          ctx.shadowColor = savedShadow;
+        }
+
+        if (layer.letterSpacing !== 0) {
+          drawTextWithLetterSpacing(
+            ctx,
+            lines[i],
+            textX,
+            lineY,
+            layer.letterSpacing,
+            'fill',
+          );
+        } else {
+          ctx.fillText(lines[i], textX, lineY);
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
+  return {
+    buffer: canvas.toBuffer('image/png'),
+    patternName: config.background.type,
+    colorSchemeName: bgResult.colorSchemeName,
+    width: OGP_WIDTH,
+    height: OGP_HEIGHT,
+  };
+}
+
+function drawTextWithLetterSpacing(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  text: string,
+  x: number,
+  y: number,
+  spacing: number,
+  mode: 'fill' | 'stroke',
+): void {
+  let currentX = x;
+  for (const char of text) {
+    if (mode === 'fill') ctx.fillText(char, currentX, y);
+    else ctx.strokeText(char, currentX, y);
+    currentX += ctx.measureText(char).width + spacing;
+  }
 }
 
 /**
