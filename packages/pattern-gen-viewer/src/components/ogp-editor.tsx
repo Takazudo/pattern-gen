@@ -270,7 +270,7 @@ export function OgpEditor({
   const buildEditorConfig = useCallback((): OgpEditorConfig => {
     return {
       version: 1,
-      background: backgroundConfig,
+      background: backgroundConfig!,
       layers: layers.map(({ id: _id, ...rest }) => rest),
     };
   }, [layers, backgroundConfig]);

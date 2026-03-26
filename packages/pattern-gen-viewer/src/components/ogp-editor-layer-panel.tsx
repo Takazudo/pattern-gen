@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import type { EditorLayer, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
+import type { EditorLayer, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
 
 /* ── Props ── */
