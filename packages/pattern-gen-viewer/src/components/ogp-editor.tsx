@@ -13,6 +13,16 @@ import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
 
+/* ── Alignment ── */
+
+export type AlignmentType =
+  | 'align-left'
+  | 'align-center-h'
+  | 'align-right'
+  | 'align-top'
+  | 'align-middle-v'
+  | 'align-bottom';
+
 /* ── Props ── */
 
 interface OgpEditorProps {
@@ -180,7 +190,7 @@ export function OgpEditor({
   const [layers, setLayers] = useState<(EditorLayer & { id: string })[]>(
     [],
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize';
@@ -253,12 +263,12 @@ export function OgpEditor({
 
     drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current);
 
-    // Draw selection handles for selected layer
-    if (selectedId) {
-      const selected = layers.find((l) => l.id === selectedId);
-      if (selected) drawSelectionHandles(ctx, selected.transform);
+    // Draw selection handles for all selected layers
+    for (const id of selectedIds) {
+      const layer = layers.find((l) => l.id === id);
+      if (layer) drawSelectionHandles(ctx, layer.transform);
     }
-  }, [layers, backgroundImage, selectedId, drawLayers]);
+  }, [layers, backgroundImage, selectedIds, drawLayers]);
 
   // Re-render when state changes
   useEffect(() => {
@@ -288,16 +298,17 @@ export function OgpEditor({
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent) => {
       const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+      const isMultiSelect = e.metaKey || e.ctrlKey;
 
-      // Check resize handles on selected layer first
-      if (selectedId) {
-        const selected = layers.find((l) => l.id === selectedId);
+      // Check resize handles on selected layers first (only when single selected)
+      if (selectedIds.length === 1) {
+        const selected = layers.find((l) => l.id === selectedIds[0]);
         if (selected) {
           const handle = hitTestHandle(selected.transform, x, y);
           if (handle) {
             setDragState({
               type: 'resize',
-              id: selectedId,
+              id: selectedIds[0],
               startX: x,
               startY: y,
               startTransform: { ...selected.transform },
@@ -312,22 +323,31 @@ export function OgpEditor({
       for (let i = layers.length - 1; i >= 0; i--) {
         const layer = layers[i];
         if (hitTestRect(layer.transform, x, y)) {
-          setSelectedId(layer.id);
-          setDragState({
-            type: 'move',
-            id: layer.id,
-            startX: x,
-            startY: y,
-            startTransform: { ...layer.transform },
-          });
+          if (isMultiSelect) {
+            // Toggle the clicked layer in selection
+            setSelectedIds((prev) =>
+              prev.includes(layer.id)
+                ? prev.filter((id) => id !== layer.id)
+                : [...prev, layer.id],
+            );
+          } else {
+            setSelectedIds([layer.id]);
+            setDragState({
+              type: 'move',
+              id: layer.id,
+              startX: x,
+              startY: y,
+              startTransform: { ...layer.transform },
+            });
+          }
           return;
         }
       }
 
       // Clicked empty space — deselect
-      setSelectedId(null);
+      setSelectedIds([]);
     },
-    [getCanvasCoords, layers, selectedId],
+    [getCanvasCoords, layers, selectedIds],
   );
 
   // Global mouse move/up so dragging works outside the canvas bounds
@@ -451,7 +471,7 @@ export function OgpEditor({
         img.src = reader.result as string;
 
         setLayers((prev) => [...prev, newLayer]);
-        setSelectedId(id);
+        setSelectedIds([id]);
       };
       reader.readAsDataURL(file);
     };
@@ -486,7 +506,7 @@ export function OgpEditor({
       transform: { x: 100, y: 200, width: 400, height: 100 },
     };
     setLayers((prev) => [...prev, newLayer]);
-    setSelectedId(id);
+    setSelectedIds([id]);
     loadGoogleFont('Inter');
   }, []);
 
@@ -516,9 +536,9 @@ export function OgpEditor({
     (id: string) => {
       setLayers((prev) => prev.filter((l) => l.id !== id));
       loadedImagesRef.current.delete(id);
-      if (selectedId === id) setSelectedId(null);
+      setSelectedIds((prev) => prev.filter((sid) => sid !== id));
     },
-    [selectedId],
+    [],
   );
 
   const handleReorder = useCallback(
@@ -528,6 +548,71 @@ export function OgpEditor({
         const [moved] = next.splice(fromIndex, 1);
         next.splice(toIndex, 0, moved);
         return next;
+      });
+    },
+    [],
+  );
+
+  // Alignment handler
+  const handleAlignLayers = useCallback(
+    (ids: string[], alignment: AlignmentType) => {
+      setLayers((prev) => {
+        const targets = prev.filter((l) => ids.includes(l.id));
+        if (targets.length < 2) return prev;
+
+        const transforms = targets.map((l) => l.transform);
+
+        let getNewX: ((t: LayerTransform) => number) | null = null;
+        let getNewY: ((t: LayerTransform) => number) | null = null;
+
+        switch (alignment) {
+          case 'align-left': {
+            const minX = Math.min(...transforms.map((t) => t.x));
+            getNewX = () => minX;
+            break;
+          }
+          case 'align-center-h': {
+            const minX = Math.min(...transforms.map((t) => t.x));
+            const maxRight = Math.max(...transforms.map((t) => t.x + t.width));
+            const centerX = (minX + maxRight) / 2;
+            getNewX = (t) => centerX - t.width / 2;
+            break;
+          }
+          case 'align-right': {
+            const maxRight = Math.max(...transforms.map((t) => t.x + t.width));
+            getNewX = (t) => maxRight - t.width;
+            break;
+          }
+          case 'align-top': {
+            const minY = Math.min(...transforms.map((t) => t.y));
+            getNewY = () => minY;
+            break;
+          }
+          case 'align-middle-v': {
+            const minY = Math.min(...transforms.map((t) => t.y));
+            const maxBottom = Math.max(
+              ...transforms.map((t) => t.y + t.height),
+            );
+            const centerY = (minY + maxBottom) / 2;
+            getNewY = (t) => centerY - t.height / 2;
+            break;
+          }
+          case 'align-bottom': {
+            const maxBottom = Math.max(
+              ...transforms.map((t) => t.y + t.height),
+            );
+            getNewY = (t) => maxBottom - t.height;
+            break;
+          }
+        }
+
+        return prev.map((l) => {
+          if (!ids.includes(l.id)) return l;
+          const newTransform = { ...l.transform };
+          if (getNewX) newTransform.x = getNewX(l.transform);
+          if (getNewY) newTransform.y = getNewY(l.transform);
+          return { ...l, transform: newTransform };
+        });
       });
     },
     [],
@@ -584,7 +669,7 @@ export function OgpEditor({
             id: crypto.randomUUID(),
           }));
           setLayers(newLayers);
-          setSelectedId(null);
+          setSelectedIds([]);
 
           // Load fonts for text layers
           for (const l of newLayers) {
@@ -655,14 +740,15 @@ export function OgpEditor({
         </div>
         <OgpEditorLayerPanel
           layers={layers}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+          selectedIds={selectedIds}
+          onSelect={setSelectedIds}
           onUpdate={handleLayerUpdate}
           onDelete={handleLayerDelete}
           onReorder={handleReorder}
           onAddImage={handleAddImage}
           onAddText={handleAddText}
           onImportJson={handleImportJson}
+          onAlignLayers={handleAlignLayers}
         />
       </div>
     </div>

@@ -1,26 +1,28 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { EditorLayer, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
+import type { AlignmentType } from './ogp-editor.js';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
 
 /* ── Props ── */
 
 interface LayerPanelProps {
   layers: (EditorLayer & { id: string })[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  selectedIds: string[];
+  onSelect: (ids: string[]) => void;
   onUpdate: (id: string, updates: Partial<EditorLayer>) => void;
   onDelete: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onAddImage: () => void;
   onAddText: () => void;
   onImportJson: () => void;
+  onAlignLayers: (selectedIds: string[], alignment: AlignmentType) => void;
 }
 
 /* ── Component ── */
 
 export function OgpEditorLayerPanel({
   layers,
-  selectedId,
+  selectedIds,
   onSelect,
   onUpdate,
   onDelete,
@@ -28,13 +30,18 @@ export function OgpEditorLayerPanel({
   onAddImage,
   onAddText,
   onImportJson,
+  onAlignLayers,
 }: LayerPanelProps) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
 
-  const selected = selectedId
-    ? layers.find((l) => l.id === selectedId)
-    : null;
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  // Single selected layer for properties panel
+  const selected =
+    selectedIds.length === 1
+      ? layers.find((l) => l.id === selectedIds[0])
+      : null;
 
   const handleDragStart = useCallback(
     (idx: number) => {
@@ -84,9 +91,20 @@ export function OgpEditorLayerPanel({
         {layers.map((layer, idx) => (
           <div
             key={layer.id}
-            className={`ogp-layer-item ${layer.id === selectedId ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
+            className={`ogp-layer-item ${selectedIdSet.has(layer.id) ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
             draggable
-            onClick={() => onSelect(layer.id)}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey) {
+                // Toggle in multi-select
+                onSelect(
+                  selectedIdSet.has(layer.id)
+                    ? selectedIds.filter((id) => id !== layer.id)
+                    : [...selectedIds, layer.id],
+                );
+              } else {
+                onSelect([layer.id]);
+              }
+            }}
             onDragStart={() => handleDragStart(idx)}
             onDragOver={(e) => handleDragOver(e, idx)}
             onDrop={handleDrop}
@@ -111,6 +129,59 @@ export function OgpEditorLayerPanel({
           <div className="ogp-layer-empty">No layers yet</div>
         )}
       </div>
+
+      {/* Alignment panel (2+ layers selected) */}
+      {selectedIds.length >= 2 && (
+        <div className="ogp-align-panel">
+          <div className="ogp-props-title">
+            Align ({selectedIds.length} layers)
+          </div>
+          <div className="ogp-align-grid">
+            <button
+              className="btn ogp-align-btn"
+              onClick={() => onAlignLayers(selectedIds, 'align-left')}
+              title="Align Left"
+            >
+              Left
+            </button>
+            <button
+              className="btn ogp-align-btn"
+              onClick={() => onAlignLayers(selectedIds, 'align-center-h')}
+              title="Align Center (Horizontal)"
+            >
+              Center H
+            </button>
+            <button
+              className="btn ogp-align-btn"
+              onClick={() => onAlignLayers(selectedIds, 'align-right')}
+              title="Align Right"
+            >
+              Right
+            </button>
+            <button
+              className="btn ogp-align-btn"
+              onClick={() => onAlignLayers(selectedIds, 'align-top')}
+              title="Align Top"
+            >
+              Top
+            </button>
+            <button
+              className="btn ogp-align-btn"
+              onClick={() => onAlignLayers(selectedIds, 'align-middle-v')}
+              title="Align Middle (Vertical)"
+            >
+              Middle V
+            </button>
+            <button
+              className="btn ogp-align-btn"
+              onClick={() => onAlignLayers(selectedIds, 'align-bottom')}
+              title="Align Bottom"
+            >
+              Bottom
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Properties panel */}
       {selected && (
