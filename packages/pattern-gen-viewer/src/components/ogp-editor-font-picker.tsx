@@ -157,18 +157,20 @@ const EXTENDED_FONTS = [
   'Zilla Slab',
 ];
 
-const loadedFonts = new Set<string>();
+const fontLoadPromises = new Map<string, Promise<void>>();
 
 export function loadGoogleFont(family: string): Promise<void> {
-  if (loadedFonts.has(family)) return Promise.resolve();
-  loadedFonts.add(family);
+  const existing = fontLoadPromises.get(family);
+  if (existing) return existing;
 
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:ital,wght@0,400;0,700;1,400;1,700&display=swap`;
   document.head.appendChild(link);
 
-  return document.fonts.ready.then(() => {});
+  const promise = document.fonts.ready.then(() => {});
+  fontLoadPromises.set(family, promise);
+  return promise;
 }
 
 interface FontPickerProps {

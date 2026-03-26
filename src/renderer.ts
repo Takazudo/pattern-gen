@@ -275,9 +275,12 @@ export async function renderOgpEditorFromConfig(
         const lineY = t.y + i * lineHeightPx;
 
         if (layer.stroke.enabled) {
-          // Reset shadow for stroke to avoid double shadow
-          const savedShadow = ctx.shadowColor;
+          // Save/restore to isolate stroke from shadow state
+          ctx.save();
           ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
           ctx.strokeStyle = layer.stroke.color;
           ctx.lineWidth = layer.stroke.width;
           ctx.lineJoin = 'round';
@@ -294,7 +297,7 @@ export async function renderOgpEditorFromConfig(
           } else {
             ctx.strokeText(lines[i], textX, lineY);
           }
-          ctx.shadowColor = savedShadow;
+          ctx.restore();
         }
 
         if (layer.letterSpacing !== 0) {

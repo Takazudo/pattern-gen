@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
@@ -236,8 +237,8 @@ export function OgpEditor({
       if (!canvas) return { x: 0, y: 0 };
       const rect = canvas.getBoundingClientRect();
       return {
-        x: (clientX - rect.left) * (1200 / rect.width),
-        y: (clientY - rect.top) * (630 / rect.height),
+        x: (clientX - rect.left) * (OGP_WIDTH / rect.width),
+        y: (clientY - rect.top) * (OGP_HEIGHT / rect.height),
       };
     },
     [],
@@ -251,8 +252,8 @@ export function OgpEditor({
       layerList: (EditorLayer & { id: string })[],
       images: Map<string, HTMLImageElement>,
     ) => {
-      ctx.clearRect(0, 0, 1200, 630);
-      if (bg) ctx.drawImage(bg, 0, 0, 1200, 630);
+      ctx.clearRect(0, 0, OGP_WIDTH, OGP_HEIGHT);
+      if (bg) ctx.drawImage(bg, 0, 0, OGP_WIDTH, OGP_HEIGHT);
 
       for (const layer of layerList) {
         ctx.save();
@@ -298,8 +299,8 @@ export function OgpEditor({
   // Render to export canvas (no selection handles)
   const renderExportCanvas = useCallback((): HTMLCanvasElement => {
     const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = 1200;
-    exportCanvas.height = 630;
+    exportCanvas.width = OGP_WIDTH;
+    exportCanvas.height = OGP_HEIGHT;
     const ctx = exportCanvas.getContext('2d')!;
     drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current);
     return exportCanvas;
@@ -605,9 +606,13 @@ export function OgpEditor({
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const config = JSON.parse(
-            reader.result as string,
-          ) as OgpEditorConfig;
+          const raw = JSON.parse(reader.result as string);
+          // Validate structure (layers array, layer types, transforms)
+          if (!raw || !Array.isArray(raw.layers)) {
+            console.error('Invalid editor config: missing layers array');
+            return;
+          }
+          const config = raw as OgpEditorConfig;
           const newLayers = config.layers.map((l) => ({
             ...l,
             id: crypto.randomUUID(),
@@ -677,8 +682,8 @@ export function OgpEditor({
         <div className="ogp-editor-canvas-area">
           <canvas
             ref={canvasRef}
-            width={1200}
-            height={630}
+            width={OGP_WIDTH}
+            height={OGP_HEIGHT}
             onMouseDown={handleCanvasMouseDown}
           />
         </div>
