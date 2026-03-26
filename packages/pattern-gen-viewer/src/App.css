@@ -536,3 +536,11 @@ select:focus {
   width: 100%;
   margin-bottom: var(--spacing-sp-sm);
 }
+
+.ogp-btn-edit {
+  background: oklch(100% 0 0 / 8%);
+}
+
+.ogp-btn-edit:hover {
+  background: oklch(100% 0 0 / 15%);
+}

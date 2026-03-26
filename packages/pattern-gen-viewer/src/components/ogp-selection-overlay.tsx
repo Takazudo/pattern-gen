@@ -21,6 +21,8 @@ interface OgpSelectionOverlayProps {
   onDownloadJson: (rect: OgpRect) => void;
   /** Callback to copy OGP config JSON to clipboard; resolves on success */
   onCopyJson: (rect: OgpRect) => Promise<void>;
+  /** Callback to enter the OGP editor with current selection */
+  onEdit: (rect: OgpRect) => void;
 }
 
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -211,6 +213,7 @@ export function OgpSelectionOverlay({
   onExit,
   onDownloadJson,
   onCopyJson,
+  onEdit,
 }: OgpSelectionOverlayProps) {
   const [rect, setRect] = useState<OgpRect>(getInitialRect);
   const [copyFeedback, setCopyFeedback] = useState(false);
@@ -378,6 +381,9 @@ export function OgpSelectionOverlay({
         </button>
         <button className="btn ogp-btn-json" onClick={() => handleCopy(rect)}>
           {copyFeedback ? 'Copied!' : 'Copy JSON'}
+        </button>
+        <button className="btn ogp-btn-edit" onClick={() => onEdit(rect)}>
+          OGP Edit
         </button>
         <button className="btn ogp-btn-exit" onClick={onExit}>
           Exit
