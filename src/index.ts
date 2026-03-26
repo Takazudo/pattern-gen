@@ -28,7 +28,7 @@ export { randomizeDefaults, getEffectiveParams } from './core/randomize-defaults
 export { patternRegistry, patternsByName, getPatternNames } from './patterns/index.js';
 
 // Renderer
-export { renderPattern, renderPatternToCanvas } from './renderer.js';
+export { renderPattern, renderPatternToCanvas, renderOgpFromConfig } from './renderer.js';
 export type { RenderResult } from './renderer.js';
 
 // OGP config
