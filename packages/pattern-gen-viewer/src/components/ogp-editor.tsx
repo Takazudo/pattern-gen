@@ -362,6 +362,20 @@ export function OgpEditor({
     [],
   );
 
+  // Memoize grid positions to avoid re-allocation on every mousemove
+  const xGridPositions = useMemo(
+    () => getGridPositions(OGP_WIDTH, gridConfig.vDivide),
+    [gridConfig.vDivide],
+  );
+  const yGridPositions = useMemo(
+    () => getGridPositions(OGP_HEIGHT, gridConfig.hDivide),
+    [gridConfig.hDivide],
+  );
+  const xGridRef = useRef(xGridPositions);
+  xGridRef.current = xGridPositions;
+  const yGridRef = useRef(yGridPositions);
+  yGridRef.current = yGridPositions;
+
   // Render canvas
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -473,20 +487,6 @@ export function OgpEditor({
 
   const gridConfigRef = useRef(gridConfig);
   gridConfigRef.current = gridConfig;
-
-  // Memoize grid positions to avoid re-allocation on every mousemove
-  const xGridPositions = useMemo(
-    () => getGridPositions(OGP_WIDTH, gridConfig.vDivide),
-    [gridConfig.vDivide],
-  );
-  const yGridPositions = useMemo(
-    () => getGridPositions(OGP_HEIGHT, gridConfig.hDivide),
-    [gridConfig.hDivide],
-  );
-  const xGridRef = useRef(xGridPositions);
-  xGridRef.current = xGridPositions;
-  const yGridRef = useRef(yGridPositions);
-  yGridRef.current = yGridPositions;
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
