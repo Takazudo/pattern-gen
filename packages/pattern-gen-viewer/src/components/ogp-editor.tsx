@@ -31,6 +31,15 @@ interface OgpEditorProps {
   onExit: () => void;
 }
 
+/* ── Grid types ── */
+
+export interface GridConfig {
+  vDivide: number;
+  hDivide: number;
+  snap: boolean;
+  visible: boolean;
+}
+
 /* ── Helpers ── */
 
 function triggerDownload(dataUrl: string, filename: string) {
@@ -180,6 +189,100 @@ function hitTestRect(
   return cx >= t.x && cx <= t.x + t.width && cy >= t.y && cy <= t.y + t.height;
 }
 
+/* ── Grid helpers ── */
+
+function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  vDivide: number,
+  hDivide: number,
+) {
+  ctx.save();
+  ctx.strokeStyle = 'oklch(80% 0 0 / 30%)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+
+  for (let i = 1; i < vDivide; i++) {
+    const x = Math.round(OGP_WIDTH * i / vDivide) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, OGP_HEIGHT);
+    ctx.stroke();
+  }
+
+  for (let i = 1; i < hDivide; i++) {
+    const y = Math.round(OGP_HEIGHT * i / hDivide) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(OGP_WIDTH, y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function getGridPositions(totalSize: number, divide: number): number[] {
+  const positions = [0, totalSize];
+  for (let i = 1; i < divide; i++) {
+    positions.push(Math.round(totalSize * i / divide));
+  }
+  return positions.sort((a, b) => a - b);
+}
+
+function snapToNearest(
+  value: number,
+  gridPositions: number[],
+  threshold: number = 10,
+): number {
+  let best: number | null = null;
+  let bestDist = threshold;
+  for (const pos of gridPositions) {
+    const dist = Math.abs(value - pos);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = pos;
+    }
+  }
+  return best ?? value;
+}
+
+function snapTransform(
+  t: LayerTransform,
+  xPositions: number[],
+  yPositions: number[],
+  threshold: number = 10,
+): { x: number; y: number } {
+  let newX = t.x;
+  let newY = t.y;
+
+  // Snap X: check left edge, center, right edge
+  const leftSnap = snapToNearest(t.x, xPositions, threshold);
+  const centerXSnap = snapToNearest(t.x + t.width / 2, xPositions, threshold);
+  const rightSnap = snapToNearest(t.x + t.width, xPositions, threshold);
+
+  if (leftSnap !== t.x) {
+    newX = leftSnap;
+  } else if (centerXSnap !== t.x + t.width / 2) {
+    newX = centerXSnap - t.width / 2;
+  } else if (rightSnap !== t.x + t.width) {
+    newX = rightSnap - t.width;
+  }
+
+  // Snap Y: check top edge, center, bottom edge
+  const topSnap = snapToNearest(t.y, yPositions, threshold);
+  const centerYSnap = snapToNearest(t.y + t.height / 2, yPositions, threshold);
+  const bottomSnap = snapToNearest(t.y + t.height, yPositions, threshold);
+
+  if (topSnap !== t.y) {
+    newY = topSnap;
+  } else if (centerYSnap !== t.y + t.height / 2) {
+    newY = centerYSnap - t.height / 2;
+  } else if (bottomSnap !== t.y + t.height) {
+    newY = bottomSnap - t.height;
+  }
+
+  return { x: newX, y: newY };
+}
+
 /* ── Main Component ── */
 
 export function OgpEditor({
@@ -192,6 +295,12 @@ export function OgpEditor({
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [gridConfig, setGridConfig] = useState<GridConfig>({
+    vDivide: 2,
+    hDivide: 2,
+    snap: false,
+    visible: false,
+  });
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize';
     id: string;
@@ -268,7 +377,15 @@ export function OgpEditor({
       const layer = layers.find((l) => l.id === id);
       if (layer) drawSelectionHandles(ctx, layer.transform);
     }
-  }, [layers, backgroundImage, selectedIds, drawLayers]);
+
+    // Draw grid overlay on top
+    if (
+      gridConfig.visible &&
+      (gridConfig.vDivide > 1 || gridConfig.hDivide > 1)
+    ) {
+      drawGrid(ctx, gridConfig.vDivide, gridConfig.hDivide);
+    }
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig]);
 
   // Re-render when state changes
   useEffect(() => {
@@ -354,6 +471,9 @@ export function OgpEditor({
   const dragStateRef = useRef(dragState);
   dragStateRef.current = dragState;
 
+  const gridConfigRef = useRef(gridConfig);
+  gridConfigRef.current = gridConfig;
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const drag = dragStateRef.current;
@@ -366,6 +486,22 @@ export function OgpEditor({
       const st = drag.startTransform;
 
       if (drag.type === 'move') {
+        const grid = gridConfigRef.current;
+        let newX = st.x + dx;
+        let newY = st.y + dy;
+
+        if (grid.snap) {
+          const xPositions = getGridPositions(OGP_WIDTH, grid.vDivide);
+          const yPositions = getGridPositions(OGP_HEIGHT, grid.hDivide);
+          const snapped = snapTransform(
+            { x: newX, y: newY, width: st.width, height: st.height },
+            xPositions,
+            yPositions,
+          );
+          newX = snapped.x;
+          newY = snapped.y;
+        }
+
         setLayers((prev) =>
           prev.map((l) =>
             l.id === drag.id
@@ -373,8 +509,8 @@ export function OgpEditor({
                   ...l,
                   transform: {
                     ...l.transform,
-                    x: st.x + dx,
-                    y: st.y + dy,
+                    x: newX,
+                    y: newY,
                   },
                 }
               : l,
@@ -749,6 +885,8 @@ export function OgpEditor({
           onAddText={handleAddText}
           onImportJson={handleImportJson}
           onAlignLayers={handleAlignLayers}
+          gridConfig={gridConfig}
+          onGridConfigChange={setGridConfig}
         />
       </div>
     </div>
