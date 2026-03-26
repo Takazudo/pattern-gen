@@ -107,27 +107,27 @@ function renderTextLayer(
     ctx.fillText(lines[i], textX, y);
   }
 
-  // Reset letter spacing
-  if (layer.letterSpacing !== 0) {
-    (ctx as unknown as Record<string, unknown>).letterSpacing = '0px';
-  }
+  // Note: letterSpacing is reset by the caller's ctx.save()/ctx.restore()
 }
+
+const HANDLE_SIZE = 8;
+const MIN_LAYER_SIZE = 20;
+const SNAP_THRESHOLD = 10;
 
 function drawSelectionHandles(
   ctx: CanvasRenderingContext2D,
   t: LayerTransform,
 ) {
   ctx.save();
-  ctx.strokeStyle = 'oklch(90% 0 0)';
+  ctx.strokeStyle = 'rgba(220, 220, 220, 1)';
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 4]);
   ctx.strokeRect(t.x, t.y, t.width, t.height);
   ctx.setLineDash([]);
 
   // Corner handles
-  const handleSize = 8;
   ctx.fillStyle = 'white';
-  ctx.strokeStyle = 'oklch(30% 0 0)';
+  ctx.strokeStyle = 'rgba(80, 80, 80, 1)';
   ctx.lineWidth = 1;
   const corners = [
     [t.x, t.y],
@@ -137,23 +137,20 @@ function drawSelectionHandles(
   ];
   for (const [cx, cy] of corners) {
     ctx.fillRect(
-      cx - handleSize / 2,
-      cy - handleSize / 2,
-      handleSize,
-      handleSize,
+      cx - HANDLE_SIZE / 2,
+      cy - HANDLE_SIZE / 2,
+      HANDLE_SIZE,
+      HANDLE_SIZE,
     );
     ctx.strokeRect(
-      cx - handleSize / 2,
-      cy - handleSize / 2,
-      handleSize,
-      handleSize,
+      cx - HANDLE_SIZE / 2,
+      cy - HANDLE_SIZE / 2,
+      HANDLE_SIZE,
+      HANDLE_SIZE,
     );
   }
   ctx.restore();
 }
-
-const HANDLE_SIZE = 8;
-const MIN_LAYER_SIZE = 20;
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | null;
 
@@ -194,24 +191,25 @@ function hitTestRect(
 
 function drawGrid(
   ctx: CanvasRenderingContext2D,
-  vDivide: number,
-  hDivide: number,
+  xPositions: number[],
+  yPositions: number[],
 ) {
   ctx.save();
   ctx.strokeStyle = 'rgba(180, 180, 180, 0.3)';
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
 
-  for (let i = 1; i < vDivide; i++) {
-    const x = Math.round(OGP_WIDTH * i / vDivide);
+  // Skip edges (0 and totalSize) — only draw interior lines
+  for (const x of xPositions) {
+    if (x === 0 || x === OGP_WIDTH) continue;
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, OGP_HEIGHT);
     ctx.stroke();
   }
 
-  for (let i = 1; i < hDivide; i++) {
-    const y = Math.round(OGP_HEIGHT * i / hDivide);
+  for (const y of yPositions) {
+    if (y === 0 || y === OGP_HEIGHT) continue;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(OGP_WIDTH, y);
@@ -232,7 +230,7 @@ function getGridPositions(totalSize: number, divide: number): number[] {
 function snapToNearest(
   value: number,
   gridPositions: number[],
-  threshold: number = 10,
+  threshold: number = SNAP_THRESHOLD,
 ): number {
   let best: number | null = null;
   let bestDist = threshold;
@@ -250,7 +248,7 @@ function snapTransform(
   t: LayerTransform,
   xPositions: number[],
   yPositions: number[],
-  threshold: number = 10,
+  threshold: number = SNAP_THRESHOLD,
 ): { x: number; y: number } {
   let newX = t.x;
   let newY = t.y;
@@ -384,9 +382,9 @@ export function OgpEditor({
       gridConfig.visible &&
       (gridConfig.vDivide > 1 || gridConfig.hDivide > 1)
     ) {
-      drawGrid(ctx, gridConfig.vDivide, gridConfig.hDivide);
+      drawGrid(ctx, xGridPositions, yGridPositions);
     }
-  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig]);
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions]);
 
   // Re-render when state changes
   useEffect(() => {
@@ -404,10 +402,11 @@ export function OgpEditor({
   }, [layers, backgroundImage, drawLayers]);
 
   // Build editor config JSON
-  const buildEditorConfig = useCallback((): OgpEditorConfig => {
+  const buildEditorConfig = useCallback((): OgpEditorConfig | null => {
+    if (!backgroundConfig) return null;
     return {
       version: 1,
-      background: backgroundConfig!,
+      background: backgroundConfig,
       layers: layers.map(({ id: _id, ...rest }) => rest),
     };
   }, [layers, backgroundConfig]);
@@ -804,6 +803,7 @@ export function OgpEditor({
 
   const handleDownloadJson = useCallback(() => {
     const config = buildEditorConfig();
+    if (!config) return;
     const json = JSON.stringify(config, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -813,6 +813,7 @@ export function OgpEditor({
 
   const handleCopyJson = useCallback(() => {
     const config = buildEditorConfig();
+    if (!config) return;
     const json = JSON.stringify(config, null, 2);
     navigator.clipboard
       .writeText(json)
