@@ -214,12 +214,16 @@ function snapToNearest(
   gridPositions: number[],
   threshold: number = 10,
 ): number {
+  let best: number | null = null;
+  let bestDist = threshold;
   for (const pos of gridPositions) {
-    if (Math.abs(value - pos) <= threshold) {
-      return pos;
+    const dist = Math.abs(value - pos);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = pos;
     }
   }
-  return value;
+  return best ?? value;
 }
 
 function snapTransform(
@@ -273,10 +277,10 @@ export function OgpEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [gridConfig, setGridConfig] = useState<GridConfig>({
-    vDivide: 1,
-    hDivide: 1,
+    vDivide: 2,
+    hDivide: 2,
     snap: false,
-    visible: true,
+    visible: false,
   });
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize';
