@@ -11,6 +11,8 @@ import { HslTweakPanel } from './components/hsl-tweak-panel.js';
 import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { OgpSelectionOverlay } from './components/ogp-selection-overlay.js';
+import { serializeOgpConfig } from 'pattern-gen/core/ogp-config';
+import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -24,6 +26,66 @@ function triggerDownload(dataUrl: string, filename: string) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+function buildOgpConfig(
+  viewportRect: { x: number; y: number; width: number; height: number },
+  canvas: HTMLCanvasElement,
+  state: {
+    slug: string;
+    patternType: string;
+    colorSchemeName: string;
+    zoom: number;
+    txVal: number;
+    tyVal: number;
+    useTranslate: boolean;
+    displayParams: Record<string, number>;
+    hslAdjust: { h: number; s: number; l: number };
+  },
+): OgpConfig {
+  const canvasRect = canvas.getBoundingClientRect();
+  const bufW = canvas.width;
+  const bufH = canvas.height;
+  const elemW = canvasRect.width;
+  const elemH = canvasRect.height;
+
+  let renderSize: number;
+  let offsetX: number;
+  let offsetY: number;
+  if (elemW > elemH) {
+    renderSize = elemW;
+    offsetX = 0;
+    offsetY = (elemH - elemW) / 2;
+  } else {
+    renderSize = elemH;
+    offsetX = (elemW - elemH) / 2;
+    offsetY = 0;
+  }
+
+  const scale = bufW / renderSize;
+  const srcX = Math.max(0, (viewportRect.x - canvasRect.left - offsetX) * scale);
+  const srcY = Math.max(0, (viewportRect.y - canvasRect.top - offsetY) * scale);
+  const srcW = Math.min(viewportRect.width * scale, bufW - srcX);
+  const srcH = Math.min(viewportRect.height * scale, bufH - srcY);
+
+  return {
+    version: 1,
+    slug: state.slug,
+    type: state.patternType,
+    colorScheme: state.colorSchemeName,
+    zoom: state.zoom,
+    translateX: state.txVal,
+    translateY: state.tyVal,
+    useTranslate: state.useTranslate,
+    params: { ...state.displayParams },
+    hsl: { ...state.hslAdjust },
+    crop: {
+      x: srcX / bufW,
+      y: srcY / bufW,
+      width: srcW / bufW,
+      height: srcH / bufW,
+    },
+  };
 }
 
 function randomSlug(): string {
@@ -289,6 +351,53 @@ export function App() {
 
   const exitOgpMode = useCallback(() => setOgpMode(false), []);
 
+  const handleOgpDownloadJson = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const config = buildOgpConfig(rect, canvas, {
+        slug,
+        patternType,
+        colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
+        zoom,
+        txVal,
+        tyVal,
+        useTranslate,
+        displayParams,
+        hslAdjust,
+      });
+      const json = serializeOgpConfig(config);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      triggerDownload(url, `ogp-config-${patternType}-${slug}.json`);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
+  );
+
+  const handleOgpCopyJson = useCallback(
+    (rect: { x: number; y: number; width: number; height: number }) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const config = buildOgpConfig(rect, canvas, {
+        slug,
+        patternType,
+        colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
+        zoom,
+        txVal,
+        tyVal,
+        useTranslate,
+        displayParams,
+        hslAdjust,
+      });
+      const json = serializeOgpConfig(config);
+      navigator.clipboard.writeText(json).catch(() => {
+        /* clipboard permission denied — feedback already shown by overlay */
+      });
+    },
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
+  );
+
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
   return (
@@ -330,6 +439,8 @@ export function App() {
         <OgpSelectionOverlay
           onGenerate={handleOgpGenerate}
           onExit={exitOgpMode}
+          onDownloadJson={handleOgpDownloadJson}
+          onCopyJson={handleOgpCopyJson}
         />
       )}
 

@@ -14,6 +14,10 @@ interface OgpSelectionOverlayProps {
   }) => void;
   /** Callback when user presses Escape or clicks Exit */
   onExit: () => void;
+  /** Callback to download OGP config as JSON file */
+  onDownloadJson: (rect: Rect) => void;
+  /** Callback to copy OGP config JSON to clipboard */
+  onCopyJson: (rect: Rect) => void;
 }
 
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -211,8 +215,11 @@ function resizeFromHandle(
 export function OgpSelectionOverlay({
   onGenerate,
   onExit,
+  onDownloadJson,
+  onCopyJson,
 }: OgpSelectionOverlayProps) {
   const [rect, setRect] = useState<Rect>(getInitialRect);
+  const [copyFeedback, setCopyFeedback] = useState(false);
   const rectRef = useRef(rect);
   rectRef.current = rect;
 
@@ -272,6 +279,12 @@ export function OgpSelectionOverlay({
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
+
+  const handleCopy = useCallback((r: Rect) => {
+    onCopyJson(r);
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 1500);
+  }, [onCopyJson]);
 
   const handleMoveStart = useCallback(
     (e: React.MouseEvent) => {
@@ -359,6 +372,12 @@ export function OgpSelectionOverlay({
           onClick={() => onGenerate(rect)}
         >
           Generate OGP Image
+        </button>
+        <button className="btn ogp-btn-json" onClick={() => onDownloadJson(rect)}>
+          Download JSON
+        </button>
+        <button className="btn ogp-btn-json" onClick={() => handleCopy(rect)}>
+          {copyFeedback ? 'Copied!' : 'Copy JSON'}
         </button>
         <button className="btn ogp-btn-exit" onClick={onExit}>
           Exit

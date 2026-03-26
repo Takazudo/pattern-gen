@@ -87,3 +87,11 @@
 .ogp-btn-generate:hover {
   background: oklch(100% 0 0 / 20%);
 }
+
+.ogp-btn-json {
+  background: oklch(100% 0 0 / 8%);
+}
+
+.ogp-btn-json:hover {
+  background: oklch(100% 0 0 / 15%);
+}
