@@ -58,13 +58,21 @@ function renderTextLayer(
 
   const lines = layer.content.split('\n');
   const lineHeightPx = layer.fontSize * layer.lineHeight;
+  const totalTextHeight = lines.length * lineHeightPx;
 
   let textX = t.x;
   if (layer.textAlign === 'center') textX = t.x + t.width / 2;
   else if (layer.textAlign === 'right') textX = t.x + t.width;
 
+  let baseY = t.y;
+  if (layer.textVAlign === 'middle') {
+    baseY = t.y + (t.height - totalTextHeight) / 2;
+  } else if (layer.textVAlign === 'bottom') {
+    baseY = t.y + t.height - totalTextHeight;
+  }
+
   for (let i = 0; i < lines.length; i++) {
-    const y = t.y + i * lineHeightPx;
+    const y = baseY + i * lineHeightPx;
 
     if (layer.stroke.enabled) {
       ctx.save();
@@ -463,6 +471,7 @@ export function OgpEditor({
       color: '#ffffff',
       opacity: 1,
       textAlign: 'left',
+      textVAlign: 'top',
       letterSpacing: 0,
       lineHeight: 1.4,
       shadow: {

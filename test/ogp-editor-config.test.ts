@@ -48,6 +48,7 @@ function makeTextLayer(): TextLayerData {
     color: '#ffffff',
     opacity: 1,
     textAlign: 'center',
+    textVAlign: 'top',
     letterSpacing: 0,
     lineHeight: 1.2,
     shadow: {

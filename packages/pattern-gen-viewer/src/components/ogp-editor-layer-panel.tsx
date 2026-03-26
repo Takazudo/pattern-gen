@@ -372,6 +372,20 @@ function TextProps({
         ))}
       </div>
 
+      {/* Vertical text align */}
+      <label className="ogp-prop-label">V Align</label>
+      <div className="ogp-prop-toggle-row">
+        {(['top', 'middle', 'bottom'] as const).map((a) => (
+          <button
+            key={a}
+            className={`btn ogp-prop-toggle ${layer.textVAlign === a ? 'active' : ''}`}
+            onClick={() => onUpdate({ textVAlign: a })}
+          >
+            {a.charAt(0).toUpperCase() + a.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {/* Letter spacing */}
       <label className="ogp-prop-label">
         Letter Spacing: {layer.letterSpacing}
