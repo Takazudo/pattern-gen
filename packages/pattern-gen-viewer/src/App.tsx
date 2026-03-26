@@ -28,21 +28,11 @@ function triggerDownload(dataUrl: string, filename: string) {
   document.body.removeChild(a);
 }
 
-function buildOgpConfig(
+/** Map a viewport rect to canvas buffer coordinates, accounting for object-fit: cover. */
+function viewportRectToBufferRect(
   viewportRect: { x: number; y: number; width: number; height: number },
   canvas: HTMLCanvasElement,
-  state: {
-    slug: string;
-    patternType: string;
-    colorSchemeName: string;
-    zoom: number;
-    txVal: number;
-    tyVal: number;
-    useTranslate: boolean;
-    displayParams: Record<string, number>;
-    hslAdjust: { h: number; s: number; l: number };
-  },
-): OgpConfig {
+): { srcX: number; srcY: number; srcW: number; srcH: number } {
   const canvasRect = canvas.getBoundingClientRect();
   const bufW = canvas.width;
   const bufH = canvas.height;
@@ -68,6 +58,28 @@ function buildOgpConfig(
   const srcW = Math.min(viewportRect.width * scale, bufW - srcX);
   const srcH = Math.min(viewportRect.height * scale, bufH - srcY);
 
+  return { srcX, srcY, srcW, srcH };
+}
+
+function buildOgpConfig(
+  viewportRect: { x: number; y: number; width: number; height: number },
+  canvas: HTMLCanvasElement,
+  state: {
+    slug: string;
+    patternType: string;
+    colorSchemeName: string;
+    zoom: number;
+    txVal: number;
+    tyVal: number;
+    useTranslate: boolean;
+    displayParams: Record<string, number>;
+    hslAdjust: { h: number; s: number; l: number };
+  },
+): OgpConfig {
+  const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(viewportRect, canvas);
+  const bufW = canvas.width;
+  const bufH = canvas.height;
+
   return {
     version: 1,
     slug: state.slug,
@@ -81,9 +93,9 @@ function buildOgpConfig(
     hsl: { ...state.hslAdjust },
     crop: {
       x: srcX / bufW,
-      y: srcY / bufW,
+      y: srcY / bufH,
       width: srcW / bufW,
-      height: srcH / bufW,
+      height: srcH / bufH,
     },
   };
 }
@@ -309,34 +321,7 @@ export function App() {
     (rect: { x: number; y: number; width: number; height: number }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const canvasRect = canvas.getBoundingClientRect();
-      const bufW = canvas.width;
-      const bufH = canvas.height;
-      const elemW = canvasRect.width;
-      const elemH = canvasRect.height;
-
-      // Account for object-fit: cover on the square canvas.
-      // The canvas content is square but the element fills the viewport,
-      // so the visible area is cropped on one axis.
-      let renderSize: number;
-      let offsetX: number;
-      let offsetY: number;
-      if (elemW > elemH) {
-        renderSize = elemW;
-        offsetX = 0;
-        offsetY = (elemH - elemW) / 2;
-      } else {
-        renderSize = elemH;
-        offsetX = (elemW - elemH) / 2;
-        offsetY = 0;
-      }
-
-      const scale = bufW / renderSize;
-      const srcX = Math.max(0, (rect.x - canvasRect.left - offsetX) * scale);
-      const srcY = Math.max(0, (rect.y - canvasRect.top - offsetY) * scale);
-      const srcW = Math.min(rect.width * scale, bufW - srcX);
-      const srcH = Math.min(rect.height * scale, bufH - srcY);
-
+      const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(rect, canvas);
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = OGP_WIDTH;
       tempCanvas.height = OGP_HEIGHT;

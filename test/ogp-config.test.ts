@@ -54,25 +54,25 @@ describe('parseOgpConfig validation', () => {
   it('throws on zoom = 0', () => {
     const config = { ...makeValidConfig(), zoom: 0 };
     const json = JSON.stringify(config);
-    expect(() => parseOgpConfig(json)).toThrow('zoom must be a number greater than 0');
+    expect(() => parseOgpConfig(json)).toThrow('zoom must be a finite number greater than 0');
   });
 
   it('throws on negative zoom', () => {
     const config = { ...makeValidConfig(), zoom: -1 };
     const json = JSON.stringify(config);
-    expect(() => parseOgpConfig(json)).toThrow('zoom must be a number greater than 0');
+    expect(() => parseOgpConfig(json)).toThrow('zoom must be a finite number greater than 0');
   });
 
   it('throws on translateX out of range', () => {
     const config = { ...makeValidConfig(), translateX: 2 };
     const json = JSON.stringify(config);
-    expect(() => parseOgpConfig(json)).toThrow('translateX must be a number in [-1, 1]');
+    expect(() => parseOgpConfig(json)).toThrow('translateX must be a finite number in [-1, 1]');
   });
 
   it('throws on translateY out of range', () => {
     const config = { ...makeValidConfig(), translateY: -1.5 };
     const json = JSON.stringify(config);
-    expect(() => parseOgpConfig(json)).toThrow('translateY must be a number in [-1, 1]');
+    expect(() => parseOgpConfig(json)).toThrow('translateY must be a finite number in [-1, 1]');
   });
 
   it('throws when crop.x + crop.width > 1', () => {
@@ -93,7 +93,7 @@ describe('parseOgpConfig validation', () => {
     const config = makeValidConfig();
     config.crop = { x: 0.1, y: 0.1, width: -0.5, height: 0.5 };
     const json = JSON.stringify(config);
-    expect(() => parseOgpConfig(json)).toThrow('crop.width must be a number in [0, 1]');
+    expect(() => parseOgpConfig(json)).toThrow('crop.width must be a finite number in [0, 1]');
   });
 
   it('defaults missing params to {}', () => {

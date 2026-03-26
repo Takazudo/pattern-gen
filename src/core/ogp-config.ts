@@ -46,16 +46,16 @@ export function parseOgpConfig(json: string): OgpConfig {
     throw new Error('OGP config: colorScheme must be a non-empty string');
   }
 
-  if (typeof raw.zoom !== 'number' || raw.zoom <= 0) {
-    throw new Error('OGP config: zoom must be a number greater than 0');
+  if (typeof raw.zoom !== 'number' || !Number.isFinite(raw.zoom) || raw.zoom <= 0) {
+    throw new Error('OGP config: zoom must be a finite number greater than 0');
   }
 
-  if (typeof raw.translateX !== 'number' || raw.translateX < -1 || raw.translateX > 1) {
-    throw new Error('OGP config: translateX must be a number in [-1, 1]');
+  if (typeof raw.translateX !== 'number' || !Number.isFinite(raw.translateX) || raw.translateX < -1 || raw.translateX > 1) {
+    throw new Error('OGP config: translateX must be a finite number in [-1, 1]');
   }
 
-  if (typeof raw.translateY !== 'number' || raw.translateY < -1 || raw.translateY > 1) {
-    throw new Error('OGP config: translateY must be a number in [-1, 1]');
+  if (typeof raw.translateY !== 'number' || !Number.isFinite(raw.translateY) || raw.translateY < -1 || raw.translateY > 1) {
+    throw new Error('OGP config: translateY must be a finite number in [-1, 1]');
   }
 
   if (typeof raw.useTranslate !== 'boolean') {
@@ -94,9 +94,15 @@ export function parseOgpConfig(json: string): OgpConfig {
     throw new Error('OGP config: crop must be an object with x, y, width, height');
   }
   for (const key of ['x', 'y', 'width', 'height'] as const) {
-    if (typeof raw.crop[key] !== 'number' || raw.crop[key] < 0 || raw.crop[key] > 1) {
-      throw new Error(`OGP config: crop.${key} must be a number in [0, 1]`);
+    if (typeof raw.crop[key] !== 'number' || !Number.isFinite(raw.crop[key]) || raw.crop[key] < 0 || raw.crop[key] > 1) {
+      throw new Error(`OGP config: crop.${key} must be a finite number in [0, 1]`);
     }
+  }
+  if (raw.crop.width <= 0) {
+    throw new Error('OGP config: crop.width must be greater than 0');
+  }
+  if (raw.crop.height <= 0) {
+    throw new Error('OGP config: crop.height must be greater than 0');
   }
   if (raw.crop.x + raw.crop.width > 1 + FLOAT_EPSILON) {
     throw new Error('OGP config: crop.x + crop.width must be <= 1');

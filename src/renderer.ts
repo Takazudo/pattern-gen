@@ -113,10 +113,13 @@ const OGP_OUTPUT_HEIGHT = 630;
 export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResult> {
   const { createCanvas } = await import('canvas');
 
-  const renderSize = Math.max(
-    800,
-    Math.ceil(OGP_OUTPUT_WIDTH / config.crop.width),
-    Math.ceil(OGP_OUTPUT_HEIGHT / config.crop.height),
+  const renderSize = Math.min(
+    4800, // Cap to prevent memory exhaustion from very narrow crops
+    Math.max(
+      800,
+      Math.ceil(OGP_OUTPUT_WIDTH / config.crop.width),
+      Math.ceil(OGP_OUTPUT_HEIGHT / config.crop.height),
+    ),
   );
 
   const pattern = patternsByName.get(config.type);
@@ -172,12 +175,9 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
       params: Object.keys(config.params).length > 0 ? config.params : undefined,
     };
 
-    const tx = config.translateX * renderSize;
-    const ty = config.translateY * renderSize;
-    patCtx.save();
-    patCtx.translate(tx, ty);
+    // When useTranslate is false, the viewer skips translate entirely
+    // (translateX/Y are reset to 0), so we render directly without offset.
     pattern.generate(patCtx as unknown as CanvasRenderingContext2D, patternOptions);
-    patCtx.restore();
   }
 
   // Apply HSL adjustments
