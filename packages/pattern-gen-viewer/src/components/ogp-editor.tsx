@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 import { parseOgpEditorConfig } from 'pattern-gen/core/ogp-editor-config';
@@ -153,6 +153,7 @@ function drawSelectionHandles(
 }
 
 const HANDLE_SIZE = 8;
+const MIN_LAYER_SIZE = 20;
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | null;
 
@@ -197,12 +198,12 @@ function drawGrid(
   hDivide: number,
 ) {
   ctx.save();
-  ctx.strokeStyle = 'oklch(80% 0 0 / 30%)';
+  ctx.strokeStyle = 'rgba(180, 180, 180, 0.3)';
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
 
   for (let i = 1; i < vDivide; i++) {
-    const x = Math.round(OGP_WIDTH * i / vDivide) + 0.5;
+    const x = Math.round(OGP_WIDTH * i / vDivide);
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, OGP_HEIGHT);
@@ -210,7 +211,7 @@ function drawGrid(
   }
 
   for (let i = 1; i < hDivide; i++) {
-    const y = Math.round(OGP_HEIGHT * i / hDivide) + 0.5;
+    const y = Math.round(OGP_HEIGHT * i / hDivide);
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(OGP_WIDTH, y);
@@ -474,6 +475,20 @@ export function OgpEditor({
   const gridConfigRef = useRef(gridConfig);
   gridConfigRef.current = gridConfig;
 
+  // Memoize grid positions to avoid re-allocation on every mousemove
+  const xGridPositions = useMemo(
+    () => getGridPositions(OGP_WIDTH, gridConfig.vDivide),
+    [gridConfig.vDivide],
+  );
+  const yGridPositions = useMemo(
+    () => getGridPositions(OGP_HEIGHT, gridConfig.hDivide),
+    [gridConfig.hDivide],
+  );
+  const xGridRef = useRef(xGridPositions);
+  xGridRef.current = xGridPositions;
+  const yGridRef = useRef(yGridPositions);
+  yGridRef.current = yGridPositions;
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const drag = dragStateRef.current;
@@ -491,12 +506,10 @@ export function OgpEditor({
         let newY = st.y + dy;
 
         if (grid.snap) {
-          const xPositions = getGridPositions(OGP_WIDTH, grid.vDivide);
-          const yPositions = getGridPositions(OGP_HEIGHT, grid.hDivide);
           const snapped = snapTransform(
             { x: newX, y: newY, width: st.width, height: st.height },
-            xPositions,
-            yPositions,
+            xGridRef.current,
+            yGridRef.current,
           );
           newX = snapped.x;
           newY = snapped.y;
@@ -524,26 +537,26 @@ export function OgpEditor({
             const newT = { ...st };
             switch (drag.handle) {
               case 'se':
-                newT.width = Math.max(20, st.width + dx);
-                newT.height = Math.max(20, st.height + dy);
+                newT.width = Math.max(MIN_LAYER_SIZE, st.width + dx);
+                newT.height = Math.max(MIN_LAYER_SIZE, st.height + dy);
                 break;
               case 'sw': {
-                const newW = Math.max(20, st.width - dx);
+                const newW = Math.max(MIN_LAYER_SIZE, st.width - dx);
                 newT.x = st.x + st.width - newW;
                 newT.width = newW;
-                newT.height = Math.max(20, st.height + dy);
+                newT.height = Math.max(MIN_LAYER_SIZE, st.height + dy);
                 break;
               }
               case 'ne': {
-                const newH = Math.max(20, st.height - dy);
+                const newH = Math.max(MIN_LAYER_SIZE, st.height - dy);
                 newT.y = st.y + st.height - newH;
-                newT.width = Math.max(20, st.width + dx);
+                newT.width = Math.max(MIN_LAYER_SIZE, st.width + dx);
                 newT.height = newH;
                 break;
               }
               case 'nw': {
-                const newW = Math.max(20, st.width - dx);
-                const newH = Math.max(20, st.height - dy);
+                const newW = Math.max(MIN_LAYER_SIZE, st.width - dx);
+                const newH = Math.max(MIN_LAYER_SIZE, st.height - dy);
                 newT.x = st.x + st.width - newW;
                 newT.y = st.y + st.height - newH;
                 newT.width = newW;
@@ -554,30 +567,27 @@ export function OgpEditor({
 
             // Snap resize edges to grid
             if (grid.snap) {
-              const xPositions = getGridPositions(OGP_WIDTH, grid.vDivide);
-              const yPositions = getGridPositions(OGP_HEIGHT, grid.hDivide);
               const handle = drag.handle!;
 
-              // Snap the edge being dragged
               if (handle === 'se' || handle === 'ne') {
-                const snappedRight = snapToNearest(newT.x + newT.width, xPositions);
-                newT.width = Math.max(20, snappedRight - newT.x);
+                const snappedRight = snapToNearest(newT.x + newT.width, xGridRef.current);
+                newT.width = Math.max(MIN_LAYER_SIZE, snappedRight - newT.x);
               }
               if (handle === 'sw' || handle === 'nw') {
-                const snappedLeft = snapToNearest(newT.x, xPositions);
+                const snappedLeft = snapToNearest(newT.x, xGridRef.current);
                 const right = newT.x + newT.width;
                 newT.x = snappedLeft;
-                newT.width = Math.max(20, right - snappedLeft);
+                newT.width = Math.max(MIN_LAYER_SIZE, right - snappedLeft);
               }
               if (handle === 'se' || handle === 'sw') {
-                const snappedBottom = snapToNearest(newT.y + newT.height, yPositions);
-                newT.height = Math.max(20, snappedBottom - newT.y);
+                const snappedBottom = snapToNearest(newT.y + newT.height, yGridRef.current);
+                newT.height = Math.max(MIN_LAYER_SIZE, snappedBottom - newT.y);
               }
               if (handle === 'ne' || handle === 'nw') {
-                const snappedTop = snapToNearest(newT.y, yPositions);
+                const snappedTop = snapToNearest(newT.y, yGridRef.current);
                 const bottom = newT.y + newT.height;
                 newT.y = snappedTop;
-                newT.height = Math.max(20, bottom - snappedTop);
+                newT.height = Math.max(MIN_LAYER_SIZE, bottom - snappedTop);
               }
             }
 

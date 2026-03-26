@@ -141,48 +141,23 @@ export function OgpEditorLayerPanel({
             Align ({selectedIds.length} layers)
           </div>
           <div className="ogp-align-grid">
-            <button
-              className="btn ogp-align-btn"
-              onClick={() => onAlignLayers(selectedIds, 'align-left')}
-              title="Align Left"
-            >
-              Left
-            </button>
-            <button
-              className="btn ogp-align-btn"
-              onClick={() => onAlignLayers(selectedIds, 'align-center-h')}
-              title="Align Center (Horizontal)"
-            >
-              Center H
-            </button>
-            <button
-              className="btn ogp-align-btn"
-              onClick={() => onAlignLayers(selectedIds, 'align-right')}
-              title="Align Right"
-            >
-              Right
-            </button>
-            <button
-              className="btn ogp-align-btn"
-              onClick={() => onAlignLayers(selectedIds, 'align-top')}
-              title="Align Top"
-            >
-              Top
-            </button>
-            <button
-              className="btn ogp-align-btn"
-              onClick={() => onAlignLayers(selectedIds, 'align-middle-v')}
-              title="Align Middle (Vertical)"
-            >
-              Middle V
-            </button>
-            <button
-              className="btn ogp-align-btn"
-              onClick={() => onAlignLayers(selectedIds, 'align-bottom')}
-              title="Align Bottom"
-            >
-              Bottom
-            </button>
+            {([
+              { type: 'align-left', label: 'Left', title: 'Align Left' },
+              { type: 'align-center-h', label: 'Center H', title: 'Align Center (Horizontal)' },
+              { type: 'align-right', label: 'Right', title: 'Align Right' },
+              { type: 'align-top', label: 'Top', title: 'Align Top' },
+              { type: 'align-middle-v', label: 'Middle V', title: 'Align Middle (Vertical)' },
+              { type: 'align-bottom', label: 'Bottom', title: 'Align Bottom' },
+            ] as const).map((btn) => (
+              <button
+                key={btn.type}
+                className="btn ogp-align-btn"
+                onClick={() => onAlignLayers(selectedIds, btn.type)}
+                title={btn.title}
+              >
+                {btn.label}
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -310,8 +285,9 @@ export function OgpEditorLayerPanel({
         <div className="ogp-props-title">Grid</div>
         <div className="ogp-prop-grid">
           <div className="ogp-prop-field">
-            <label className="ogp-prop-label">V Divide</label>
+            <label className="ogp-prop-label" htmlFor="ogp-grid-vdivide">V Divide</label>
             <input
+              id="ogp-grid-vdivide"
               type="number"
               className="ogp-prop-input ogp-prop-num"
               min={1}
@@ -326,8 +302,9 @@ export function OgpEditorLayerPanel({
             />
           </div>
           <div className="ogp-prop-field">
-            <label className="ogp-prop-label">H Divide</label>
+            <label className="ogp-prop-label" htmlFor="ogp-grid-hdivide">H Divide</label>
             <input
+              id="ogp-grid-hdivide"
               type="number"
               className="ogp-prop-input ogp-prop-num"
               min={1}
