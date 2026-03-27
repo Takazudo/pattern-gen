@@ -11,6 +11,9 @@ export interface Hsla {
  * Parse hex color (#RRGGBB or #RRGGBBAA) to HSLA.
  */
 export function hexToHsla(hex: string): Hsla {
+  if (!hex || !/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(hex)) {
+    return { h: 0, s: 0, l: 0, a: 100 };
+  }
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
   const b = parseInt(hex.slice(5, 7), 16) / 255;

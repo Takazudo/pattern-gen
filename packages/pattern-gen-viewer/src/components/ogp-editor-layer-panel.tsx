@@ -322,9 +322,10 @@ export function OgpEditorLayerPanel({
             />
           </div>
         </div>
-        <label className="ogp-prop-label">Line Color</label>
+        <label className="ogp-prop-label" htmlFor="ogp-grid-linecolor">Line Color</label>
         <div className="ogp-prop-color-row">
           <input
+            id="ogp-grid-linecolor"
             type="text"
             className="ogp-prop-input ogp-prop-color-text"
             value={gridConfig.lineColor}
