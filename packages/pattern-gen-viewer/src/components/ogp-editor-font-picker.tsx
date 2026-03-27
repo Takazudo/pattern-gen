@@ -157,6 +157,13 @@ const EXTENDED_FONTS = [
 ];
 
 const fontLoadPromises = new Map<string, Promise<void>>();
+const loadedFonts = new Set<string>();
+
+const FONT_LOAD_TIMEOUT_MS = 10000;
+
+export function isFontLoaded(family: string): boolean {
+  return loadedFonts.has(family);
+}
 
 export function loadGoogleFont(family: string): Promise<void> {
   const existing = fontLoadPromises.get(family);
@@ -167,8 +174,14 @@ export function loadGoogleFont(family: string): Promise<void> {
   link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:ital,wght@0,400;0,700;1,400;1,700&display=swap`;
   document.head.appendChild(link);
 
-  // Wait for the specific font to load (not just document.fonts.ready which is one-shot)
-  const promise = document.fonts.load(`400 1em "${family}"`).then(() => {});
+  // Wait for the specific font to load with a timeout fallback
+  const fontReady = document.fonts.load(`400 1em "${family}"`).then(() => {});
+  const timeout = new Promise<void>((resolve) =>
+    setTimeout(resolve, FONT_LOAD_TIMEOUT_MS),
+  );
+  const promise = Promise.race([fontReady, timeout]).then(() => {
+    loadedFonts.add(family);
+  });
   fontLoadPromises.set(family, promise);
   return promise;
 }
@@ -199,7 +212,6 @@ export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
             value={value}
             onChange={(e) => {
               onChange(e.target.value);
-              loadGoogleFont(e.target.value);
             }}
           >
             {CURATED_FONTS.map((f) => (
@@ -234,7 +246,6 @@ export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
                 className={`ogp-font-item ${f === value ? 'active' : ''}`}
                 onClick={() => {
                   onChange(f);
-                  loadGoogleFont(f);
                   setShowMore(false);
                 }}
               >

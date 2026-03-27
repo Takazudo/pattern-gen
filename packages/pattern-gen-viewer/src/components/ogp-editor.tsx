@@ -10,7 +10,7 @@ import type {
   LayerTransform,
 } from 'pattern-gen/core/ogp-editor-config';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
-import { loadGoogleFont } from './ogp-editor-font-picker.js';
+import { loadGoogleFont, isFontLoaded } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
 
 /* ── Alignment ── */
@@ -114,6 +114,7 @@ function renderTextLayer(
 const HANDLE_SIZE = 8;
 const MIN_LAYER_SIZE = 20;
 const SNAP_THRESHOLD = 10;
+const LOADING_FONT_DIM_FACTOR = 0.3;
 
 function drawSelectionHandles(
   ctx: CanvasRenderingContext2D,
@@ -302,6 +303,8 @@ export function OgpEditor({
     visible: false,
     lineColor: 'rgba(180, 180, 180, 0.5)',
   });
+  const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
+
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize';
     id: string;
@@ -340,13 +343,15 @@ export function OgpEditor({
       bg: ImageBitmap | null,
       layerList: (EditorLayer & { id: string })[],
       images: Map<string, HTMLImageElement>,
+      loadingFontSet?: Set<string>,
     ) => {
       ctx.clearRect(0, 0, OGP_WIDTH, OGP_HEIGHT);
       if (bg) ctx.drawImage(bg, 0, 0, OGP_WIDTH, OGP_HEIGHT);
 
       for (const layer of layerList) {
         ctx.save();
-        ctx.globalAlpha = layer.opacity;
+        const isLoading = loadingFontSet && layer.type === 'text' && loadingFontSet.has(layer.fontFamily);
+        ctx.globalAlpha = isLoading ? layer.opacity * LOADING_FONT_DIM_FACTOR : layer.opacity;
 
         if (layer.type === 'image' && images.has(layer.id)) {
           const img = images.get(layer.id)!;
@@ -385,7 +390,7 @@ export function OgpEditor({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current);
+    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, loadingFonts);
 
     // Draw selection handles for all selected layers
     for (const id of selectedIds) {
@@ -400,7 +405,7 @@ export function OgpEditor({
     ) {
       drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor);
     }
-  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions]);
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts]);
 
   // Re-render when state changes
   useEffect(() => {
@@ -656,6 +661,19 @@ export function OgpEditor({
     input.click();
   }, []);
 
+  // Track a font load: add to loadingFonts, remove when loaded
+  const trackFontLoad = useCallback((family: string) => {
+    if (isFontLoaded(family)) return;
+    setLoadingFonts((prev) => new Set(prev).add(family));
+    loadGoogleFont(family).finally(() => {
+      setLoadingFonts((prev) => {
+        const next = new Set(prev);
+        next.delete(family);
+        return next;
+      });
+    });
+  }, []);
+
   const handleAddText = useCallback(() => {
     const id = crypto.randomUUID();
     const newLayer: TextLayerData & { id: string } = {
@@ -685,11 +703,16 @@ export function OgpEditor({
     };
     setLayers((prev) => [...prev, newLayer]);
     setSelectedIds([id]);
-    loadGoogleFont('Inter');
-  }, []);
+    trackFontLoad('Inter');
+  }, [trackFontLoad]);
 
   const handleLayerUpdate = useCallback(
     (id: string, updates: Partial<EditorLayer>) => {
+      // Track font loading when fontFamily changes
+      if ('fontFamily' in updates && typeof updates.fontFamily === 'string') {
+        trackFontLoad(updates.fontFamily);
+      }
+
       // If image src changed, reload the HTMLImageElement
       if ('src' in updates && typeof updates.src === 'string') {
         const img = new Image();
@@ -707,7 +730,7 @@ export function OgpEditor({
         ),
       );
     },
-    [],
+    [trackFontLoad],
   );
 
   const handleLayerDelete = useCallback(
@@ -851,10 +874,10 @@ export function OgpEditor({
           setLayers(newLayers);
           setSelectedIds([]);
 
-          // Load fonts for text layers
+          // Load fonts for text layers (with loading state tracking)
           for (const l of newLayers) {
             if (l.type === 'text') {
-              loadGoogleFont(l.fontFamily);
+              trackFontLoad(l.fontFamily);
             }
           }
 
@@ -879,7 +902,7 @@ export function OgpEditor({
       reader.readAsText(file);
     };
     input.click();
-  }, []);
+  }, [trackFontLoad]);
 
   return (
     <div className="ogp-editor">
