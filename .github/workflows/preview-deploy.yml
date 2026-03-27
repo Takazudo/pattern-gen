@@ -30,7 +30,7 @@ jobs:
   build-and-deploy:
     name: Build and Deploy Preview
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
@@ -78,15 +78,26 @@ jobs:
         run: |
           BRANCH="${{ steps.branch.outputs.name }}"
 
-          pnpm exec wrangler pages deploy deploy \
-            --project-name=zudo-pattern-gen \
-            --branch="$BRANCH" \
-            --commit-hash="${GITHUB_SHA}" \
-            --commit-message="Preview: ${BRANCH} @ ${GITHUB_SHA:0:7}"
-
-          DEPLOY_URL="https://${BRANCH}.zudo-pattern-gen.pages.dev"
-          echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
-          echo "Preview URL: $DEPLOY_URL"
+          for attempt in 1 2 3; do
+            echo "Deploy attempt $attempt/3..."
+            if pnpm exec wrangler pages deploy deploy \
+              --project-name=zudo-pattern-gen \
+              --branch="$BRANCH" \
+              --commit-hash="${GITHUB_SHA}" \
+              --commit-message="Preview: ${BRANCH} @ ${GITHUB_SHA:0:7}"; then
+              echo "Deploy succeeded on attempt $attempt"
+              DEPLOY_URL="https://${BRANCH}.zudo-pattern-gen.pages.dev"
+              echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+              echo "Preview URL: $DEPLOY_URL"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Deploy failed, retrying in 150 seconds..."
+              sleep 150
+            fi
+          done
+          echo "Deploy failed after 3 attempts"
+          exit 1
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
