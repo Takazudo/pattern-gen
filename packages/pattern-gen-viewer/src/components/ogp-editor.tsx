@@ -10,7 +10,7 @@ import type {
   LayerTransform,
 } from 'pattern-gen/core/ogp-editor-config';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
-import { loadGoogleFont } from './ogp-editor-font-picker.js';
+import { loadGoogleFont, isFontLoaded } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
 
 /* ── Alignment ── */
@@ -114,6 +114,7 @@ function renderTextLayer(
 const HANDLE_SIZE = 8;
 const MIN_LAYER_SIZE = 20;
 const SNAP_THRESHOLD = 10;
+const LOADING_FONT_DIM_FACTOR = 0.3;
 
 function drawSelectionHandles(
   ctx: CanvasRenderingContext2D,
@@ -350,7 +351,7 @@ export function OgpEditor({
       for (const layer of layerList) {
         ctx.save();
         const isLoading = loadingFontSet && layer.type === 'text' && loadingFontSet.has(layer.fontFamily);
-        ctx.globalAlpha = isLoading ? layer.opacity * 0.3 : layer.opacity;
+        ctx.globalAlpha = isLoading ? layer.opacity * LOADING_FONT_DIM_FACTOR : layer.opacity;
 
         if (layer.type === 'image' && images.has(layer.id)) {
           const img = images.get(layer.id)!;
@@ -662,6 +663,7 @@ export function OgpEditor({
 
   // Track a font load: add to loadingFonts, remove when loaded
   const trackFontLoad = useCallback((family: string) => {
+    if (isFontLoaded(family)) return;
     setLoadingFonts((prev) => new Set(prev).add(family));
     loadGoogleFont(family).finally(() => {
       setLoadingFonts((prev) => {
