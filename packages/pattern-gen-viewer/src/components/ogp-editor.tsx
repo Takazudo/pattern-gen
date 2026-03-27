@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 import { parseOgpEditorConfig } from 'pattern-gen/core/ogp-editor-config';
 import type {
@@ -32,6 +31,8 @@ export type AlignmentType =
 interface OgpEditorProps {
   backgroundImage: ImageBitmap | null;
   backgroundConfig: OgpConfig | null;
+  outputWidth: number;
+  outputHeight: number;
   onExit: () => void;
 }
 
@@ -200,6 +201,8 @@ function drawGrid(
   xPositions: number[],
   yPositions: number[],
   lineColor: string,
+  canvasWidth: number,
+  canvasHeight: number,
 ) {
   ctx.save();
   ctx.strokeStyle = lineColor;
@@ -207,18 +210,18 @@ function drawGrid(
 
   // Skip edges (0 and totalSize) — only draw interior lines
   for (const x of xPositions) {
-    if (x === 0 || x === OGP_WIDTH) continue;
+    if (x === 0 || x === canvasWidth) continue;
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, OGP_HEIGHT);
+    ctx.lineTo(x, canvasHeight);
     ctx.stroke();
   }
 
   for (const y of yPositions) {
-    if (y === 0 || y === OGP_HEIGHT) continue;
+    if (y === 0 || y === canvasHeight) continue;
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(OGP_WIDTH, y);
+    ctx.lineTo(canvasWidth, y);
     ctx.stroke();
   }
 
@@ -293,6 +296,8 @@ function snapTransform(
 export function OgpEditor({
   backgroundImage,
   backgroundConfig,
+  outputWidth,
+  outputHeight,
   onExit,
 }: OgpEditorProps) {
   const [layers, setLayers] = useState<(EditorLayer & { id: string })[]>(
@@ -334,11 +339,11 @@ export function OgpEditor({
       if (!canvas) return { x: 0, y: 0 };
       const rect = canvas.getBoundingClientRect();
       return {
-        x: (clientX - rect.left) * (OGP_WIDTH / rect.width),
-        y: (clientY - rect.top) * (OGP_HEIGHT / rect.height),
+        x: (clientX - rect.left) * (outputWidth / rect.width),
+        y: (clientY - rect.top) * (outputHeight / rect.height),
       };
     },
-    [],
+    [outputWidth, outputHeight],
   );
 
   // Draw frame overlay
@@ -352,12 +357,12 @@ export function OgpEditor({
       ctx.save();
       generator.render(
         ctx,
-        { width: OGP_WIDTH, height: OGP_HEIGHT, rand },
+        { width: outputWidth, height: outputHeight, rand },
         frame.params,
       );
       ctx.restore();
     },
-    [],
+    [outputWidth, outputHeight],
   );
 
   // Shared layer drawing logic
@@ -370,8 +375,8 @@ export function OgpEditor({
       frame: FrameConfig | null,
       loadingFontSet?: Set<string>,
     ) => {
-      ctx.clearRect(0, 0, OGP_WIDTH, OGP_HEIGHT);
-      if (bg) ctx.drawImage(bg, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+      ctx.clearRect(0, 0, outputWidth, outputHeight);
+      if (bg) ctx.drawImage(bg, 0, 0, outputWidth, outputHeight);
 
       for (const layer of layerList) {
         ctx.save();
@@ -394,17 +399,17 @@ export function OgpEditor({
       // Draw frame on top of all layers
       drawFrame(ctx, frame);
     },
-    [drawFrame],
+    [drawFrame, outputWidth, outputHeight],
   );
 
   // Memoize grid positions to avoid re-allocation on every mousemove
   const xGridPositions = useMemo(
-    () => getGridPositions(OGP_WIDTH, gridConfig.vDivide),
-    [gridConfig.vDivide],
+    () => getGridPositions(outputWidth, gridConfig.vDivide),
+    [outputWidth, gridConfig.vDivide],
   );
   const yGridPositions = useMemo(
-    () => getGridPositions(OGP_HEIGHT, gridConfig.hDivide),
-    [gridConfig.hDivide],
+    () => getGridPositions(outputHeight, gridConfig.hDivide),
+    [outputHeight, gridConfig.hDivide],
   );
   const xGridRef = useRef(xGridPositions);
   xGridRef.current = xGridPositions;
@@ -431,7 +436,7 @@ export function OgpEditor({
       gridConfig.visible &&
       (gridConfig.vDivide > 1 || gridConfig.hDivide > 1)
     ) {
-      drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor);
+      drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor, outputWidth, outputHeight);
     }
   }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig]);
 
@@ -443,12 +448,12 @@ export function OgpEditor({
   // Render to export canvas (no selection handles)
   const renderExportCanvas = useCallback((): HTMLCanvasElement => {
     const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = OGP_WIDTH;
-    exportCanvas.height = OGP_HEIGHT;
+    exportCanvas.width = outputWidth;
+    exportCanvas.height = outputHeight;
     const ctx = exportCanvas.getContext('2d')!;
     drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, frameConfig);
     return exportCanvas;
-  }, [layers, backgroundImage, drawLayers, frameConfig]);
+  }, [layers, backgroundImage, drawLayers, frameConfig, outputWidth, outputHeight]);
 
   // Build editor config JSON
   const buildEditorConfig = useCallback((): OgpEditorConfig | null => {
@@ -966,8 +971,8 @@ export function OgpEditor({
         <div className="ogp-editor-canvas-area">
           <canvas
             ref={canvasRef}
-            width={OGP_WIDTH}
-            height={OGP_HEIGHT}
+            width={outputWidth}
+            height={outputHeight}
             onMouseDown={handleCanvasMouseDown}
           />
         </div>

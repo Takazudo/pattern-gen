@@ -10,7 +10,8 @@ import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
 import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
-import { OgpSelectionOverlay } from './components/ogp-selection-overlay.js';
+import { OgpSelectionOverlay, getOutputDimensions } from './components/ogp-selection-overlay.js';
+import type { AspectConfig } from './components/ogp-selection-overlay.js';
 import { OgpEditor } from './components/ogp-editor.js';
 import { serializeOgpConfig, OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import type { OgpConfig } from 'pattern-gen/core/ogp-config';
@@ -184,6 +185,7 @@ export function App() {
   const [ogpEditMode, setOgpEditMode] = useState(false);
   const [editorBgImage, setEditorBgImage] = useState<ImageBitmap | null>(null);
   const [editorBgConfig, setEditorBgConfig] = useState<OgpConfig | null>(null);
+  const [editorOutputSize, setEditorOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   // Params locked to their current value across seed changes
@@ -416,9 +418,11 @@ export function App() {
   );
 
   const handleEnterOgpEdit = useCallback(
-    async (rect: { x: number; y: number; width: number; height: number }) => {
+    async (rect: { x: number; y: number; width: number; height: number }, aspectConfig: AspectConfig) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+
+      const outSize = getOutputDimensions(aspectConfig);
 
       const config = buildOgpConfig(rect, canvas, {
         slug,
@@ -441,8 +445,8 @@ export function App() {
 
       const renderSize = Math.min(4000, Math.max(
         CANVAS_SIZE,
-        Math.ceil(OGP_WIDTH / cropW),
-        Math.ceil(OGP_HEIGHT / cropH),
+        Math.ceil(outSize.width / cropW),
+        Math.ceil(outSize.height / cropH),
       ));
 
       const hiResCanvas = document.createElement('canvas');
@@ -462,15 +466,16 @@ export function App() {
       const ch = Math.min(Math.round(cropH * renderSize), renderSize - cy);
 
       const bgCanvas = document.createElement('canvas');
-      bgCanvas.width = OGP_WIDTH;
-      bgCanvas.height = OGP_HEIGHT;
+      bgCanvas.width = outSize.width;
+      bgCanvas.height = outSize.height;
       const bgCtx = bgCanvas.getContext('2d');
       if (!bgCtx) return;
-      bgCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+      bgCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, outSize.width, outSize.height);
 
       const bitmap = await createImageBitmap(bgCanvas);
       setEditorBgImage(bitmap);
       setEditorBgConfig(config);
+      setEditorOutputSize(outSize);
       setOgpEditMode(true);
     },
     [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams],
@@ -527,6 +532,8 @@ export function App() {
         <OgpEditor
           backgroundImage={editorBgImage}
           backgroundConfig={editorBgConfig}
+          outputWidth={editorOutputSize.width}
+          outputHeight={editorOutputSize.height}
           onExit={() => setOgpEditMode(false)}
         />
       )}
