@@ -63,6 +63,21 @@ const result = await renderOgpFromConfig(config);
 fs.writeFileSync('ogp-image.png', result.buffer);
 ```
 
+### `renderOgpEditorFromConfig(config)`
+
+Render an OGP image from an editor config with layers and frames (Node.js only).
+
+```typescript
+import { renderOgpEditorFromConfig, parseOgpEditorConfig } from '@takazudo/pattern-gen';
+
+const json = fs.readFileSync('editor-config.json', 'utf-8');
+const config = parseOgpEditorConfig(json);
+const result = await renderOgpEditorFromConfig(config);
+
+// result.buffer: Buffer (1200×630 PNG with background + layers + frame)
+fs.writeFileSync('ogp-image.png', result.buffer);
+```
+
 ## OGP Config
 
 ### `OgpConfig` Type
@@ -179,6 +194,77 @@ import {
   patternsByName,     // Map<string, PatternGenerator>
   getPatternNames,    // () => string[]
 } from '@takazudo/pattern-gen';
+```
+
+## Frame System
+
+### `FrameGenerator` Type
+
+```typescript
+import type { FrameGenerator, FrameParamDef, FrameRenderOptions } from '@takazudo/pattern-gen';
+
+interface FrameGenerator {
+  name: string;           // URL-safe slug (e.g., 'simple-line')
+  displayName: string;    // Human-readable name
+  description: string;
+  paramDefs: FrameParamDef[];
+  render(ctx: CanvasRenderingContext2D, options: FrameRenderOptions, params: Record<string, number | string>): void;
+}
+
+interface FrameRenderOptions {
+  width: number;          // Canvas width (1200 for OGP)
+  height: number;         // Canvas height (630 for OGP)
+  rand: () => number;     // Seeded PRNG for deterministic frames
+}
+```
+
+### Frame Parameter Types
+
+```typescript
+type FrameParamDef = SliderFrameParam | ColorFrameParam | SelectFrameParam | ToggleFrameParam;
+
+// slider: numeric range (e.g., border width 2-40)
+// color: hex string with alpha (#RRGGBB or #RRGGBBAA)
+// select: enumerated options (e.g., line style: solid/dashed)
+// toggle: boolean (0 or 1)
+```
+
+### Frame Registry
+
+```typescript
+import {
+  FRAME_GENERATORS,   // FrameGenerator[] (all 20 frames)
+  framesByName,        // Map<string, FrameGenerator>
+} from '@takazudo/pattern-gen';
+```
+
+### `OgpEditorConfig` Type
+
+```typescript
+import type { OgpEditorConfig, FrameConfig } from '@takazudo/pattern-gen';
+
+interface OgpEditorConfig {
+  version: 1;
+  background: OgpConfig;
+  layers: EditorLayer[];  // Image and text layers
+  frame?: FrameConfig;    // Optional decorative frame
+}
+
+interface FrameConfig {
+  type: string;                          // Frame generator name
+  params: Record<string, number | string>;  // Frame-specific parameters
+}
+```
+
+### `parseOgpEditorConfig(json)` / `serializeOgpEditorConfig(config)`
+
+Parse and validate / serialize editor configs including frame configuration.
+
+```typescript
+import { parseOgpEditorConfig, serializeOgpEditorConfig } from '@takazudo/pattern-gen';
+
+const config = parseOgpEditorConfig(jsonString);
+const json = serializeOgpEditorConfig(config);
 ```
 
 ## Color Schemes

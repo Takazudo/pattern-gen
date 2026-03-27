@@ -1,7 +1,10 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import type { EditorLayer, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
+import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
+import type { FrameParamDef } from 'pattern-gen/core/frame-types';
+import { FRAME_GENERATORS, framesByName } from 'pattern-gen/frames';
 import type { AlignmentType, GridConfig } from './ogp-editor.js';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
+import { HslaColorSwatch } from './hsla-color-picker.js';
 
 /* ── Props ── */
 
@@ -18,6 +21,8 @@ interface LayerPanelProps {
   onAlignLayers: (selectedIds: string[], alignment: AlignmentType) => void;
   gridConfig: GridConfig;
   onGridConfigChange: (config: GridConfig) => void;
+  frameConfig: FrameConfig | null;
+  onFrameConfigChange: (config: FrameConfig | null) => void;
 }
 
 /* ── Component ── */
@@ -35,6 +40,8 @@ export function OgpEditorLayerPanel({
   onAlignLayers,
   gridConfig,
   onGridConfigChange,
+  frameConfig,
+  onFrameConfigChange,
 }: LayerPanelProps) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
@@ -74,6 +81,44 @@ export function OgpEditorLayerPanel({
     setDragIdx(null);
     dragOverIdx.current = null;
   }, []);
+
+  // Frame handlers
+  const handleFrameTypeChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = e.target.value;
+      if (!value) {
+        onFrameConfigChange(null);
+        return;
+      }
+      const generator = framesByName.get(value);
+      if (!generator) {
+        onFrameConfigChange(null);
+        return;
+      }
+      // Initialize params from defaults
+      const params: Record<string, number | string> = {};
+      for (const def of generator.paramDefs) {
+        params[def.key] = def.defaultValue;
+      }
+      onFrameConfigChange({ type: value, params });
+    },
+    [onFrameConfigChange],
+  );
+
+  const handleFrameParamChange = useCallback(
+    (key: string, value: number | string) => {
+      if (!frameConfig) return;
+      onFrameConfigChange({
+        ...frameConfig,
+        params: { ...frameConfig.params, [key]: value },
+      });
+    },
+    [frameConfig, onFrameConfigChange],
+  );
+
+  const activeFrameGenerator = frameConfig
+    ? framesByName.get(frameConfig.type) ?? null
+    : null;
 
   return (
     <div className="ogp-editor-panel">
@@ -134,6 +179,30 @@ export function OgpEditorLayerPanel({
             <div className="ogp-layer-empty">No layers yet</div>
           )}
         </div>
+      </div>
+
+      {/* Frame section */}
+      <div className="ogp-panel-section ogp-frame-section">
+        <div className="ogp-props-title">Frame</div>
+        <select
+          className="ogp-frame-select"
+          value={frameConfig?.type ?? ''}
+          onChange={handleFrameTypeChange}
+        >
+          <option value="">None</option>
+          {FRAME_GENERATORS.map((f) => (
+            <option key={f.name} value={f.name}>
+              {f.displayName}
+            </option>
+          ))}
+        </select>
+        {activeFrameGenerator && frameConfig && (
+          <FrameParams
+            paramDefs={activeFrameGenerator.paramDefs}
+            params={frameConfig.params}
+            onChange={handleFrameParamChange}
+          />
+        )}
       </div>
 
       {/* Alignment panel (2+ layers selected) */}
@@ -332,16 +401,13 @@ export function OgpEditorLayerPanel({
               onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
             }
           />
-          {/^#[0-9a-fA-F]{6}$/.test(gridConfig.lineColor) && (
-            <input
-              type="color"
-              className="ogp-prop-color-picker"
-              value={gridConfig.lineColor}
-              onChange={(e) =>
-                onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
-              }
-            />
-          )}
+          <HslaColorSwatch
+            color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(gridConfig.lineColor) ? gridConfig.lineColor : '#ff0000'}
+            onChange={(hex) =>
+              onGridConfigChange({ ...gridConfig, lineColor: hex })
+            }
+            label="Line Color"
+          />
         </div>
         <label className="ogp-prop-toggle-row">
           <input
@@ -492,11 +558,10 @@ function TextProps({
           value={layer.color}
           onChange={(e) => onUpdate({ color: e.target.value })}
         />
-        <input
-          type="color"
-          className="ogp-prop-color-picker"
-          value={layer.color}
-          onChange={(e) => onUpdate({ color: e.target.value })}
+        <HslaColorSwatch
+          color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(layer.color) ? layer.color : '#ffffff'}
+          onChange={(hex) => onUpdate({ color: hex })}
+          label="Text color"
         />
       </div>
 
@@ -697,4 +762,111 @@ function TextProps({
       </div>
     </div>
   );
+}
+
+/* ── Frame parameters ── */
+
+function FrameParams({
+  paramDefs,
+  params,
+  onChange,
+}: {
+  paramDefs: FrameParamDef[];
+  params: Record<string, number | string>;
+  onChange: (key: string, value: number | string) => void;
+}) {
+  if (paramDefs.length === 0) return null;
+
+  return (
+    <div className="ogp-frame-params">
+      {paramDefs.map((def) => (
+        <FrameParamControl
+          key={def.key}
+          def={def}
+          value={params[def.key] ?? def.defaultValue}
+          onChange={(v) => onChange(def.key, v)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function FrameParamControl({
+  def,
+  value,
+  onChange,
+}: {
+  def: FrameParamDef;
+  value: number | string;
+  onChange: (value: number | string) => void;
+}) {
+  switch (def.type) {
+    case 'slider':
+      return (
+        <div className="ogp-frame-param-row">
+          <label className="ogp-prop-label">
+            {def.label}: {Number(value).toFixed(def.step < 1 ? 1 : 0)}
+          </label>
+          <input
+            type="range"
+            min={def.min}
+            max={def.max}
+            step={def.step}
+            value={Number(value)}
+            onChange={(e) => onChange(Number(e.target.value))}
+          />
+        </div>
+      );
+    case 'color':
+      return (
+        <div className="ogp-frame-param-row">
+          <label className="ogp-prop-label">{def.label}</label>
+          <div className="ogp-prop-color-row">
+            <input
+              type="text"
+              className="ogp-prop-input ogp-prop-color-text"
+              value={String(value)}
+              onChange={(e) => onChange(e.target.value)}
+            />
+            <HslaColorSwatch
+              color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(String(value)) ? String(value) : '#000000'}
+              onChange={(hex) => onChange(hex)}
+              label={def.label}
+            />
+          </div>
+        </div>
+      );
+    case 'select':
+      return (
+        <div className="ogp-frame-param-row">
+          <label className="ogp-prop-label">{def.label}</label>
+          <select
+            className="ogp-frame-select"
+            value={Number(value)}
+            onChange={(e) => onChange(Number(e.target.value))}
+          >
+            {def.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+    case 'toggle':
+      return (
+        <div className="ogp-frame-param-row">
+          <label className="ogp-prop-toggle-row">
+            <input
+              type="checkbox"
+              checked={Number(value) === 1}
+              onChange={(e) => onChange(e.target.checked ? 1 : 0)}
+            />
+            <span className="ogp-prop-label">{def.label}</span>
+          </label>
+        </div>
+      );
+    default:
+      return null;
+  }
 }

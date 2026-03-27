@@ -4,6 +4,7 @@ import { COLOR_SCHEMES, colorSchemesByKey, normalizeSchemeKey } from './core/col
 import { applyHslAdjust } from './core/hsl-adjust.js';
 import type { HslAdjust } from './core/hsl-adjust.js';
 import { patternsByName } from './patterns/index.js';
+import { framesByName } from './frames/index.js';
 import type { ColorScheme } from './core/color-schemes.js';
 import { OGP_WIDTH, OGP_HEIGHT } from './core/ogp-config.js';
 import type { OgpConfig } from './core/ogp-config.js';
@@ -316,6 +317,22 @@ export async function renderOgpEditorFromConfig(
     }
 
     ctx.restore();
+  }
+
+  // 4. Render frame on top of everything (mirrors browser drawFrame logic)
+  if (config.frame) {
+    const frameGen = framesByName.get(config.frame.type);
+    if (frameGen) {
+      const frameSeed = hashString(config.frame.type);
+      const frameRand = createRandom(frameSeed);
+      ctx.save();
+      frameGen.render(
+        ctx as unknown as CanvasRenderingContext2D,
+        { width: OGP_WIDTH, height: OGP_HEIGHT, rand: frameRand },
+        config.frame.params,
+      );
+      ctx.restore();
+    }
   }
 
   return {

@@ -328,17 +328,6 @@
   min-width: 0;
 }
 
-.ogp-prop-color-picker {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid oklch(100% 0 0 / 15%);
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
 /* ── Source row (image layers) ── */
 
 .ogp-prop-src-row {
@@ -459,6 +448,35 @@
 .ogp-panel-section input[type="checkbox"] {
   accent-color: oklch(60% 0 0);
   margin-right: 4px;
+}
+
+/* ── Frame section ── */
+
+.ogp-frame-section {
+  /* Inherits from .ogp-panel-section */
+}
+
+.ogp-frame-select {
+  width: 100%;
+  padding: 4px 6px;
+  background: oklch(100% 0 0 / 6%);
+  border: 1px solid oklch(100% 0 0 / 10%);
+  border-radius: 4px;
+  color: oklch(90% 0 0);
+  font-size: 12px;
+}
+
+.ogp-frame-params {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.ogp-frame-param-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 /* ── Grid panel ── */

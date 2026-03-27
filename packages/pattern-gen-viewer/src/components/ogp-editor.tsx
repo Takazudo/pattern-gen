@@ -5,10 +5,14 @@ import { parseOgpEditorConfig } from 'pattern-gen/core/ogp-editor-config';
 import type {
   OgpEditorConfig,
   EditorLayer,
+  FrameConfig,
   ImageLayerData,
   TextLayerData,
   LayerTransform,
 } from 'pattern-gen/core/ogp-editor-config';
+import { framesByName } from 'pattern-gen/frames';
+import { hashString } from 'pattern-gen/core/hash';
+import { createRandom } from 'pattern-gen/core/seeded-random';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont, isFontLoaded } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
@@ -303,6 +307,7 @@ export function OgpEditor({
     visible: false,
     lineColor: 'rgba(180, 180, 180, 0.5)',
   });
+  const [frameConfig, setFrameConfig] = useState<FrameConfig | null>(null);
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
 
   const [dragState, setDragState] = useState<{
@@ -336,6 +341,25 @@ export function OgpEditor({
     [],
   );
 
+  // Draw frame overlay
+  const drawFrame = useCallback(
+    (ctx: CanvasRenderingContext2D, frame: FrameConfig | null) => {
+      if (!frame) return;
+      const generator = framesByName.get(frame.type);
+      if (!generator) return;
+      const seed = hashString(frame.type);
+      const rand = createRandom(seed);
+      ctx.save();
+      generator.render(
+        ctx,
+        { width: OGP_WIDTH, height: OGP_HEIGHT, rand },
+        frame.params,
+      );
+      ctx.restore();
+    },
+    [],
+  );
+
   // Shared layer drawing logic
   const drawLayers = useCallback(
     (
@@ -343,6 +367,7 @@ export function OgpEditor({
       bg: ImageBitmap | null,
       layerList: (EditorLayer & { id: string })[],
       images: Map<string, HTMLImageElement>,
+      frame: FrameConfig | null,
       loadingFontSet?: Set<string>,
     ) => {
       ctx.clearRect(0, 0, OGP_WIDTH, OGP_HEIGHT);
@@ -365,8 +390,11 @@ export function OgpEditor({
 
         ctx.restore();
       }
+
+      // Draw frame on top of all layers
+      drawFrame(ctx, frame);
     },
-    [],
+    [drawFrame],
   );
 
   // Memoize grid positions to avoid re-allocation on every mousemove
@@ -390,7 +418,7 @@ export function OgpEditor({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, loadingFonts);
+    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, frameConfig, loadingFonts);
 
     // Draw selection handles for all selected layers
     for (const id of selectedIds) {
@@ -405,7 +433,7 @@ export function OgpEditor({
     ) {
       drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor);
     }
-  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts]);
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig]);
 
   // Re-render when state changes
   useEffect(() => {
@@ -418,9 +446,9 @@ export function OgpEditor({
     exportCanvas.width = OGP_WIDTH;
     exportCanvas.height = OGP_HEIGHT;
     const ctx = exportCanvas.getContext('2d')!;
-    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current);
+    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, frameConfig);
     return exportCanvas;
-  }, [layers, backgroundImage, drawLayers]);
+  }, [layers, backgroundImage, drawLayers, frameConfig]);
 
   // Build editor config JSON
   const buildEditorConfig = useCallback((): OgpEditorConfig | null => {
@@ -429,8 +457,9 @@ export function OgpEditor({
       version: 1,
       background: backgroundConfig,
       layers: layers.map(({ id: _id, ...rest }) => rest),
+      ...(frameConfig ? { frame: frameConfig } : {}),
     };
-  }, [layers, backgroundConfig]);
+  }, [layers, backgroundConfig, frameConfig]);
 
   // Mouse handlers
   const handleCanvasMouseDown = useCallback(
@@ -873,6 +902,7 @@ export function OgpEditor({
           }));
           setLayers(newLayers);
           setSelectedIds([]);
+          setFrameConfig(config.frame ?? null);
 
           // Load fonts for text layers (with loading state tracking)
           for (const l of newLayers) {
@@ -954,6 +984,8 @@ export function OgpEditor({
           onAlignLayers={handleAlignLayers}
           gridConfig={gridConfig}
           onGridConfigChange={setGridConfig}
+          frameConfig={frameConfig}
+          onFrameConfigChange={setFrameConfig}
         />
       </div>
     </div>

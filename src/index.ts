@@ -37,4 +37,8 @@ export type { OgpConfig, OgpCropRegion } from './core/ogp-config.js';
 
 // OGP editor config
 export { serializeOgpEditorConfig, parseOgpEditorConfig } from './core/ogp-editor-config.js';
-export type { OgpEditorConfig, EditorLayer, ImageLayerData, TextLayerData, LayerTransform } from './core/ogp-editor-config.js';
+export type { OgpEditorConfig, EditorLayer, ImageLayerData, TextLayerData, LayerTransform, FrameConfig } from './core/ogp-editor-config.js';
+
+// Frame system
+export type { FrameGenerator, FrameParamDef, FrameRenderOptions, SliderFrameParam, ColorFrameParam, SelectFrameParam, ToggleFrameParam } from './core/frame-types.js';
+export { FRAME_GENERATORS, framesByName } from './frames/index.js';

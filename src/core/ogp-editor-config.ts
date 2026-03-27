@@ -43,10 +43,16 @@ export interface TextLayerData {
 
 export type EditorLayer = ImageLayerData | TextLayerData;
 
+export interface FrameConfig {
+  type: string; // frame generator name (slug)
+  params: Record<string, number | string>;
+}
+
 export interface OgpEditorConfig {
   version: 1;
   background: OgpConfig;
   layers: EditorLayer[];
+  frame?: FrameConfig;
 }
 
 export function serializeOgpEditorConfig(config: OgpEditorConfig): string {
@@ -280,9 +286,29 @@ export function parseOgpEditorConfig(json: string): OgpEditorConfig {
     },
   );
 
+  // Validate optional frame
+  let frame: FrameConfig | undefined;
+  if (raw.frame != null) {
+    if (typeof raw.frame !== 'object' || Array.isArray(raw.frame)) {
+      throw new Error('OGP editor config: frame must be an object');
+    }
+    const f = raw.frame as Record<string, unknown>;
+    if (typeof f.type !== 'string' || f.type.length === 0) {
+      throw new Error('OGP editor config: frame.type must be a non-empty string');
+    }
+    if (f.params != null && (typeof f.params !== 'object' || Array.isArray(f.params))) {
+      throw new Error('OGP editor config: frame.params must be an object');
+    }
+    frame = {
+      type: f.type,
+      params: (f.params as Record<string, number | string>) ?? {},
+    };
+  }
+
   return {
     version: 1 as const,
     background,
     layers,
+    ...(frame ? { frame } : {}),
   };
 }
