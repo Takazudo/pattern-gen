@@ -2,6 +2,7 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["src/index.ts"],
+  external: ["@takazudo/pattern-gen-core"],
   format: ["esm"],
   dts: true,
   splitting: false,
