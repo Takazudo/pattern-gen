@@ -27,6 +27,7 @@ export interface TextLayerData {
   color: string;
   opacity: number;
   textAlign: 'left' | 'center' | 'right';
+  textVAlign: 'top' | 'middle' | 'bottom';
   letterSpacing: number;
   lineHeight: number;
   shadow: {
@@ -150,6 +151,17 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
   ) {
     throw new Error(`${label}: textAlign must be "left", "center", or "right"`);
   }
+  // Default textVAlign to 'top' for backwards compat
+  const textVAlign = raw.textVAlign == null ? 'top' : raw.textVAlign;
+  if (
+    textVAlign !== 'top' &&
+    textVAlign !== 'middle' &&
+    textVAlign !== 'bottom'
+  ) {
+    throw new Error(
+      `${label}: textVAlign must be "top", "middle", or "bottom"`,
+    );
+  }
   if (
     typeof raw.letterSpacing !== 'number' ||
     !Number.isFinite(raw.letterSpacing)
@@ -221,6 +233,7 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
     color: raw.color as string,
     opacity: raw.opacity as number,
     textAlign: raw.textAlign as 'left' | 'center' | 'right',
+    textVAlign: textVAlign as 'top' | 'middle' | 'bottom',
     letterSpacing: raw.letterSpacing as number,
     lineHeight: raw.lineHeight as number,
     shadow: {

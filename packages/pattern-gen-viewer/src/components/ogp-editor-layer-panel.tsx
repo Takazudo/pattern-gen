@@ -1,26 +1,30 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { EditorLayer, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
+import type { AlignmentType, GridConfig } from './ogp-editor.js';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
 
 /* ── Props ── */
 
 interface LayerPanelProps {
   layers: (EditorLayer & { id: string })[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  selectedIds: string[];
+  onSelect: (ids: string[]) => void;
   onUpdate: (id: string, updates: Partial<EditorLayer>) => void;
   onDelete: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onAddImage: () => void;
   onAddText: () => void;
   onImportJson: () => void;
+  onAlignLayers: (selectedIds: string[], alignment: AlignmentType) => void;
+  gridConfig: GridConfig;
+  onGridConfigChange: (config: GridConfig) => void;
 }
 
 /* ── Component ── */
 
 export function OgpEditorLayerPanel({
   layers,
-  selectedId,
+  selectedIds,
   onSelect,
   onUpdate,
   onDelete,
@@ -28,13 +32,20 @@ export function OgpEditorLayerPanel({
   onAddImage,
   onAddText,
   onImportJson,
+  onAlignLayers,
+  gridConfig,
+  onGridConfigChange,
 }: LayerPanelProps) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
 
-  const selected = selectedId
-    ? layers.find((l) => l.id === selectedId)
-    : null;
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  // Single selected layer for properties panel
+  const selected =
+    selectedIds.length === 1
+      ? layers.find((l) => l.id === selectedIds[0])
+      : null;
 
   const handleDragStart = useCallback(
     (idx: number) => {
@@ -66,55 +77,96 @@ export function OgpEditorLayerPanel({
 
   return (
     <div className="ogp-editor-panel">
-      {/* Action buttons */}
-      <div className="ogp-panel-actions">
-        <button className="btn ogp-panel-btn" onClick={onAddImage}>
-          Add Image
-        </button>
-        <button className="btn ogp-panel-btn" onClick={onAddText}>
-          Add Text
-        </button>
-        <button className="btn ogp-panel-btn" onClick={onImportJson}>
-          Import JSON
-        </button>
+      {/* Layers section (actions + list) */}
+      <div className="ogp-panel-section">
+        <div className="ogp-props-title">Layers</div>
+        <div className="ogp-panel-actions">
+          <button className="btn ogp-panel-btn" onClick={onAddImage}>
+            Add Image
+          </button>
+          <button className="btn ogp-panel-btn" onClick={onAddText}>
+            Add Text
+          </button>
+          <button className="btn ogp-panel-btn" onClick={onImportJson}>
+            Import JSON
+          </button>
+        </div>
+        <div className="ogp-layer-list">
+          {layers.map((layer, idx) => (
+            <div
+              key={layer.id}
+              className={`ogp-layer-item ${selectedIdSet.has(layer.id) ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
+              draggable
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey) {
+                  // Toggle in multi-select
+                  onSelect(
+                    selectedIdSet.has(layer.id)
+                      ? selectedIds.filter((id) => id !== layer.id)
+                      : [...selectedIds, layer.id],
+                  );
+                } else {
+                  onSelect([layer.id]);
+                }
+              }}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+            >
+              <span className="ogp-layer-icon">
+                {layer.type === 'text' ? 'T' : '\u{1F5BC}'}
+              </span>
+              <span className="ogp-layer-name">{layer.name}</span>
+              <button
+                className="ogp-layer-delete"
+                aria-label={`Delete ${layer.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(layer.id);
+                }}
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+          {layers.length === 0 && (
+            <div className="ogp-layer-empty">No layers yet</div>
+          )}
+        </div>
       </div>
 
-      {/* Layer list */}
-      <div className="ogp-layer-list">
-        {layers.map((layer, idx) => (
-          <div
-            key={layer.id}
-            className={`ogp-layer-item ${layer.id === selectedId ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
-            draggable
-            onClick={() => onSelect(layer.id)}
-            onDragStart={() => handleDragStart(idx)}
-            onDragOver={(e) => handleDragOver(e, idx)}
-            onDrop={handleDrop}
-            onDragEnd={handleDragEnd}
-          >
-            <span className="ogp-layer-icon">
-              {layer.type === 'text' ? 'T' : '\u{1F5BC}'}
-            </span>
-            <span className="ogp-layer-name">{layer.name}</span>
-            <button
-              className="ogp-layer-delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(layer.id);
-              }}
-            >
-              &times;
-            </button>
+      {/* Alignment panel (2+ layers selected) */}
+      {selectedIds.length >= 2 && (
+        <div className="ogp-panel-section ogp-align-panel">
+          <div className="ogp-props-title">
+            Align ({selectedIds.length} layers)
           </div>
-        ))}
-        {layers.length === 0 && (
-          <div className="ogp-layer-empty">No layers yet</div>
-        )}
-      </div>
+          <div className="ogp-align-grid">
+            {([
+              { type: 'align-left', label: 'Left', title: 'Align Left' },
+              { type: 'align-center-h', label: 'Center H', title: 'Align Center (Horizontal)' },
+              { type: 'align-right', label: 'Right', title: 'Align Right' },
+              { type: 'align-top', label: 'Top', title: 'Align Top' },
+              { type: 'align-middle-v', label: 'Middle V', title: 'Align Middle (Vertical)' },
+              { type: 'align-bottom', label: 'Bottom', title: 'Align Bottom' },
+            ] as const).map((btn) => (
+              <button
+                key={btn.type}
+                className="btn ogp-align-btn"
+                onClick={() => onAlignLayers(selectedIds, btn.type)}
+                title={btn.title}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Properties panel */}
       {selected && (
-        <div className="ogp-props">
+        <div className="ogp-panel-section ogp-props">
           <div className="ogp-props-title">Properties</div>
 
           {/* Common: name */}
@@ -229,6 +281,94 @@ export function OgpEditorLayerPanel({
           )}
         </div>
       )}
+
+      {/* Grid panel — always visible */}
+      <div className="ogp-panel-section ogp-grid-panel">
+        <div className="ogp-props-title">Grid</div>
+        <div className="ogp-prop-grid">
+          <div className="ogp-prop-field">
+            <label className="ogp-prop-label" htmlFor="ogp-grid-vdivide">V Divide</label>
+            <input
+              id="ogp-grid-vdivide"
+              type="number"
+              className="ogp-prop-input ogp-prop-num"
+              min={1}
+              max={12}
+              value={gridConfig.vDivide}
+              onChange={(e) =>
+                onGridConfigChange({
+                  ...gridConfig,
+                  vDivide: Math.max(1, Math.min(12, Number(e.target.value) || 1)),
+                })
+              }
+            />
+          </div>
+          <div className="ogp-prop-field">
+            <label className="ogp-prop-label" htmlFor="ogp-grid-hdivide">H Divide</label>
+            <input
+              id="ogp-grid-hdivide"
+              type="number"
+              className="ogp-prop-input ogp-prop-num"
+              min={1}
+              max={12}
+              value={gridConfig.hDivide}
+              onChange={(e) =>
+                onGridConfigChange({
+                  ...gridConfig,
+                  hDivide: Math.max(1, Math.min(12, Number(e.target.value) || 1)),
+                })
+              }
+            />
+          </div>
+        </div>
+        <label className="ogp-prop-label" htmlFor="ogp-grid-linecolor">Line Color</label>
+        <div className="ogp-prop-color-row">
+          <input
+            id="ogp-grid-linecolor"
+            type="text"
+            className="ogp-prop-input ogp-prop-color-text"
+            value={gridConfig.lineColor}
+            onChange={(e) =>
+              onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
+            }
+          />
+          {/^#[0-9a-fA-F]{6}$/.test(gridConfig.lineColor) && (
+            <input
+              type="color"
+              className="ogp-prop-color-picker"
+              value={gridConfig.lineColor}
+              onChange={(e) =>
+                onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
+              }
+            />
+          )}
+        </div>
+        <label className="ogp-prop-toggle-row">
+          <input
+            type="checkbox"
+            checked={gridConfig.snap}
+            onChange={(e) =>
+              onGridConfigChange({
+                ...gridConfig,
+                snap: e.target.checked,
+                // Auto-show grid when snap is enabled
+                visible: e.target.checked ? true : gridConfig.visible,
+              })
+            }
+          />
+          <span className="ogp-prop-label">Snap to Grid</span>
+        </label>
+        <label className="ogp-prop-toggle-row">
+          <input
+            type="checkbox"
+            checked={gridConfig.visible}
+            onChange={(e) =>
+              onGridConfigChange({ ...gridConfig, visible: e.target.checked })
+            }
+          />
+          <span className="ogp-prop-label">Show Grid</span>
+        </label>
+      </div>
     </div>
   );
 }
@@ -321,6 +461,7 @@ function TextProps({
       <div className="ogp-prop-toggle-row">
         <button
           className={`btn ogp-prop-toggle ${layer.fontWeight === 'bold' ? 'active' : ''}`}
+          aria-pressed={layer.fontWeight === 'bold'}
           onClick={() =>
             onUpdate({
               fontWeight: layer.fontWeight === 'bold' ? 'normal' : 'bold',
@@ -331,6 +472,7 @@ function TextProps({
         </button>
         <button
           className={`btn ogp-prop-toggle ${layer.fontStyle === 'italic' ? 'active' : ''}`}
+          aria-pressed={layer.fontStyle === 'italic'}
           onClick={() =>
             onUpdate({
               fontStyle: layer.fontStyle === 'italic' ? 'normal' : 'italic',
@@ -365,7 +507,23 @@ function TextProps({
           <button
             key={a}
             className={`btn ogp-prop-toggle ${layer.textAlign === a ? 'active' : ''}`}
+            aria-pressed={layer.textAlign === a}
             onClick={() => onUpdate({ textAlign: a })}
+          >
+            {a.charAt(0).toUpperCase() + a.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Vertical text align */}
+      <label className="ogp-prop-label">V Align</label>
+      <div className="ogp-prop-toggle-row">
+        {(['top', 'middle', 'bottom'] as const).map((a) => (
+          <button
+            key={a}
+            className={`btn ogp-prop-toggle ${layer.textVAlign === a ? 'active' : ''}`}
+            aria-pressed={layer.textVAlign === a}
+            onClick={() => onUpdate({ textVAlign: a })}
           >
             {a.charAt(0).toUpperCase() + a.slice(1)}
           </button>

@@ -93,8 +93,20 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
+}
+
+/* ── Panel section card ── */
+
+.ogp-panel-section {
+  background: oklch(100% 0 0 / 4%);
+  border: 1px solid oklch(100% 0 0 / 8%);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* ── Panel action buttons ── */
@@ -190,15 +202,31 @@
   font-size: 12px;
 }
 
-/* ── Properties panel ── */
+/* ── Alignment panel ── */
 
-.ogp-props {
-  border-top: 1px solid oklch(100% 0 0 / 8%);
-  padding-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.ogp-align-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
 }
+
+.ogp-align-btn {
+  font-size: 11px;
+  padding: 6px 4px;
+  text-align: center;
+  background: oklch(100% 0 0 / 6%);
+  border: 1px solid oklch(100% 0 0 / 10%);
+  border-radius: 4px;
+  color: oklch(80% 0 0);
+  cursor: pointer;
+}
+
+.ogp-align-btn:hover {
+  background: oklch(100% 0 0 / 14%);
+  color: oklch(95% 0 0);
+}
+
+/* ── Properties panel ── */
 
 .ogp-props-title {
   font-size: 11px;
@@ -418,7 +446,8 @@
 /* ── Range sliders in panel ── */
 
 .ogp-props input[type="range"],
-.ogp-props-section input[type="range"] {
+.ogp-props-section input[type="range"],
+.ogp-panel-section input[type="range"] {
   width: 100%;
   accent-color: oklch(60% 0 0);
 }
@@ -426,7 +455,16 @@
 /* ── Checkboxes in panel ── */
 
 .ogp-props input[type="checkbox"],
-.ogp-props-section input[type="checkbox"] {
+.ogp-props-section input[type="checkbox"],
+.ogp-panel-section input[type="checkbox"] {
   accent-color: oklch(60% 0 0);
   margin-right: 4px;
 }
+
+/* ── Grid panel ── */
+
+.ogp-grid-panel {
+  margin-top: auto;
+}
+
+/* Reuses .ogp-props-title for the grid panel header */

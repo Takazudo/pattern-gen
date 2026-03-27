@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
 import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 import { parseOgpEditorConfig } from 'pattern-gen/core/ogp-editor-config';
@@ -13,12 +13,32 @@ import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
 
+/* ── Alignment ── */
+
+export type AlignmentType =
+  | 'align-left'
+  | 'align-center-h'
+  | 'align-right'
+  | 'align-top'
+  | 'align-middle-v'
+  | 'align-bottom';
+
 /* ── Props ── */
 
 interface OgpEditorProps {
   backgroundImage: ImageBitmap | null;
   backgroundConfig: OgpConfig | null;
   onExit: () => void;
+}
+
+/* ── Grid types ── */
+
+export interface GridConfig {
+  vDivide: number;
+  hDivide: number;
+  snap: boolean;
+  visible: boolean;
+  lineColor: string;
 }
 
 /* ── Helpers ── */
@@ -58,13 +78,22 @@ function renderTextLayer(
 
   const lines = layer.content.split('\n');
   const lineHeightPx = layer.fontSize * layer.lineHeight;
+  const totalTextHeight =
+    (lines.length - 1) * lineHeightPx + layer.fontSize;
 
   let textX = t.x;
   if (layer.textAlign === 'center') textX = t.x + t.width / 2;
   else if (layer.textAlign === 'right') textX = t.x + t.width;
 
+  let baseY = t.y;
+  if (layer.textVAlign === 'middle') {
+    baseY = t.y + (t.height - totalTextHeight) / 2;
+  } else if (layer.textVAlign === 'bottom') {
+    baseY = t.y + t.height - totalTextHeight;
+  }
+
   for (let i = 0; i < lines.length; i++) {
-    const y = t.y + i * lineHeightPx;
+    const y = baseY + i * lineHeightPx;
 
     if (layer.stroke.enabled) {
       ctx.save();
@@ -79,27 +108,27 @@ function renderTextLayer(
     ctx.fillText(lines[i], textX, y);
   }
 
-  // Reset letter spacing
-  if (layer.letterSpacing !== 0) {
-    (ctx as unknown as Record<string, unknown>).letterSpacing = '0px';
-  }
+  // Note: letterSpacing is reset by the caller's ctx.save()/ctx.restore()
 }
+
+const HANDLE_SIZE = 8;
+const MIN_LAYER_SIZE = 20;
+const SNAP_THRESHOLD = 10;
 
 function drawSelectionHandles(
   ctx: CanvasRenderingContext2D,
   t: LayerTransform,
 ) {
   ctx.save();
-  ctx.strokeStyle = 'oklch(90% 0 0)';
+  ctx.strokeStyle = 'rgba(220, 220, 220, 1)';
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 4]);
   ctx.strokeRect(t.x, t.y, t.width, t.height);
   ctx.setLineDash([]);
 
   // Corner handles
-  const handleSize = 8;
   ctx.fillStyle = 'white';
-  ctx.strokeStyle = 'oklch(30% 0 0)';
+  ctx.strokeStyle = 'rgba(80, 80, 80, 1)';
   ctx.lineWidth = 1;
   const corners = [
     [t.x, t.y],
@@ -109,22 +138,20 @@ function drawSelectionHandles(
   ];
   for (const [cx, cy] of corners) {
     ctx.fillRect(
-      cx - handleSize / 2,
-      cy - handleSize / 2,
-      handleSize,
-      handleSize,
+      cx - HANDLE_SIZE / 2,
+      cy - HANDLE_SIZE / 2,
+      HANDLE_SIZE,
+      HANDLE_SIZE,
     );
     ctx.strokeRect(
-      cx - handleSize / 2,
-      cy - handleSize / 2,
-      handleSize,
-      handleSize,
+      cx - HANDLE_SIZE / 2,
+      cy - HANDLE_SIZE / 2,
+      HANDLE_SIZE,
+      HANDLE_SIZE,
     );
   }
   ctx.restore();
 }
-
-const HANDLE_SIZE = 8;
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | null;
 
@@ -161,6 +188,101 @@ function hitTestRect(
   return cx >= t.x && cx <= t.x + t.width && cy >= t.y && cy <= t.y + t.height;
 }
 
+/* ── Grid helpers ── */
+
+function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  xPositions: number[],
+  yPositions: number[],
+  lineColor: string,
+) {
+  ctx.save();
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 1;
+
+  // Skip edges (0 and totalSize) — only draw interior lines
+  for (const x of xPositions) {
+    if (x === 0 || x === OGP_WIDTH) continue;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, OGP_HEIGHT);
+    ctx.stroke();
+  }
+
+  for (const y of yPositions) {
+    if (y === 0 || y === OGP_HEIGHT) continue;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(OGP_WIDTH, y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function getGridPositions(totalSize: number, divide: number): number[] {
+  const positions = [0, totalSize];
+  for (let i = 1; i < divide; i++) {
+    positions.push(Math.round(totalSize * i / divide));
+  }
+  return positions.sort((a, b) => a - b);
+}
+
+function snapToNearest(
+  value: number,
+  gridPositions: number[],
+  threshold: number = SNAP_THRESHOLD,
+): number {
+  let best: number | null = null;
+  let bestDist = threshold;
+  for (const pos of gridPositions) {
+    const dist = Math.abs(value - pos);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = pos;
+    }
+  }
+  return best ?? value;
+}
+
+function snapTransform(
+  t: LayerTransform,
+  xPositions: number[],
+  yPositions: number[],
+  threshold: number = SNAP_THRESHOLD,
+): { x: number; y: number } {
+  let newX = t.x;
+  let newY = t.y;
+
+  // Snap X: check left edge, center, right edge
+  const leftSnap = snapToNearest(t.x, xPositions, threshold);
+  const centerXSnap = snapToNearest(t.x + t.width / 2, xPositions, threshold);
+  const rightSnap = snapToNearest(t.x + t.width, xPositions, threshold);
+
+  if (leftSnap !== t.x) {
+    newX = leftSnap;
+  } else if (centerXSnap !== t.x + t.width / 2) {
+    newX = centerXSnap - t.width / 2;
+  } else if (rightSnap !== t.x + t.width) {
+    newX = rightSnap - t.width;
+  }
+
+  // Snap Y: check top edge, center, bottom edge
+  const topSnap = snapToNearest(t.y, yPositions, threshold);
+  const centerYSnap = snapToNearest(t.y + t.height / 2, yPositions, threshold);
+  const bottomSnap = snapToNearest(t.y + t.height, yPositions, threshold);
+
+  if (topSnap !== t.y) {
+    newY = topSnap;
+  } else if (centerYSnap !== t.y + t.height / 2) {
+    newY = centerYSnap - t.height / 2;
+  } else if (bottomSnap !== t.y + t.height) {
+    newY = bottomSnap - t.height;
+  }
+
+  return { x: newX, y: newY };
+}
+
 /* ── Main Component ── */
 
 export function OgpEditor({
@@ -171,8 +293,15 @@ export function OgpEditor({
   const [layers, setLayers] = useState<(EditorLayer & { id: string })[]>(
     [],
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [gridConfig, setGridConfig] = useState<GridConfig>({
+    vDivide: 2,
+    hDivide: 2,
+    snap: false,
+    visible: false,
+    lineColor: 'rgba(180, 180, 180, 0.5)',
+  });
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize';
     id: string;
@@ -235,6 +364,20 @@ export function OgpEditor({
     [],
   );
 
+  // Memoize grid positions to avoid re-allocation on every mousemove
+  const xGridPositions = useMemo(
+    () => getGridPositions(OGP_WIDTH, gridConfig.vDivide),
+    [gridConfig.vDivide],
+  );
+  const yGridPositions = useMemo(
+    () => getGridPositions(OGP_HEIGHT, gridConfig.hDivide),
+    [gridConfig.hDivide],
+  );
+  const xGridRef = useRef(xGridPositions);
+  xGridRef.current = xGridPositions;
+  const yGridRef = useRef(yGridPositions);
+  yGridRef.current = yGridPositions;
+
   // Render canvas
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -244,12 +387,20 @@ export function OgpEditor({
 
     drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current);
 
-    // Draw selection handles for selected layer
-    if (selectedId) {
-      const selected = layers.find((l) => l.id === selectedId);
-      if (selected) drawSelectionHandles(ctx, selected.transform);
+    // Draw selection handles for all selected layers
+    for (const id of selectedIds) {
+      const layer = layers.find((l) => l.id === id);
+      if (layer) drawSelectionHandles(ctx, layer.transform);
     }
-  }, [layers, backgroundImage, selectedId, drawLayers]);
+
+    // Draw grid overlay on top
+    if (
+      gridConfig.visible &&
+      (gridConfig.vDivide > 1 || gridConfig.hDivide > 1)
+    ) {
+      drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor);
+    }
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions]);
 
   // Re-render when state changes
   useEffect(() => {
@@ -267,10 +418,11 @@ export function OgpEditor({
   }, [layers, backgroundImage, drawLayers]);
 
   // Build editor config JSON
-  const buildEditorConfig = useCallback((): OgpEditorConfig => {
+  const buildEditorConfig = useCallback((): OgpEditorConfig | null => {
+    if (!backgroundConfig) return null;
     return {
       version: 1,
-      background: backgroundConfig!,
+      background: backgroundConfig,
       layers: layers.map(({ id: _id, ...rest }) => rest),
     };
   }, [layers, backgroundConfig]);
@@ -279,16 +431,17 @@ export function OgpEditor({
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent) => {
       const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+      const isMultiSelect = e.metaKey || e.ctrlKey;
 
-      // Check resize handles on selected layer first
-      if (selectedId) {
-        const selected = layers.find((l) => l.id === selectedId);
+      // Check resize handles on selected layers first (only when single selected)
+      if (selectedIds.length === 1) {
+        const selected = layers.find((l) => l.id === selectedIds[0]);
         if (selected) {
           const handle = hitTestHandle(selected.transform, x, y);
           if (handle) {
             setDragState({
               type: 'resize',
-              id: selectedId,
+              id: selectedIds[0],
               startX: x,
               startY: y,
               startTransform: { ...selected.transform },
@@ -303,27 +456,39 @@ export function OgpEditor({
       for (let i = layers.length - 1; i >= 0; i--) {
         const layer = layers[i];
         if (hitTestRect(layer.transform, x, y)) {
-          setSelectedId(layer.id);
-          setDragState({
-            type: 'move',
-            id: layer.id,
-            startX: x,
-            startY: y,
-            startTransform: { ...layer.transform },
-          });
+          if (isMultiSelect) {
+            // Toggle the clicked layer in selection
+            setSelectedIds((prev) =>
+              prev.includes(layer.id)
+                ? prev.filter((id) => id !== layer.id)
+                : [...prev, layer.id],
+            );
+          } else {
+            setSelectedIds([layer.id]);
+            setDragState({
+              type: 'move',
+              id: layer.id,
+              startX: x,
+              startY: y,
+              startTransform: { ...layer.transform },
+            });
+          }
           return;
         }
       }
 
       // Clicked empty space — deselect
-      setSelectedId(null);
+      setSelectedIds([]);
     },
-    [getCanvasCoords, layers, selectedId],
+    [getCanvasCoords, layers, selectedIds],
   );
 
   // Global mouse move/up so dragging works outside the canvas bounds
   const dragStateRef = useRef(dragState);
   dragStateRef.current = dragState;
+
+  const gridConfigRef = useRef(gridConfig);
+  gridConfigRef.current = gridConfig;
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -337,6 +502,20 @@ export function OgpEditor({
       const st = drag.startTransform;
 
       if (drag.type === 'move') {
+        const grid = gridConfigRef.current;
+        let newX = st.x + dx;
+        let newY = st.y + dy;
+
+        if (grid.snap) {
+          const snapped = snapTransform(
+            { x: newX, y: newY, width: st.width, height: st.height },
+            xGridRef.current,
+            yGridRef.current,
+          );
+          newX = snapped.x;
+          newY = snapped.y;
+        }
+
         setLayers((prev) =>
           prev.map((l) =>
             l.id === drag.id
@@ -344,40 +523,41 @@ export function OgpEditor({
                   ...l,
                   transform: {
                     ...l.transform,
-                    x: st.x + dx,
-                    y: st.y + dy,
+                    x: newX,
+                    y: newY,
                   },
                 }
               : l,
           ),
         );
       } else if (drag.type === 'resize' && drag.handle) {
+        const grid = gridConfigRef.current;
         setLayers((prev) =>
           prev.map((l) => {
             if (l.id !== drag.id) return l;
             const newT = { ...st };
             switch (drag.handle) {
               case 'se':
-                newT.width = Math.max(20, st.width + dx);
-                newT.height = Math.max(20, st.height + dy);
+                newT.width = Math.max(MIN_LAYER_SIZE, st.width + dx);
+                newT.height = Math.max(MIN_LAYER_SIZE, st.height + dy);
                 break;
               case 'sw': {
-                const newW = Math.max(20, st.width - dx);
+                const newW = Math.max(MIN_LAYER_SIZE, st.width - dx);
                 newT.x = st.x + st.width - newW;
                 newT.width = newW;
-                newT.height = Math.max(20, st.height + dy);
+                newT.height = Math.max(MIN_LAYER_SIZE, st.height + dy);
                 break;
               }
               case 'ne': {
-                const newH = Math.max(20, st.height - dy);
+                const newH = Math.max(MIN_LAYER_SIZE, st.height - dy);
                 newT.y = st.y + st.height - newH;
-                newT.width = Math.max(20, st.width + dx);
+                newT.width = Math.max(MIN_LAYER_SIZE, st.width + dx);
                 newT.height = newH;
                 break;
               }
               case 'nw': {
-                const newW = Math.max(20, st.width - dx);
-                const newH = Math.max(20, st.height - dy);
+                const newW = Math.max(MIN_LAYER_SIZE, st.width - dx);
+                const newH = Math.max(MIN_LAYER_SIZE, st.height - dy);
                 newT.x = st.x + st.width - newW;
                 newT.y = st.y + st.height - newH;
                 newT.width = newW;
@@ -385,6 +565,33 @@ export function OgpEditor({
                 break;
               }
             }
+
+            // Snap resize edges to grid
+            if (grid.snap) {
+              const handle = drag.handle!;
+
+              if (handle === 'se' || handle === 'ne') {
+                const snappedRight = snapToNearest(newT.x + newT.width, xGridRef.current);
+                newT.width = Math.max(MIN_LAYER_SIZE, snappedRight - newT.x);
+              }
+              if (handle === 'sw' || handle === 'nw') {
+                const snappedLeft = snapToNearest(newT.x, xGridRef.current);
+                const right = newT.x + newT.width;
+                newT.x = snappedLeft;
+                newT.width = Math.max(MIN_LAYER_SIZE, right - snappedLeft);
+              }
+              if (handle === 'se' || handle === 'sw') {
+                const snappedBottom = snapToNearest(newT.y + newT.height, yGridRef.current);
+                newT.height = Math.max(MIN_LAYER_SIZE, snappedBottom - newT.y);
+              }
+              if (handle === 'ne' || handle === 'nw') {
+                const snappedTop = snapToNearest(newT.y, yGridRef.current);
+                const bottom = newT.y + newT.height;
+                newT.y = snappedTop;
+                newT.height = Math.max(MIN_LAYER_SIZE, bottom - snappedTop);
+              }
+            }
+
             return { ...l, transform: newT };
           }),
         );
@@ -442,7 +649,7 @@ export function OgpEditor({
         img.src = reader.result as string;
 
         setLayers((prev) => [...prev, newLayer]);
-        setSelectedId(id);
+        setSelectedIds([id]);
       };
       reader.readAsDataURL(file);
     };
@@ -463,6 +670,7 @@ export function OgpEditor({
       color: '#ffffff',
       opacity: 1,
       textAlign: 'left',
+      textVAlign: 'top',
       letterSpacing: 0,
       lineHeight: 1.4,
       shadow: {
@@ -476,7 +684,7 @@ export function OgpEditor({
       transform: { x: 100, y: 200, width: 400, height: 100 },
     };
     setLayers((prev) => [...prev, newLayer]);
-    setSelectedId(id);
+    setSelectedIds([id]);
     loadGoogleFont('Inter');
   }, []);
 
@@ -506,9 +714,9 @@ export function OgpEditor({
     (id: string) => {
       setLayers((prev) => prev.filter((l) => l.id !== id));
       loadedImagesRef.current.delete(id);
-      if (selectedId === id) setSelectedId(null);
+      setSelectedIds((prev) => prev.filter((sid) => sid !== id));
     },
-    [selectedId],
+    [],
   );
 
   const handleReorder = useCallback(
@@ -523,6 +731,71 @@ export function OgpEditor({
     [],
   );
 
+  // Alignment handler
+  const handleAlignLayers = useCallback(
+    (ids: string[], alignment: AlignmentType) => {
+      setLayers((prev) => {
+        const targets = prev.filter((l) => ids.includes(l.id));
+        if (targets.length < 2) return prev;
+
+        const transforms = targets.map((l) => l.transform);
+
+        let getNewX: ((t: LayerTransform) => number) | null = null;
+        let getNewY: ((t: LayerTransform) => number) | null = null;
+
+        switch (alignment) {
+          case 'align-left': {
+            const minX = Math.min(...transforms.map((t) => t.x));
+            getNewX = () => minX;
+            break;
+          }
+          case 'align-center-h': {
+            const minX = Math.min(...transforms.map((t) => t.x));
+            const maxRight = Math.max(...transforms.map((t) => t.x + t.width));
+            const centerX = (minX + maxRight) / 2;
+            getNewX = (t) => centerX - t.width / 2;
+            break;
+          }
+          case 'align-right': {
+            const maxRight = Math.max(...transforms.map((t) => t.x + t.width));
+            getNewX = (t) => maxRight - t.width;
+            break;
+          }
+          case 'align-top': {
+            const minY = Math.min(...transforms.map((t) => t.y));
+            getNewY = () => minY;
+            break;
+          }
+          case 'align-middle-v': {
+            const minY = Math.min(...transforms.map((t) => t.y));
+            const maxBottom = Math.max(
+              ...transforms.map((t) => t.y + t.height),
+            );
+            const centerY = (minY + maxBottom) / 2;
+            getNewY = (t) => centerY - t.height / 2;
+            break;
+          }
+          case 'align-bottom': {
+            const maxBottom = Math.max(
+              ...transforms.map((t) => t.y + t.height),
+            );
+            getNewY = (t) => maxBottom - t.height;
+            break;
+          }
+        }
+
+        return prev.map((l) => {
+          if (!ids.includes(l.id)) return l;
+          const newTransform = { ...l.transform };
+          if (getNewX) newTransform.x = getNewX(l.transform);
+          if (getNewY) newTransform.y = getNewY(l.transform);
+          return { ...l, transform: newTransform };
+        });
+      });
+    },
+    [],
+  );
+
   // Export handlers
   const handleDownloadPng = useCallback(() => {
     const exportCanvas = renderExportCanvas();
@@ -532,6 +805,7 @@ export function OgpEditor({
 
   const handleDownloadJson = useCallback(() => {
     const config = buildEditorConfig();
+    if (!config) return;
     const json = JSON.stringify(config, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -541,6 +815,7 @@ export function OgpEditor({
 
   const handleCopyJson = useCallback(() => {
     const config = buildEditorConfig();
+    if (!config) return;
     const json = JSON.stringify(config, null, 2);
     navigator.clipboard
       .writeText(json)
@@ -574,7 +849,7 @@ export function OgpEditor({
             id: crypto.randomUUID(),
           }));
           setLayers(newLayers);
-          setSelectedId(null);
+          setSelectedIds([]);
 
           // Load fonts for text layers
           for (const l of newLayers) {
@@ -645,14 +920,17 @@ export function OgpEditor({
         </div>
         <OgpEditorLayerPanel
           layers={layers}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+          selectedIds={selectedIds}
+          onSelect={setSelectedIds}
           onUpdate={handleLayerUpdate}
           onDelete={handleLayerDelete}
           onReorder={handleReorder}
           onAddImage={handleAddImage}
           onAddText={handleAddText}
           onImportJson={handleImportJson}
+          onAlignLayers={handleAlignLayers}
+          gridConfig={gridConfig}
+          onGridConfigChange={setGridConfig}
         />
       </div>
     </div>
