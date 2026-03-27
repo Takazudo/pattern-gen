@@ -12,3 +12,10 @@ export function hexToRgba(hex: string): string {
   const a = hex.length > 7 ? parseInt(hex.slice(7, 9), 16) / 255 : 1;
   return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
+
+/**
+ * Parse hex alpha value (0-1) from #RRGGBBAA format.
+ */
+export function hexAlpha(hex: string): number {
+  return hex.length > 7 ? parseInt(hex.slice(7, 9), 16) / 255 : 1;
+}
