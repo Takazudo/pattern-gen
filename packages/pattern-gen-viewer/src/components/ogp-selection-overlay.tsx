@@ -22,14 +22,14 @@ interface OgpSelectionOverlayProps {
   /** Callback to copy OGP config JSON to clipboard; resolves on success */
   onCopyJson: (rect: OgpRect) => Promise<void>;
   /** Callback to enter the OGP editor with current selection */
-  onEdit: (rect: OgpRect) => void;
+  onEdit: (rect: OgpRect, aspectConfig: AspectConfig) => void;
 }
 
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
-type AspectMode = 'ogp' | 'square' | 'free' | 'fixed';
+export type AspectMode = 'ogp' | 'square' | 'free' | 'fixed';
 
-interface AspectConfig {
+export interface AspectConfig {
   mode: AspectMode;
   freeW: number;
   freeH: number;
@@ -56,6 +56,18 @@ function getAspect(config: AspectConfig): number {
     case 'fixed':
       return config.fixedW / config.fixedH;
   }
+}
+
+const BASE_DIMENSION = 1200;
+
+export function getOutputDimensions(config: AspectConfig): { width: number; height: number } {
+  if (config.mode === 'ogp') return { width: OGP_WIDTH, height: OGP_HEIGHT };
+  if (config.mode === 'fixed') return { width: config.fixedW, height: config.fixedH };
+  const aspect = getAspect(config);
+  if (aspect >= 1) {
+    return { width: BASE_DIMENSION, height: Math.round(BASE_DIMENSION / aspect) };
+  }
+  return { width: Math.round(BASE_DIMENSION * aspect), height: BASE_DIMENSION };
 }
 
 type DragState =
@@ -631,7 +643,7 @@ export function OgpSelectionOverlay({
           >
             {copyFeedback ? 'Copied!' : 'Copy JSON'}
           </button>
-          <button className="btn ogp-btn-edit" onClick={() => onEdit(rect)}>
+          <button className="btn ogp-btn-edit" onClick={() => onEdit(rect, aspectConfig)}>
             Edit
           </button>
           <button className="btn ogp-btn-exit" onClick={onExit}>
