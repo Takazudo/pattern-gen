@@ -179,4 +179,31 @@ describe('parseOgpEditorConfig validation', () => {
       'textVAlign must be "top", "middle", or "bottom"',
     );
   });
+
+  it('parses config with frame field', () => {
+    const config = {
+      ...makeValidEditorConfig(),
+      frame: { type: 'simple-line', params: { borderWidth: 10, color: '#ff0000' } },
+    };
+    const json = JSON.stringify(config);
+    const parsed = parseOgpEditorConfig(json);
+    expect(parsed.frame).toEqual({ type: 'simple-line', params: { borderWidth: 10, color: '#ff0000' } });
+  });
+
+  it('parses config without frame field (undefined)', () => {
+    const config = makeValidEditorConfig();
+    const json = JSON.stringify(config);
+    const parsed = parseOgpEditorConfig(json);
+    expect(parsed.frame).toBeUndefined();
+  });
+
+  it('round-trips config with frame', () => {
+    const config: OgpEditorConfig = {
+      ...makeValidEditorConfig(),
+      frame: { type: 'neon-glow', params: { glowColor: '#00ffff', glowRadius: 15 } },
+    };
+    const json = serializeOgpEditorConfig(config);
+    const parsed = parseOgpEditorConfig(json);
+    expect(parsed.frame).toEqual(config.frame);
+  });
 });

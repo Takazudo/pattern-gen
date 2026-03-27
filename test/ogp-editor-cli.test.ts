@@ -88,6 +88,40 @@ describe('renderOgpEditorFromConfig', () => {
     expect(result1.buffer.equals(result2.buffer)).toBe(true);
   });
 
+  it('produces valid PNG with frame config', async () => {
+    const config: OgpEditorConfig = {
+      version: 1,
+      background: makeValidBackground(),
+      layers: [],
+      frame: { type: 'simple-line', params: { borderWidth: 10, color: '#ff0000' } },
+    };
+    const result = await renderOgpEditorFromConfig(config);
+    expect(result.width).toBe(1200);
+    expect(result.height).toBe(630);
+    expect(result.buffer[0]).toBe(0x89); // PNG signature
+    expect(result.buffer[1]).toBe(0x50);
+    // Output should differ from frameless version
+    const noFrame: OgpEditorConfig = {
+      version: 1,
+      background: makeValidBackground(),
+      layers: [],
+    };
+    const noFrameResult = await renderOgpEditorFromConfig(noFrame);
+    expect(result.buffer.equals(noFrameResult.buffer)).toBe(false);
+  });
+
+  it('ignores unknown frame type gracefully', async () => {
+    const config: OgpEditorConfig = {
+      version: 1,
+      background: makeValidBackground(),
+      layers: [],
+      frame: { type: 'nonexistent-frame', params: {} },
+    };
+    // Should not throw — unknown frame is silently skipped
+    const result = await renderOgpEditorFromConfig(config);
+    expect(result.buffer[0]).toBe(0x89);
+  });
+
   it('throws for unknown pattern type in background', async () => {
     const config: OgpEditorConfig = {
       version: 1,
