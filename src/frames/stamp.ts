@@ -65,66 +65,50 @@ export const stamp: FrameGenerator = {
 
     ctx.save();
 
-    // Render stamp border to an offscreen canvas to avoid destination-out
-    // erasing the underlying OGP content (background, images, text layers)
-    // Use OffscreenCanvas for browser+Node.js compat (avoids document.createElement)
-    const offscreen = new OffscreenCanvas(width, height);
-    const oc = offscreen.getContext('2d')!;
+    // Build the entire stamp border as one path using evenodd fill rule:
+    // outer rect + inner rect + perforation circles = border with holes
+    // No destination-out or OffscreenCanvas needed (works in Node.js too).
+    ctx.beginPath();
 
-    // Build the outer border shape with bumpy perforated edges
-    oc.beginPath();
-    oc.rect(0, 0, width, height);
+    // Outer rectangle (clockwise)
+    ctx.rect(0, 0, width, height);
 
-    // Inner content rectangle (to cut out)
+    // Inner content rectangle (creates center cutout via evenodd)
     const inner = {
       x: borderWidth,
       y: borderWidth,
       w: width - borderWidth * 2,
       h: height - borderWidth * 2,
     };
-    oc.rect(inner.x, inner.y, inner.w, inner.h);
+    ctx.rect(inner.x, inner.y, inner.w, inner.h);
 
-    oc.fillStyle = borderColor;
-    oc.fill('evenodd');
-
-    // Cut perforations on the offscreen canvas (safe to use destination-out here)
-    oc.globalCompositeOperation = 'destination-out';
-    oc.fillStyle = 'rgba(0, 0, 0, 1)';
-
-    // Top edge perforations
+    // Perforation circles along outer edge (each circle subtracts from border via evenodd)
     const numTop = Math.floor(width / perfSpacing);
     const topOffset = (width - (numTop - 1) * perfSpacing) / 2;
     for (let i = 0; i < numTop; i++) {
-      oc.beginPath();
-      oc.arc(topOffset + i * perfSpacing, 0, perfRadius, 0, Math.PI * 2);
-      oc.fill();
+      const px = topOffset + i * perfSpacing;
+      // Top edge
+      ctx.moveTo(px + perfRadius, 0);
+      ctx.arc(px, 0, perfRadius, 0, Math.PI * 2);
+      // Bottom edge
+      ctx.moveTo(px + perfRadius, height);
+      ctx.arc(px, height, perfRadius, 0, Math.PI * 2);
     }
 
-    // Bottom edge perforations
-    for (let i = 0; i < numTop; i++) {
-      oc.beginPath();
-      oc.arc(topOffset + i * perfSpacing, height, perfRadius, 0, Math.PI * 2);
-      oc.fill();
-    }
-
-    // Left edge perforations
     const numLeft = Math.floor(height / perfSpacing);
     const leftOffset = (height - (numLeft - 1) * perfSpacing) / 2;
     for (let i = 0; i < numLeft; i++) {
-      oc.beginPath();
-      oc.arc(0, leftOffset + i * perfSpacing, perfRadius, 0, Math.PI * 2);
-      oc.fill();
+      const py = leftOffset + i * perfSpacing;
+      // Left edge
+      ctx.moveTo(perfRadius, py);
+      ctx.arc(0, py, perfRadius, 0, Math.PI * 2);
+      // Right edge
+      ctx.moveTo(width + perfRadius, py);
+      ctx.arc(width, py, perfRadius, 0, Math.PI * 2);
     }
 
-    // Right edge perforations
-    for (let i = 0; i < numLeft; i++) {
-      oc.beginPath();
-      oc.arc(width, leftOffset + i * perfSpacing, perfRadius, 0, Math.PI * 2);
-      oc.fill();
-    }
-
-    // Composite the offscreen result onto the main canvas
-    ctx.drawImage(offscreen, 0, 0);
+    ctx.fillStyle = hexToRgba(borderColor);
+    ctx.fill('evenodd');
 
     // Inner decorative line (dashed rectangle)
     if (innerLine) {

@@ -1,5 +1,5 @@
 import type { FrameGenerator, FrameParamDef } from '../core/frame-types.js';
-import { hexAlpha } from './frame-utils.js';
+import { hexToRgba, hexAlpha } from './frame-utils.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -124,15 +124,12 @@ export const washiTape: FrameGenerator = {
     const patternScale = (params.patternScale as number) ?? 8;
     const sides = (params.sides as number) ?? 2;
 
-    // Parse alpha once; use it for globalAlpha only
+    // Parse alpha; use for globalAlpha. Extract opaque base via hexToRgba with validation.
     const alpha = hexAlpha(tapeColor);
-    // Make base color fully opaque in rgba — alpha comes from globalAlpha only
-    const r = parseInt(tapeColor.slice(1, 3), 16);
-    const g = parseInt(tapeColor.slice(3, 5), 16);
-    const b = parseInt(tapeColor.slice(5, 7), 16);
-    const baseRgba = `rgba(${r}, ${g}, ${b}, 1)`;
-    // Darker pattern color for overlay
-    const patternColor = `rgba(0, 0, 0, 0.15)`;
+    // Strip alpha from color — build opaque version for fillStyle (alpha via globalAlpha)
+    const opaqueHex = tapeColor.slice(0, 7);
+    const baseRgba = hexToRgba(opaqueHex);
+    const patternColor = 'rgba(0, 0, 0, 0.15)';
 
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -156,8 +153,11 @@ export const washiTape: FrameGenerator = {
 
     if (drawTop) drawTape(0, 0, width, tapeWidth);
     if (drawBottom) drawTape(0, height - tapeWidth, width, tapeWidth);
-    if (drawLeft) drawTape(0, 0, tapeWidth, height);
-    if (drawRight) drawTape(width - tapeWidth, 0, tapeWidth, height);
+    // Clip left/right strips to exclude corners if top/bottom are also drawn
+    const lrTop = drawTop ? tapeWidth : 0;
+    const lrHeight = height - lrTop - (drawBottom ? tapeWidth : 0);
+    if (drawLeft && lrHeight > 0) drawTape(0, lrTop, tapeWidth, lrHeight);
+    if (drawRight && lrHeight > 0) drawTape(width - tapeWidth, lrTop, tapeWidth, lrHeight);
 
     ctx.restore();
   },

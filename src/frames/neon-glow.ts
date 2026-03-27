@@ -97,7 +97,7 @@ export const neonGlow: FrameGenerator = {
 
     // Draw glow layers from outermost (most diffuse) to innermost (brightest)
     for (let i = 0; i < layers; i++) {
-      const t = i / (layers - 1); // 0 = outermost, 1 = innermost
+      const t = layers > 1 ? i / (layers - 1) : 1; // 0 = outermost, 1 = innermost
       const alpha = 0.1 + t * 0.6;
       const currentLineWidth = lineWidth + (1 - t) * glowRadius * 0.8;
 

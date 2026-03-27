@@ -84,72 +84,72 @@ export const filmstrip: FrameGenerator = {
     const holeHeight = (params.holeHeight as number) ?? 10;
     const holeSpacing = (params.holeSpacing as number) ?? 25;
     const bandColor = (params.bandColor as string) ?? '#1a1a1a';
-    const holeColor = (params.holeColor as string) ?? '#ffffff';
     const sides = (params.sides as number) ?? 0;
     const holeRadius = (params.holeRadius as number) ?? 2;
 
     ctx.save();
 
     const bandRgba = hexToRgba(bandColor);
-    const holeRgba = hexToRgba(holeColor);
 
-    // Draw horizontal bands (top and bottom)
-    ctx.fillStyle = bandRgba;
-    ctx.fillRect(0, 0, width, bandWidth);
-    ctx.fillRect(0, height - bandWidth, width, bandWidth);
-
-    // Draw sprocket holes on horizontal bands
-    const holeCenterY_top = bandWidth / 2;
-    const holeCenterY_bottom = height - bandWidth / 2;
+    // Use evenodd fill: band rect + hole rects = holes are transparent (reveal content)
     const holeStep = holeWidth + holeSpacing;
     const holeCount = Math.floor(width / holeStep);
     const holeStartX = (width - holeCount * holeStep + holeSpacing) / 2;
+    const holeCenterY_top = bandWidth / 2;
+    const holeCenterY_bottom = height - bandWidth / 2;
 
-    ctx.fillStyle = holeRgba;
+    // Top band with holes
+    ctx.beginPath();
+    ctx.rect(0, 0, width, bandWidth);
     for (let i = 0; i < holeCount; i++) {
       const cx = holeStartX + i * holeStep + holeWidth / 2;
-
-      // Top band holes
-      drawRoundedRect(ctx, cx - holeWidth / 2, holeCenterY_top - holeHeight / 2, holeWidth, holeHeight, holeRadius);
-      ctx.fill();
-
-      // Bottom band holes
-      drawRoundedRect(ctx, cx - holeWidth / 2, holeCenterY_bottom - holeHeight / 2, holeWidth, holeHeight, holeRadius);
-      ctx.fill();
+      addRoundedRect(ctx, cx - holeWidth / 2, holeCenterY_top - holeHeight / 2, holeWidth, holeHeight, holeRadius);
     }
+    ctx.fillStyle = bandRgba;
+    ctx.fill('evenodd');
 
-    // Draw vertical bands if all-four mode
+    // Bottom band with holes
+    ctx.beginPath();
+    ctx.rect(0, height - bandWidth, width, bandWidth);
+    for (let i = 0; i < holeCount; i++) {
+      const cx = holeStartX + i * holeStep + holeWidth / 2;
+      addRoundedRect(ctx, cx - holeWidth / 2, holeCenterY_bottom - holeHeight / 2, holeWidth, holeHeight, holeRadius);
+    }
+    ctx.fill('evenodd');
+
+    // Vertical bands if all-four mode
     if (sides === 1) {
-      ctx.fillStyle = bandRgba;
-      ctx.fillRect(0, bandWidth, bandWidth, height - 2 * bandWidth);
-      ctx.fillRect(width - bandWidth, bandWidth, bandWidth, height - 2 * bandWidth);
-
-      // Draw sprocket holes on vertical bands
-      const holeCenterX_left = bandWidth / 2;
-      const holeCenterX_right = width - bandWidth / 2;
       const vHoleStep = holeHeight + holeSpacing;
       const vHoleCount = Math.floor((height - 2 * bandWidth) / vHoleStep);
       const vHoleStartY = bandWidth + ((height - 2 * bandWidth) - vHoleCount * vHoleStep + holeSpacing) / 2;
+      const holeCenterX_left = bandWidth / 2;
+      const holeCenterX_right = width - bandWidth / 2;
 
-      ctx.fillStyle = holeRgba;
+      // Left band with holes
+      ctx.beginPath();
+      ctx.rect(0, bandWidth, bandWidth, height - 2 * bandWidth);
       for (let i = 0; i < vHoleCount; i++) {
         const cy = vHoleStartY + i * vHoleStep + holeHeight / 2;
-
-        // Left band holes (rotated: width becomes height, height becomes width)
-        drawRoundedRect(ctx, holeCenterX_left - holeHeight / 2, cy - holeWidth / 2, holeHeight, holeWidth, holeRadius);
-        ctx.fill();
-
-        // Right band holes
-        drawRoundedRect(ctx, holeCenterX_right - holeHeight / 2, cy - holeWidth / 2, holeHeight, holeWidth, holeRadius);
-        ctx.fill();
+        addRoundedRect(ctx, holeCenterX_left - holeHeight / 2, cy - holeWidth / 2, holeHeight, holeWidth, holeRadius);
       }
+      ctx.fill('evenodd');
+
+      // Right band with holes
+      ctx.beginPath();
+      ctx.rect(width - bandWidth, bandWidth, bandWidth, height - 2 * bandWidth);
+      for (let i = 0; i < vHoleCount; i++) {
+        const cy = vHoleStartY + i * vHoleStep + holeHeight / 2;
+        addRoundedRect(ctx, holeCenterX_right - holeHeight / 2, cy - holeWidth / 2, holeHeight, holeWidth, holeRadius);
+      }
+      ctx.fill('evenodd');
     }
 
     ctx.restore();
   },
 };
 
-function drawRoundedRect(
+/** Add a rounded rect sub-path (no beginPath — appends to current path for evenodd) */
+function addRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -158,6 +158,5 @@ function drawRoundedRect(
   r: number,
 ): void {
   const radius = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
   ctx.roundRect(x, y, w, h, radius);
 }
