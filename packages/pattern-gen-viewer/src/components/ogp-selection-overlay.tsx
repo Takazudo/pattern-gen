@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
+import { getAspect, getOutputDimensions } from 'pattern-gen/core/aspect-config';
+import type { AspectMode, AspectConfig } from 'pattern-gen/core/aspect-config';
 import './ogp-selection-overlay.css';
+
+export type { AspectMode, AspectConfig };
+export { getOutputDimensions };
 
 const OGP_ASPECT = OGP_WIDTH / OGP_HEIGHT;
 const MIN_WIDTH = 100;
@@ -27,16 +32,6 @@ interface OgpSelectionOverlayProps {
 
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
-export type AspectMode = 'ogp' | 'square' | 'free' | 'fixed';
-
-export interface AspectConfig {
-  mode: AspectMode;
-  freeW: number;
-  freeH: number;
-  fixedW: number;
-  fixedH: number;
-}
-
 const DEFAULT_ASPECT_CONFIG: AspectConfig = {
   mode: 'ogp',
   freeW: 16,
@@ -44,31 +39,6 @@ const DEFAULT_ASPECT_CONFIG: AspectConfig = {
   fixedW: 800,
   fixedH: 600,
 };
-
-function getAspect(config: AspectConfig): number {
-  switch (config.mode) {
-    case 'ogp':
-      return OGP_ASPECT;
-    case 'square':
-      return 1;
-    case 'free':
-      return config.freeW / config.freeH;
-    case 'fixed':
-      return config.fixedW / config.fixedH;
-  }
-}
-
-const BASE_DIMENSION = 1200;
-
-export function getOutputDimensions(config: AspectConfig): { width: number; height: number } {
-  if (config.mode === 'ogp') return { width: OGP_WIDTH, height: OGP_HEIGHT };
-  if (config.mode === 'fixed') return { width: config.fixedW, height: config.fixedH };
-  const aspect = getAspect(config);
-  if (aspect >= 1) {
-    return { width: BASE_DIMENSION, height: Math.round(BASE_DIMENSION / aspect) };
-  }
-  return { width: Math.round(BASE_DIMENSION * aspect), height: BASE_DIMENSION };
-}
 
 type DragState =
   | { type: 'move'; startMouseX: number; startMouseY: number; startRect: OgpRect }
