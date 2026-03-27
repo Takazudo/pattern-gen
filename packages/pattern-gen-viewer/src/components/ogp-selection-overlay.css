@@ -95,3 +95,64 @@
 .ogp-btn-json:hover {
   background: oklch(100% 0 0 / 15%);
 }
+
+/* ── Aspect ratio toolbar ── */
+
+.ogp-aspect-toolbar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 12px;
+  background: oklch(0% 0 0 / 75%);
+  backdrop-filter: blur(12px);
+  border-radius: 8px;
+  border: 1px solid oklch(100% 0 0 / 10%);
+  z-index: 101;
+  white-space: nowrap;
+}
+
+.ogp-clip-toolbar-row {
+  display: flex;
+  gap: 4px;
+}
+
+.ogp-clip-mode-btn {
+  font-size: 12px;
+  padding: 2px 8px;
+  background: oklch(100% 0 0 / 8%);
+}
+
+.ogp-clip-mode-btn:hover {
+  background: oklch(100% 0 0 / 15%);
+}
+
+.ogp-clip-mode-btn.active {
+  background: oklch(100% 0 0 / 22%);
+}
+
+.ogp-clip-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: oklch(100% 0 0 / 70%);
+  justify-content: center;
+}
+
+.ogp-clip-detail-input {
+  width: 50px;
+  padding: 1px 4px;
+  font-size: 12px;
+  background: oklch(100% 0 0 / 10%);
+  border: 1px solid oklch(100% 0 0 / 20%);
+  border-radius: 4px;
+  color: oklch(100% 0 0 / 90%);
+  text-align: center;
+}
+
+.ogp-clip-detail-separator {
+  color: oklch(100% 0 0 / 50%);
+}

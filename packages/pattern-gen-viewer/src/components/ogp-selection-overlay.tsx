@@ -12,6 +12,25 @@ export interface OgpRect {
   height: number;
 }
 
+export type AspectMode = 'ogp' | 'square' | 'free' | 'fixed';
+
+export interface AspectConfig {
+  mode: AspectMode;
+  freeW: number;
+  freeH: number;
+  fixedW: number;
+  fixedH: number;
+}
+
+function getAspect(config: AspectConfig): number {
+  switch (config.mode) {
+    case 'ogp': return OGP_ASPECT;
+    case 'square': return 1;
+    case 'free': return (config.freeW / config.freeH) || 1;
+    case 'fixed': return (config.fixedW / config.fixedH) || 1;
+  }
+}
+
 interface OgpSelectionOverlayProps {
   /** Callback when user clicks Generate or presses Enter */
   onGenerate: (rect: OgpRect) => void;
@@ -80,19 +99,19 @@ const HANDLES: HandleDef[] = [
   },
 ];
 
-function clampRect(rect: OgpRect): OgpRect {
+function clampRect(rect: OgpRect, aspect: number): OgpRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   let { x, y, width, height } = rect;
 
   if (width < MIN_WIDTH) {
     width = MIN_WIDTH;
-    height = width / OGP_ASPECT;
+    height = width / aspect;
   }
 
   // Cap dimensions to fit within viewport (both axes must satisfy)
-  const maxW = Math.min(vw, vh * OGP_ASPECT);
-  const maxH = maxW / OGP_ASPECT;
+  const maxW = Math.min(vw, vh * aspect);
+  const maxH = maxW / aspect;
   if (width > maxW) {
     width = maxW;
     height = maxH;
@@ -106,14 +125,14 @@ function clampRect(rect: OgpRect): OgpRect {
   return { x, y, width, height };
 }
 
-function getInitialRect(): OgpRect {
+function getInitialRect(aspect: number): OgpRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const width = vw * 0.6;
-  const height = width / OGP_ASPECT;
+  const height = width / aspect;
   const x = (vw - width) / 2;
   const y = (vh - height) / 2;
-  return clampRect({ x, y, width, height });
+  return clampRect({ x, y, width, height }, aspect);
 }
 
 function resizeFromHandle(
@@ -121,24 +140,25 @@ function resizeFromHandle(
   sr: OgpRect,
   dx: number,
   dy: number,
+  aspect: number,
 ): OgpRect {
   switch (handle) {
     case 'se': {
       let w = sr.width + dx;
       if (w < MIN_WIDTH) w = MIN_WIDTH;
-      const h = w / OGP_ASPECT;
+      const h = w / aspect;
       return { x: sr.x, y: sr.y, width: w, height: h };
     }
     case 'sw': {
       let w = sr.width - dx;
       if (w < MIN_WIDTH) w = MIN_WIDTH;
-      const h = w / OGP_ASPECT;
+      const h = w / aspect;
       return { x: sr.x + sr.width - w, y: sr.y, width: w, height: h };
     }
     case 'ne': {
       let w = sr.width + dx;
       if (w < MIN_WIDTH) w = MIN_WIDTH;
-      const h = w / OGP_ASPECT;
+      const h = w / aspect;
       return {
         x: sr.x,
         y: sr.y + sr.height - h,
@@ -149,7 +169,7 @@ function resizeFromHandle(
     case 'nw': {
       let w = sr.width - dx;
       if (w < MIN_WIDTH) w = MIN_WIDTH;
-      const h = w / OGP_ASPECT;
+      const h = w / aspect;
       return {
         x: sr.x + sr.width - w,
         y: sr.y + sr.height - h,
@@ -160,14 +180,14 @@ function resizeFromHandle(
     case 'e': {
       let w = sr.width + dx;
       if (w < MIN_WIDTH) w = MIN_WIDTH;
-      const h = w / OGP_ASPECT;
+      const h = w / aspect;
       const centerY = sr.y + sr.height / 2;
       return { x: sr.x, y: centerY - h / 2, width: w, height: h };
     }
     case 'w': {
       let w = sr.width - dx;
       if (w < MIN_WIDTH) w = MIN_WIDTH;
-      const h = w / OGP_ASPECT;
+      const h = w / aspect;
       const centerY = sr.y + sr.height / 2;
       return {
         x: sr.x + sr.width - w,
@@ -178,20 +198,20 @@ function resizeFromHandle(
     }
     case 's': {
       let h = sr.height + dy;
-      let w = h * OGP_ASPECT;
+      let w = h * aspect;
       if (w < MIN_WIDTH) {
         w = MIN_WIDTH;
-        h = w / OGP_ASPECT;
+        h = w / aspect;
       }
       const centerX = sr.x + sr.width / 2;
       return { x: centerX - w / 2, y: sr.y, width: w, height: h };
     }
     case 'n': {
       let h = sr.height - dy;
-      let w = h * OGP_ASPECT;
+      let w = h * aspect;
       if (w < MIN_WIDTH) {
         w = MIN_WIDTH;
-        h = w / OGP_ASPECT;
+        h = w / aspect;
       }
       const centerX = sr.x + sr.width / 2;
       return {
@@ -215,10 +235,39 @@ export function OgpSelectionOverlay({
   onCopyJson,
   onEdit,
 }: OgpSelectionOverlayProps) {
-  const [rect, setRect] = useState<OgpRect>(getInitialRect);
+  const [aspectConfig, setAspectConfig] = useState<AspectConfig>({
+    mode: 'ogp',
+    freeW: 16,
+    freeH: 9,
+    fixedW: 800,
+    fixedH: 600,
+  });
+
+  const aspect = getAspect(aspectConfig);
+  const aspectRef = useRef(aspect);
+  aspectRef.current = aspect;
+
+  const [rect, setRect] = useState<OgpRect>(() => getInitialRect(OGP_ASPECT));
   const [copyFeedback, setCopyFeedback] = useState(false);
   const rectRef = useRef(rect);
   rectRef.current = rect;
+
+  const handleAspectChange = useCallback((newConfig: AspectConfig) => {
+    setAspectConfig(newConfig);
+    const newAspect = getAspect(newConfig);
+    setRect(prev => {
+      const centerX = prev.x + prev.width / 2;
+      const centerY = prev.y + prev.height / 2;
+      const newWidth = prev.width;
+      const newHeight = newWidth / newAspect;
+      return clampRect({
+        x: centerX - newWidth / 2,
+        y: centerY - newHeight / 2,
+        width: newWidth,
+        height: newHeight,
+      }, newAspect);
+    });
+  }, []);
 
   const dragRef = useRef<DragState | null>(null);
 
@@ -255,13 +304,13 @@ export function OgpSelectionOverlay({
             y: sr.y + dy,
             width: sr.width,
             height: sr.height,
-          }),
+          }, aspectRef.current),
         );
         return;
       }
 
       if (drag.type === 'resize') {
-        setRect(clampRect(resizeFromHandle(drag.handle, sr, dx, dy)));
+        setRect(clampRect(resizeFromHandle(drag.handle, sr, dx, dy, aspectRef.current), aspectRef.current));
       }
     };
 
@@ -367,6 +416,48 @@ export function OgpSelectionOverlay({
           />
         );
       })}
+
+      {/* Aspect ratio toolbar */}
+      <div className="ogp-aspect-toolbar" style={{ top: barTop - 50 }}>
+        <div className="ogp-clip-toolbar-row">
+          {(['ogp', 'square', 'free', 'fixed'] as const).map(mode => (
+            <button
+              key={mode}
+              className={`btn ogp-clip-mode-btn ${aspectConfig.mode === mode ? 'active' : ''}`}
+              onClick={() => handleAspectChange({ ...aspectConfig, mode })}
+            >
+              {mode === 'ogp' ? 'OGP' : mode.charAt(0).toUpperCase() + mode.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="ogp-clip-detail">
+          {aspectConfig.mode === 'ogp' && <span>1200 : 630</span>}
+          {aspectConfig.mode === 'square' && <span>1 : 1</span>}
+          {aspectConfig.mode === 'free' && (
+            <>
+              <input type="number" className="ogp-clip-detail-input" min={1}
+                value={aspectConfig.freeW}
+                onChange={e => handleAspectChange({ ...aspectConfig, freeW: Number(e.target.value) || 1 })} />
+              <span className="ogp-clip-detail-separator">:</span>
+              <input type="number" className="ogp-clip-detail-input" min={1}
+                value={aspectConfig.freeH}
+                onChange={e => handleAspectChange({ ...aspectConfig, freeH: Number(e.target.value) || 1 })} />
+            </>
+          )}
+          {aspectConfig.mode === 'fixed' && (
+            <>
+              <input type="number" className="ogp-clip-detail-input" min={1}
+                value={aspectConfig.fixedW}
+                onChange={e => handleAspectChange({ ...aspectConfig, fixedW: Number(e.target.value) || 1 })} />
+              <span className="ogp-clip-detail-separator">&times;</span>
+              <input type="number" className="ogp-clip-detail-input" min={1}
+                value={aspectConfig.fixedH}
+                onChange={e => handleAspectChange({ ...aspectConfig, fixedH: Number(e.target.value) || 1 })} />
+              <span>px</span>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Action bar */}
       <div className="ogp-action-bar" style={{ top: barTop }}>
