@@ -1,0 +1,119 @@
+/* ── HSLA Color Picker ── */
+
+.ogp-hsla-picker {
+  position: fixed;
+  z-index: 300;
+  width: 320px;
+  padding: 12px;
+  background: #1e1e2e;
+  border: 1px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Top row: swatch + hex input ── */
+
+.ogp-hsla-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ogp-hsla-preview {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ogp-hsla-preview-checkerboard {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%);
+  background-size: 12px 12px;
+}
+
+.ogp-hsla-preview-color {
+  position: absolute;
+  inset: 0;
+}
+
+.ogp-hsla-hex-input {
+  font-family: monospace;
+  font-size: 1rem;
+  width: 8rem;
+  padding: 4px 6px;
+  background: #2a2a3a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #eee;
+  outline: none;
+}
+
+.ogp-hsla-hex-input:focus {
+  border-color: #888;
+}
+
+/* ── Slider rows ── */
+
+.ogp-hsla-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ogp-hsla-slider-label {
+  font-size: 0.875rem;
+  color: #999;
+  width: 1rem;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.ogp-hsla-slider-row input[type='range'] {
+  flex: 1;
+  height: 1.5rem;
+  accent-color: #7c5cbf;
+}
+
+.ogp-hsla-slider-value {
+  font-size: 0.875rem;
+  color: #eee;
+  width: 2.5rem;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+/* ── Swatch button (inline trigger) ── */
+
+.ogp-hsla-swatch-btn {
+  position: relative;
+  display: block;
+  border: 1px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  background: none;
+}
+
+.ogp-hsla-swatch-btn:hover {
+  border-color: #888;
+}
+
+.ogp-hsla-swatch-checkerboard {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%);
+  background-size: 10px 10px;
+}
+
+.ogp-hsla-swatch-color {
+  position: absolute;
+  inset: 0;
+}

@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 import type { EditorLayer, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
 import type { AlignmentType, GridConfig } from './ogp-editor.js';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
+import { HslaColorSwatch } from './hsla-color-picker.js';
 
 /* ── Props ── */
 
@@ -321,10 +322,9 @@ export function OgpEditorLayerPanel({
             />
           </div>
         </div>
-        <label className="ogp-prop-label" htmlFor="ogp-grid-linecolor">Line Color</label>
+        <label className="ogp-prop-label">Line Color</label>
         <div className="ogp-prop-color-row">
           <input
-            id="ogp-grid-linecolor"
             type="text"
             className="ogp-prop-input ogp-prop-color-text"
             value={gridConfig.lineColor}
@@ -332,16 +332,13 @@ export function OgpEditorLayerPanel({
               onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
             }
           />
-          {/^#[0-9a-fA-F]{6}$/.test(gridConfig.lineColor) && (
-            <input
-              type="color"
-              className="ogp-prop-color-picker"
-              value={gridConfig.lineColor}
-              onChange={(e) =>
-                onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
-              }
-            />
-          )}
+          <HslaColorSwatch
+            color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(gridConfig.lineColor) ? gridConfig.lineColor : '#ff0000'}
+            onChange={(hex) =>
+              onGridConfigChange({ ...gridConfig, lineColor: hex })
+            }
+            label="Line Color"
+          />
         </div>
         <label className="ogp-prop-toggle-row">
           <input
@@ -492,11 +489,10 @@ function TextProps({
           value={layer.color}
           onChange={(e) => onUpdate({ color: e.target.value })}
         />
-        <input
-          type="color"
-          className="ogp-prop-color-picker"
-          value={layer.color}
-          onChange={(e) => onUpdate({ color: e.target.value })}
+        <HslaColorSwatch
+          color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(layer.color) ? layer.color : '#ffffff'}
+          onChange={(hex) => onUpdate({ color: hex })}
+          label="Text color"
         />
       </div>
 
