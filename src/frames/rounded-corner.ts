@@ -85,25 +85,10 @@ export const roundedCorner: FrameGenerator = {
       ctx.shadowOffsetY = 0;
     }
 
-    // Fill the border band if fillColor has alpha
-    const fillRgba = hexToRgba(fillColor);
-    if (fillColor.length > 7 && fillColor.slice(7, 9) !== '00') {
-      ctx.fillStyle = fillRgba;
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, cornerRadius);
-      // Cut out the inner area
-      const innerInset = borderWidth;
-      const ix = half + innerInset;
-      const iy = half + innerInset;
-      const iw = w - 2 * innerInset;
-      const ih = h - 2 * innerInset;
-      const innerRadius = Math.max(0, cornerRadius - innerInset);
-      if (iw > 0 && ih > 0) {
-        ctx.roundRect(ix, iy, iw, ih, innerRadius);
-      }
-      ctx.fill('evenodd');
-    } else if (fillColor.length <= 7) {
-      // Fully opaque fill
+    // Fill the border band (skip if fully transparent #rrggbb00)
+    const isTransparent = fillColor.length > 7 && fillColor.slice(7, 9) === '00';
+    if (!isTransparent) {
+      const fillRgba = hexToRgba(fillColor);
       ctx.fillStyle = fillRgba;
       ctx.beginPath();
       ctx.roundRect(x, y, w, h, cornerRadius);

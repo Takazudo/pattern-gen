@@ -64,10 +64,7 @@ export const scalloped: FrameGenerator = {
 
     // Calculate scallop sizes for horizontal and vertical edges
     const hScallopWidth = width / scallopsPerSide;
-    const hRadius = hScallopWidth / 2;
     const vScallopCount = Math.max(1, Math.round(height / hScallopWidth));
-    const vScallopHeight = height / vScallopCount;
-    const vRadius = vScallopHeight / 2;
 
     // The scalloped inner edge baseline
     const inward = direction === 0;
