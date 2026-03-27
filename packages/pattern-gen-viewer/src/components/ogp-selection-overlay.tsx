@@ -291,6 +291,8 @@ export function OgpSelectionOverlay({
   const aspect = getAspect(aspectConfig);
   const aspectRef = useRef(aspect);
   aspectRef.current = aspect;
+  const aspectConfigRef = useRef(aspectConfig);
+  aspectConfigRef.current = aspectConfig;
 
   const [rect, setRect] = useState<OgpRect>(() => getInitialRect(OGP_ASPECT));
   const [copyFeedback, setCopyFeedback] = useState(false);
@@ -301,6 +303,8 @@ export function OgpSelectionOverlay({
     x: (window.innerWidth - 340) / 2,
     y: 20,
   }));
+  const toolbarPosRef = useRef(toolbarPos);
+  toolbarPosRef.current = toolbarPos;
   const toolbarRef = useRef<HTMLDivElement>(null);
   const toolbarDragRef = useRef<ToolbarDragState | null>(null);
 
@@ -446,32 +450,22 @@ export function OgpSelectionOverlay({
     toolbarDragRef.current = {
       startMouseX: e.clientX,
       startMouseY: e.clientY,
-      startPos: { ...toolbarPos },
+      startPos: { ...toolbarPosRef.current },
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toolbarPos]);
+  }, []);
 
-  const handleModeChange = useCallback(
-    (mode: AspectMode) => {
-      setAspectConfig((prev) => {
-        const next = { ...prev, mode };
-        const newAspect = getAspect(next);
-        setRect((r) => reclampToAspect(r, newAspect));
-        return next;
-      });
-    },
-    [],
-  );
+  const handleModeChange = useCallback((mode: AspectMode) => {
+    const newAspect = getAspect({ ...aspectConfigRef.current, mode });
+    setAspectConfig((prev) => ({ ...prev, mode }));
+    setRect((r) => reclampToAspect(r, newAspect));
+  }, []);
 
   const handleAspectInputChange = useCallback(
     (field: 'freeW' | 'freeH' | 'fixedW' | 'fixedH', value: string) => {
       const num = Number(value) || 1;
-      setAspectConfig((prev) => {
-        const next = { ...prev, [field]: num };
-        const newAspect = getAspect(next);
-        setRect((r) => reclampToAspect(r, newAspect));
-        return next;
-      });
+      const newAspect = getAspect({ ...aspectConfigRef.current, [field]: num });
+      setAspectConfig((prev) => ({ ...prev, [field]: num }));
+      setRect((r) => reclampToAspect(r, newAspect));
     },
     [],
   );
