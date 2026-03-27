@@ -199,7 +199,6 @@ export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
             value={value}
             onChange={(e) => {
               onChange(e.target.value);
-              loadGoogleFont(e.target.value);
             }}
           >
             {CURATED_FONTS.map((f) => (
@@ -234,7 +233,6 @@ export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
                 className={`ogp-font-item ${f === value ? 'active' : ''}`}
                 onClick={() => {
                   onChange(f);
-                  loadGoogleFont(f);
                   setShowMore(false);
                 }}
               >

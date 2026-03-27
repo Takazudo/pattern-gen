@@ -660,6 +660,18 @@ export function OgpEditor({
     input.click();
   }, []);
 
+  // Track a font load: add to loadingFonts, remove when loaded
+  const trackFontLoad = useCallback((family: string) => {
+    setLoadingFonts((prev) => new Set(prev).add(family));
+    loadGoogleFont(family).finally(() => {
+      setLoadingFonts((prev) => {
+        const next = new Set(prev);
+        next.delete(family);
+        return next;
+      });
+    });
+  }, []);
+
   const handleAddText = useCallback(() => {
     const id = crypto.randomUUID();
     const newLayer: TextLayerData & { id: string } = {
@@ -691,18 +703,6 @@ export function OgpEditor({
     setSelectedIds([id]);
     trackFontLoad('Inter');
   }, [trackFontLoad]);
-
-  // Track a font load: add to loadingFonts, remove when loaded
-  const trackFontLoad = useCallback((family: string) => {
-    setLoadingFonts((prev) => new Set(prev).add(family));
-    loadGoogleFont(family).then(() => {
-      setLoadingFonts((prev) => {
-        const next = new Set(prev);
-        next.delete(family);
-        return next;
-      });
-    });
-  }, []);
 
   const handleLayerUpdate = useCallback(
     (id: string, updates: Partial<EditorLayer>) => {
