@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createCanvas } from 'canvas';
-import { createRandom } from '../src/core/seeded-random.js';
-import { COLOR_SCHEMES } from '../src/core/color-schemes.js';
-import { patternsByName } from '../src/patterns/index.js';
-import type { PatternOptions } from '../src/core/types.js';
+import { createRandom, COLOR_SCHEMES } from '@takazudo/pattern-gen-core';
+import type { PatternOptions } from '@takazudo/pattern-gen-core';
+import { patternsByName } from '@takazudo/pattern-gen-generators';
 
 /** Small canvas size for fast tests */
 const SIZE = 100;

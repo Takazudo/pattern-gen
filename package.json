@@ -16,10 +16,11 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsup",
+    "build:deps": "pnpm --filter @takazudo/pattern-gen-core run build && pnpm --filter @takazudo/pattern-gen-generators run build",
+    "build": "pnpm run build:deps && tsup",
     "test": "vitest run",
     "test:watch": "vitest --watch",
-    "prepublishOnly": "tsup && vitest run",
+    "prepublishOnly": "pnpm run build && vitest run",
     "// ── Viewer ──────────────────────────────────────": "",
     "viewer:dev": "pnpm --filter pattern-gen-viewer dev",
     "viewer:build": "pnpm --filter pattern-gen-viewer build",
@@ -30,7 +31,7 @@
     "// ── Validation ──────────────────────────────────": "",
     "b4push": "./scripts/run-b4push.sh",
     "// ── Typecheck ───────────────────────────────────": "",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm --filter @takazudo/pattern-gen-core run typecheck && pnpm --filter @takazudo/pattern-gen-generators run typecheck && tsc --noEmit"
   },
   "keywords": ["pattern", "generative", "geometric", "texture", "canvas", "cli", "deterministic"],
   "author": "Takazudo",
@@ -47,6 +48,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@takazudo/pattern-gen-core": "workspace:*",
+    "@takazudo/pattern-gen-generators": "workspace:*",
     "canvas": "^3.1.0"
   },
   "devDependencies": {

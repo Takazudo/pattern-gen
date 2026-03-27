@@ -1,3 +1,5 @@
 packages:
+  - "packages/core"
+  - "packages/generators"
   - "packages/pattern-gen-viewer"
   - "doc"

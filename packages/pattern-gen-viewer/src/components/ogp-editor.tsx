@@ -1,17 +1,15 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import type { OgpConfig } from 'pattern-gen/core/ogp-config';
-import { parseOgpEditorConfig } from 'pattern-gen/core/ogp-editor-config';
+import { parseOgpEditorConfig, hashString, createRandom } from '@takazudo/pattern-gen-core';
 import type {
+  OgpConfig,
   OgpEditorConfig,
   EditorLayer,
   FrameConfig,
   ImageLayerData,
   TextLayerData,
   LayerTransform,
-} from 'pattern-gen/core/ogp-editor-config';
-import { framesByName } from 'pattern-gen/frames';
-import { hashString } from 'pattern-gen/core/hash';
-import { createRandom } from 'pattern-gen/core/seeded-random';
+} from '@takazudo/pattern-gen-core';
+import { framesByName } from '@takazudo/pattern-gen-generators';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont, isFontLoaded } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';

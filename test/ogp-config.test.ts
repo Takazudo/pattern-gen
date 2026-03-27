@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   serializeOgpConfig,
   parseOgpConfig,
-} from '../src/core/ogp-config.js';
-import type { OgpConfig } from '../src/core/ogp-config.js';
+} from '@takazudo/pattern-gen-core';
+import type { OgpConfig } from '@takazudo/pattern-gen-core';
 
 function makeValidConfig(): OgpConfig {
   return {

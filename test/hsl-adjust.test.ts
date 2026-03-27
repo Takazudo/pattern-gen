@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rgbToHsl, hslToRgb } from '../src/core/color-utils.js';
+import { rgbToHsl, hslToRgb } from '@takazudo/pattern-gen-core';
 
 describe('rgbToHsl', () => {
   it('converts red', () => {

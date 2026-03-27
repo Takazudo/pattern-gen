@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@takazudo/pattern-gen-core": "workspace:*",
+    "@takazudo/pattern-gen-generators": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

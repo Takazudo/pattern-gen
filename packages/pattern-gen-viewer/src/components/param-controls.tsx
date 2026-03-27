@@ -1,4 +1,4 @@
-import type { ParamDef } from 'pattern-gen/core/types';
+import type { ParamDef } from '@takazudo/pattern-gen-core';
 
 interface ParamControlsProps {
   paramDefs: ParamDef[];

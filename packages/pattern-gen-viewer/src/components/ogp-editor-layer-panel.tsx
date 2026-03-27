@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData } from 'pattern-gen/core/ogp-editor-config';
-import type { FrameParamDef } from 'pattern-gen/core/frame-types';
-import { FRAME_GENERATORS, framesByName } from 'pattern-gen/frames';
+import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData, FrameParamDef } from '@takazudo/pattern-gen-core';
+import { FRAME_GENERATORS, framesByName } from '@takazudo/pattern-gen-generators';
 import type { AlignmentType, GridConfig } from './ogp-editor.js';
 import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
 import { HslaColorSwatch } from './hsla-color-picker.js';

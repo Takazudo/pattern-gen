@@ -12,9 +12,7 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noEmit": true,
-    "paths": {
-      "pattern-gen/*": ["../../src/*"]
-    }
+    "customConditions": ["development"]
   },
-  "include": ["src", "../../src"]
+  "include": ["src"]
 }

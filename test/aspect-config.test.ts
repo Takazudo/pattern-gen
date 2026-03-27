@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getAspect, getOutputDimensions } from '../src/core/aspect-config.js';
-import type { AspectConfig } from '../src/core/aspect-config.js';
-import { OGP_WIDTH, OGP_HEIGHT } from '../src/core/ogp-config.js';
+import { getAspect, getOutputDimensions, OGP_WIDTH, OGP_HEIGHT } from '@takazudo/pattern-gen-core';
+import type { AspectConfig } from '@takazudo/pattern-gen-core';
 
 function makeConfig(overrides: Partial<AspectConfig> = {}): AspectConfig {
   return {

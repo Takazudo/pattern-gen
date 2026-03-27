@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderOgpFromConfig } from '../src/renderer.js';
-import type { OgpConfig } from '../src/core/ogp-config.js';
+import type { OgpConfig } from '@takazudo/pattern-gen-core';
 
 function makeValidOgpConfig(): OgpConfig {
   return {

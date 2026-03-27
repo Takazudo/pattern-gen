@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderOgpEditorFromConfig } from '../src/renderer.js';
-import type { OgpEditorConfig, TextLayerData } from '../src/core/ogp-editor-config.js';
-import type { OgpConfig } from '../src/core/ogp-config.js';
+import type { OgpEditorConfig, TextLayerData, OgpConfig } from '@takazudo/pattern-gen-core';
 
 function makeValidBackground(): OgpConfig {
   return {
