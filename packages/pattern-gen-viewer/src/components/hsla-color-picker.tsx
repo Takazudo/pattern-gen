@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { hexToHsla, hslaToHex, hslaToString } from '../utils/color-hsla.js';
 import './hsla-color-picker.css';
 
@@ -29,8 +30,12 @@ function usePopoverClose(
 
   useEffect(() => {
     if (!isOpen) return;
-    function handleScroll() {
-      onClose();
+    function handleScroll(e: Event) {
+      // Only close on window/document scroll, not panel scroll events
+      // (capture: true catches all scroll events from any element)
+      if (e.target === document || e.target === document.documentElement) {
+        onClose();
+      }
     }
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
@@ -201,14 +206,16 @@ export function HslaColorSwatch({
         {showCheckerboard && <div className="ogp-hsla-swatch-checkerboard" />}
         <div className="ogp-hsla-swatch-color" style={{ backgroundColor: cssColor }} />
       </button>
-      {isOpen && (
-        <HslaColorPicker
-          color={color}
-          onChange={onChange}
-          onClose={handleClose}
-          anchorRef={buttonRef}
-        />
-      )}
+      {isOpen &&
+        createPortal(
+          <HslaColorPicker
+            color={color}
+            onChange={onChange}
+            onClose={handleClose}
+            anchorRef={buttonRef}
+          />,
+          document.body,
+        )}
     </>
   );
 }
