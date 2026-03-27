@@ -96,9 +96,9 @@ export const tornEdge: FrameGenerator = {
 
     // Generate torn edge points for each side (inner edge of border)
     const topEdge = generateTornPoints(rand, 0, width, borderWidth, true, roughness, numPointsH, true);
-    const bottomEdge = generateTornPoints(rand, 0, width, height - borderWidth, true, roughness, numPointsV, false);
+    const bottomEdge = generateTornPoints(rand, 0, width, height - borderWidth, true, roughness, numPointsH, false);
     const leftEdge = generateTornPoints(rand, 0, height, borderWidth, false, roughness, numPointsV, true);
-    const rightEdge = generateTornPoints(rand, 0, height, width - borderWidth, false, roughness, numPointsH, false);
+    const rightEdge = generateTornPoints(rand, 0, height, width - borderWidth, false, roughness, numPointsV, false);
 
     // Draw the border by filling the area between canvas edges and torn path
     ctx.fillStyle = paperColor;

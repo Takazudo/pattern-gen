@@ -1,5 +1,5 @@
 import type { FrameGenerator, FrameParamDef } from '../core/frame-types.js';
-import { hexToRgba, hexAlpha } from './frame-utils.js';
+import { hexAlpha } from './frame-utils.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -124,10 +124,15 @@ export const washiTape: FrameGenerator = {
     const patternScale = (params.patternScale as number) ?? 8;
     const sides = (params.sides as number) ?? 2;
 
-    const baseRgba = hexToRgba(tapeColor);
+    // Parse alpha once; use it for globalAlpha only
     const alpha = hexAlpha(tapeColor);
+    // Make base color fully opaque in rgba — alpha comes from globalAlpha only
+    const r = parseInt(tapeColor.slice(1, 3), 16);
+    const g = parseInt(tapeColor.slice(3, 5), 16);
+    const b = parseInt(tapeColor.slice(5, 7), 16);
+    const baseRgba = `rgba(${r}, ${g}, ${b}, 1)`;
     // Darker pattern color for overlay
-    const patternColor = `rgba(0, 0, 0, ${alpha * 0.15})`;
+    const patternColor = `rgba(0, 0, 0, 0.15)`;
 
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -139,7 +144,7 @@ export const washiTape: FrameGenerator = {
       // Tape pattern overlay
       drawTapePattern(ctx, x, y, w, h, pattern, patternScale, patternColor);
       // Subtle edge highlight
-      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.2})`;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.lineWidth = 0.5;
       ctx.strokeRect(x, y, w, h);
     };

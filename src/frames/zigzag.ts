@@ -63,7 +63,6 @@ function drawZigzagLine(
   amplitude: number,
   numZigs: number,
   filled: boolean,
-  color: string,
 ): void {
   const dx = endX - startX;
   const dy = endY - startY;
@@ -146,13 +145,13 @@ export const zigzag: FrameGenerator = {
       const inset = baseInset + row * (amplitude * 2 + 4);
 
       // Top edge
-      drawZigzagLine(ctx, 0, inset, width, inset, amplitude, frequency * 4, !!filled, rgba);
+      drawZigzagLine(ctx, 0, inset, width, inset, amplitude, frequency * 4, !!filled);
       // Bottom edge
-      drawZigzagLine(ctx, 0, height - inset, width, height - inset, amplitude, frequency * 4, !!filled, rgba);
+      drawZigzagLine(ctx, 0, height - inset, width, height - inset, amplitude, frequency * 4, !!filled);
       // Left edge
-      drawZigzagLine(ctx, inset, 0, inset, height, amplitude, frequency * 2, !!filled, rgba);
+      drawZigzagLine(ctx, inset, 0, inset, height, amplitude, frequency * 2, !!filled);
       // Right edge
-      drawZigzagLine(ctx, width - inset, 0, width - inset, height, amplitude, frequency * 2, !!filled, rgba);
+      drawZigzagLine(ctx, width - inset, 0, width - inset, height, amplitude, frequency * 2, !!filled);
     }
 
     ctx.restore();

@@ -65,11 +65,16 @@ export const stamp: FrameGenerator = {
 
     ctx.save();
 
-    // Build the outer border shape with bumpy perforated edges
-    ctx.beginPath();
+    // Render stamp border to an offscreen canvas to avoid destination-out
+    // erasing the underlying OGP content (background, images, text layers)
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    const oc = offscreen.getContext('2d')!;
 
-    // Outer rectangle (full canvas)
-    ctx.rect(0, 0, width, height);
+    // Build the outer border shape with bumpy perforated edges
+    oc.beginPath();
+    oc.rect(0, 0, width, height);
 
     // Inner content rectangle (to cut out)
     const inner = {
@@ -78,49 +83,49 @@ export const stamp: FrameGenerator = {
       w: width - borderWidth * 2,
       h: height - borderWidth * 2,
     };
-    ctx.rect(inner.x, inner.y, inner.w, inner.h);
+    oc.rect(inner.x, inner.y, inner.w, inner.h);
 
-    ctx.fillStyle = borderColor;
-    ctx.fill('evenodd');
+    oc.fillStyle = borderColor;
+    oc.fill('evenodd');
 
-    // Cut perforations along the outer edge using destination-out
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+    // Cut perforations on the offscreen canvas (safe to use destination-out here)
+    oc.globalCompositeOperation = 'destination-out';
+    oc.fillStyle = 'rgba(0, 0, 0, 1)';
 
     // Top edge perforations
     const numTop = Math.floor(width / perfSpacing);
     const topOffset = (width - (numTop - 1) * perfSpacing) / 2;
     for (let i = 0; i < numTop; i++) {
-      ctx.beginPath();
-      ctx.arc(topOffset + i * perfSpacing, 0, perfRadius, 0, Math.PI * 2);
-      ctx.fill();
+      oc.beginPath();
+      oc.arc(topOffset + i * perfSpacing, 0, perfRadius, 0, Math.PI * 2);
+      oc.fill();
     }
 
     // Bottom edge perforations
     for (let i = 0; i < numTop; i++) {
-      ctx.beginPath();
-      ctx.arc(topOffset + i * perfSpacing, height, perfRadius, 0, Math.PI * 2);
-      ctx.fill();
+      oc.beginPath();
+      oc.arc(topOffset + i * perfSpacing, height, perfRadius, 0, Math.PI * 2);
+      oc.fill();
     }
 
     // Left edge perforations
     const numLeft = Math.floor(height / perfSpacing);
     const leftOffset = (height - (numLeft - 1) * perfSpacing) / 2;
     for (let i = 0; i < numLeft; i++) {
-      ctx.beginPath();
-      ctx.arc(0, leftOffset + i * perfSpacing, perfRadius, 0, Math.PI * 2);
-      ctx.fill();
+      oc.beginPath();
+      oc.arc(0, leftOffset + i * perfSpacing, perfRadius, 0, Math.PI * 2);
+      oc.fill();
     }
 
     // Right edge perforations
     for (let i = 0; i < numLeft; i++) {
-      ctx.beginPath();
-      ctx.arc(width, leftOffset + i * perfSpacing, perfRadius, 0, Math.PI * 2);
-      ctx.fill();
+      oc.beginPath();
+      oc.arc(width, leftOffset + i * perfSpacing, perfRadius, 0, Math.PI * 2);
+      oc.fill();
     }
 
-    // Reset composite operation
-    ctx.globalCompositeOperation = 'source-over';
+    // Composite the offscreen result onto the main canvas
+    ctx.drawImage(offscreen, 0, 0);
 
     // Inner decorative line (dashed rectangle)
     if (innerLine) {

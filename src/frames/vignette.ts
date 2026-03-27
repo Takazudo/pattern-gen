@@ -1,4 +1,5 @@
 import type { FrameGenerator, FrameParamDef } from '../core/frame-types.js';
+import { hexToRgba } from './frame-utils.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -47,11 +48,11 @@ const paramDefs: FrameParamDef[] = [
 ];
 
 function parseHexRgb(hex: string): { r: number; g: number; b: number } {
-  return {
-    r: parseInt(hex.slice(1, 3), 16),
-    g: parseInt(hex.slice(3, 5), 16),
-    b: parseInt(hex.slice(5, 7), 16),
-  };
+  if (!hex || hex[0] !== '#' || hex.length < 7) return { r: 0, g: 0, b: 0 };
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r: isNaN(r) ? 0 : r, g: isNaN(g) ? 0 : g, b: isNaN(b) ? 0 : b };
 }
 
 export const vignette: FrameGenerator = {

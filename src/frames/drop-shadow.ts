@@ -1,5 +1,5 @@
 import type { FrameGenerator, FrameParamDef } from '../core/frame-types.js';
-import { hexToRgba } from './frame-utils.js';
+import { hexToRgba, resetShadow } from './frame-utils.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -79,10 +79,6 @@ export const dropShadow: FrameGenerator = {
 
     ctx.save();
 
-    // Fill background area outside the card with a subtle contrasting color
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
-    ctx.fillRect(0, 0, width, height);
-
     // Card dimensions
     const cx = inset;
     const cy = inset;
@@ -106,10 +102,7 @@ export const dropShadow: FrameGenerator = {
     ctx.fill();
 
     // Remove shadow for card border
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
+    resetShadow(ctx);
 
     // Subtle card edge
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';

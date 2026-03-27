@@ -1,4 +1,5 @@
 import type { FrameGenerator, FrameParamDef } from '../core/frame-types.js';
+import { resetShadow } from './frame-utils.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -100,10 +101,7 @@ export const polaroid: FrameGenerator = {
     ctx.fill('evenodd');
 
     // Reset shadow for the inner frame line
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
+    resetShadow(ctx);
 
     // Subtle inner border line
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';

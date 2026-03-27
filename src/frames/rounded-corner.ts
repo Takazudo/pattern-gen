@@ -1,5 +1,5 @@
 import type { FrameGenerator, FrameParamDef } from '../core/frame-types.js';
-import { hexToRgba } from './frame-utils.js';
+import { hexToRgba, resetShadow } from './frame-utils.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -106,8 +106,7 @@ export const roundedCorner: FrameGenerator = {
 
     // Clear shadow before stroke so border doesn't get double-shadowed
     if (shadowBlur > 0) {
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
+      resetShadow(ctx);
     }
 
     // Draw the border stroke

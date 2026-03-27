@@ -828,11 +828,10 @@ function FrameParamControl({
               value={String(value)}
               onChange={(e) => onChange(e.target.value)}
             />
-            <input
-              type="color"
-              className="ogp-prop-color-picker"
-              value={String(value).slice(0, 7)}
-              onChange={(e) => onChange(e.target.value)}
+            <HslaColorSwatch
+              color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(String(value)) ? String(value) : '#000000'}
+              onChange={(hex) => onChange(hex)}
+              label={def.label}
             />
           </div>
         </div>
