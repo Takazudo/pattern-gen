@@ -319,6 +319,29 @@ export function OgpEditorLayerPanel({
             />
           </div>
         </div>
+        <label className="ogp-prop-label">Line Color</label>
+        <div className="ogp-prop-color-row">
+          <input
+            type="text"
+            className="ogp-prop-input ogp-prop-color-text"
+            value={gridConfig.lineColor}
+            onChange={(e) =>
+              onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
+            }
+          />
+          <input
+            type="color"
+            className="ogp-prop-color-picker"
+            value={
+              gridConfig.lineColor.startsWith('#')
+                ? gridConfig.lineColor
+                : '#b4b4b4'
+            }
+            onChange={(e) =>
+              onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
+            }
+          />
+        </div>
         <label className="ogp-prop-toggle-row">
           <input
             type="checkbox"

@@ -38,6 +38,7 @@ export interface GridConfig {
   hDivide: number;
   snap: boolean;
   visible: boolean;
+  lineColor: string;
 }
 
 /* ── Helpers ── */
@@ -193,11 +194,11 @@ function drawGrid(
   ctx: CanvasRenderingContext2D,
   xPositions: number[],
   yPositions: number[],
+  lineColor: string,
 ) {
   ctx.save();
-  ctx.strokeStyle = 'rgba(180, 180, 180, 0.3)';
+  ctx.strokeStyle = lineColor;
   ctx.lineWidth = 1;
-  ctx.setLineDash([4, 4]);
 
   // Skip edges (0 and totalSize) — only draw interior lines
   for (const x of xPositions) {
@@ -299,6 +300,7 @@ export function OgpEditor({
     hDivide: 2,
     snap: false,
     visible: false,
+    lineColor: 'rgba(180, 180, 180, 0.5)',
   });
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize';
@@ -396,7 +398,7 @@ export function OgpEditor({
       gridConfig.visible &&
       (gridConfig.vDivide > 1 || gridConfig.hDivide > 1)
     ) {
-      drawGrid(ctx, xGridPositions, yGridPositions);
+      drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor);
     }
   }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions]);
 
