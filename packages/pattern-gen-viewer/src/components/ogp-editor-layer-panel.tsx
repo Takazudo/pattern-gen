@@ -77,66 +77,67 @@ export function OgpEditorLayerPanel({
 
   return (
     <div className="ogp-editor-panel">
-      {/* Action buttons */}
-      <div className="ogp-panel-actions">
-        <button className="btn ogp-panel-btn" onClick={onAddImage}>
-          Add Image
-        </button>
-        <button className="btn ogp-panel-btn" onClick={onAddText}>
-          Add Text
-        </button>
-        <button className="btn ogp-panel-btn" onClick={onImportJson}>
-          Import JSON
-        </button>
-      </div>
-
-      {/* Layer list */}
-      <div className="ogp-layer-list">
-        {layers.map((layer, idx) => (
-          <div
-            key={layer.id}
-            className={`ogp-layer-item ${selectedIdSet.has(layer.id) ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
-            draggable
-            onClick={(e) => {
-              if (e.metaKey || e.ctrlKey) {
-                // Toggle in multi-select
-                onSelect(
-                  selectedIdSet.has(layer.id)
-                    ? selectedIds.filter((id) => id !== layer.id)
-                    : [...selectedIds, layer.id],
-                );
-              } else {
-                onSelect([layer.id]);
-              }
-            }}
-            onDragStart={() => handleDragStart(idx)}
-            onDragOver={(e) => handleDragOver(e, idx)}
-            onDrop={handleDrop}
-            onDragEnd={handleDragEnd}
-          >
-            <span className="ogp-layer-icon">
-              {layer.type === 'text' ? 'T' : '\u{1F5BC}'}
-            </span>
-            <span className="ogp-layer-name">{layer.name}</span>
-            <button
-              className="ogp-layer-delete"
+      {/* Layers section (actions + list) */}
+      <div className="ogp-panel-section">
+        <div className="ogp-props-title">Layers</div>
+        <div className="ogp-panel-actions">
+          <button className="btn ogp-panel-btn" onClick={onAddImage}>
+            Add Image
+          </button>
+          <button className="btn ogp-panel-btn" onClick={onAddText}>
+            Add Text
+          </button>
+          <button className="btn ogp-panel-btn" onClick={onImportJson}>
+            Import JSON
+          </button>
+        </div>
+        <div className="ogp-layer-list">
+          {layers.map((layer, idx) => (
+            <div
+              key={layer.id}
+              className={`ogp-layer-item ${selectedIdSet.has(layer.id) ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
+              draggable
               onClick={(e) => {
-                e.stopPropagation();
-                onDelete(layer.id);
+                if (e.metaKey || e.ctrlKey) {
+                  // Toggle in multi-select
+                  onSelect(
+                    selectedIdSet.has(layer.id)
+                      ? selectedIds.filter((id) => id !== layer.id)
+                      : [...selectedIds, layer.id],
+                  );
+                } else {
+                  onSelect([layer.id]);
+                }
               }}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
             >
-              &times;
-            </button>
-          </div>
-        ))}
-        {layers.length === 0 && (
-          <div className="ogp-layer-empty">No layers yet</div>
-        )}
+              <span className="ogp-layer-icon">
+                {layer.type === 'text' ? 'T' : '\u{1F5BC}'}
+              </span>
+              <span className="ogp-layer-name">{layer.name}</span>
+              <button
+                className="ogp-layer-delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(layer.id);
+                }}
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+          {layers.length === 0 && (
+            <div className="ogp-layer-empty">No layers yet</div>
+          )}
+        </div>
       </div>
 
       {/* Alignment panel (2+ layers selected) */}
       {selectedIds.length >= 2 && (
-        <div className="ogp-align-panel">
+        <div className="ogp-panel-section ogp-align-panel">
           <div className="ogp-props-title">
             Align ({selectedIds.length} layers)
           </div>
@@ -164,7 +165,7 @@ export function OgpEditorLayerPanel({
 
       {/* Properties panel */}
       {selected && (
-        <div className="ogp-props">
+        <div className="ogp-panel-section ogp-props">
           <div className="ogp-props-title">Properties</div>
 
           {/* Common: name */}
@@ -281,7 +282,7 @@ export function OgpEditorLayerPanel({
       )}
 
       {/* Grid panel — always visible */}
-      <div className="ogp-grid-panel">
+      <div className="ogp-panel-section ogp-grid-panel">
         <div className="ogp-props-title">Grid</div>
         <div className="ogp-prop-grid">
           <div className="ogp-prop-field">
