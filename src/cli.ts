@@ -2,11 +2,9 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { renderPattern, renderOgpFromConfig, renderOgpEditorFromConfig } from './renderer.js';
-import { parseOgpConfig } from './core/ogp-config.js';
-import { parseOgpEditorConfig } from './core/ogp-editor-config.js';
-import { getPatternNames } from './patterns/index.js';
-import { getColorSchemeNames } from './core/color-schemes.js';
-import type { GenerateOptions } from './core/types.js';
+import { parseOgpConfig, parseOgpEditorConfig, getColorSchemeNames } from '@takazudo/pattern-gen-core';
+import type { GenerateOptions } from '@takazudo/pattern-gen-core';
+import { getPatternNames } from '@takazudo/pattern-gen-generators';
 
 function fail(msg: string): never {
   console.error(msg);

@@ -1,16 +1,23 @@
-import { hashString } from './core/hash.js';
-import { createRandom } from './core/seeded-random.js';
-import { COLOR_SCHEMES, colorSchemesByKey, normalizeSchemeKey } from './core/color-schemes.js';
-import { applyHslAdjust } from './core/hsl-adjust.js';
-import type { HslAdjust } from './core/hsl-adjust.js';
-import { patternsByName } from './patterns/index.js';
-import { framesByName } from './frames/index.js';
-import type { ColorScheme } from './core/color-schemes.js';
-import { OGP_WIDTH, OGP_HEIGHT } from './core/ogp-config.js';
-import type { OgpConfig } from './core/ogp-config.js';
-import type { OgpEditorConfig } from './core/ogp-editor-config.js';
-import { ensureGoogleFont } from './core/google-fonts-loader.js';
-import type { PatternOptions, GenerateOptions } from './core/types.js';
+import {
+  hashString,
+  createRandom,
+  COLOR_SCHEMES,
+  colorSchemesByKey,
+  normalizeSchemeKey,
+  applyHslAdjust,
+  OGP_WIDTH,
+  OGP_HEIGHT,
+} from '@takazudo/pattern-gen-core';
+import type {
+  HslAdjust,
+  ColorScheme,
+  OgpConfig,
+  OgpEditorConfig,
+  PatternOptions,
+  GenerateOptions,
+} from '@takazudo/pattern-gen-core';
+import { patternsByName, framesByName } from '@takazudo/pattern-gen-generators';
+import { ensureGoogleFont } from './google-fonts-loader.js';
 
 /** Resolve a color scheme from name/seed, optionally overriding the background. */
 function resolveColorScheme(

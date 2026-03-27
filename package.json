@@ -16,7 +16,8 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsup",
+    "build": "pnpm --filter @takazudo/pattern-gen-core run build && pnpm --filter @takazudo/pattern-gen-generators run build && tsup",
+    "build:self": "tsup",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "prepublishOnly": "tsup && vitest run",
@@ -47,6 +48,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@takazudo/pattern-gen-core": "workspace:*",
+    "@takazudo/pattern-gen-generators": "workspace:*",
     "canvas": "^3.1.0"
   },
   "devDependencies": {
