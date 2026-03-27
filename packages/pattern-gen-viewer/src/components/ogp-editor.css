@@ -461,6 +461,35 @@
   margin-right: 4px;
 }
 
+/* ── Frame section ── */
+
+.ogp-frame-section {
+  /* Inherits from .ogp-panel-section */
+}
+
+.ogp-frame-select {
+  width: 100%;
+  padding: 4px 6px;
+  background: oklch(100% 0 0 / 6%);
+  border: 1px solid oklch(100% 0 0 / 10%);
+  border-radius: 4px;
+  color: oklch(90% 0 0);
+  font-size: 12px;
+}
+
+.ogp-frame-params {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.ogp-frame-param-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* ── Grid panel ── */
 
 .ogp-grid-panel {
