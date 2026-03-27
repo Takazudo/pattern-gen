@@ -100,9 +100,9 @@ export const scalloped: FrameGenerator = {
       const cy = borderWidth + (i + 0.5) * ((height - 2 * borderWidth) / vScallopCount);
       const arcRadius = (height - 2 * borderWidth) / vScallopCount / 2;
       if (inward) {
-        ctx.arc(rightX, cy, arcRadius, -Math.PI / 2, Math.PI / 2, false);
-      } else {
         ctx.arc(rightX, cy, arcRadius, -Math.PI / 2, Math.PI / 2, true);
+      } else {
+        ctx.arc(rightX, cy, arcRadius, -Math.PI / 2, Math.PI / 2, false);
       }
     }
 
@@ -124,9 +124,9 @@ export const scalloped: FrameGenerator = {
       const cy = borderWidth + (i + 0.5) * ((height - 2 * borderWidth) / vScallopCount);
       const arcRadius = (height - 2 * borderWidth) / vScallopCount / 2;
       if (inward) {
-        ctx.arc(leftX, cy, arcRadius, Math.PI / 2, -Math.PI / 2, false);
-      } else {
         ctx.arc(leftX, cy, arcRadius, Math.PI / 2, -Math.PI / 2, true);
+      } else {
+        ctx.arc(leftX, cy, arcRadius, Math.PI / 2, -Math.PI / 2, false);
       }
     }
 

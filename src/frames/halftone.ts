@@ -112,38 +112,56 @@ export const halftone: FrameGenerator = {
     ctx.save();
     ctx.fillStyle = rgba;
 
-    for (let x = gridSpacing / 2; x < width; x += gridSpacing) {
-      for (let y = gridSpacing / 2; y < height; y += gridSpacing) {
-        if (!isInBorder(x, y, width, height, borderWidth)) continue;
+    // Batch circles into a single path for performance (~30k dots at spacing=5)
+    if (dotShape === 0) {
+      ctx.beginPath();
+      for (let x = gridSpacing / 2; x < width; x += gridSpacing) {
+        for (let y = gridSpacing / 2; y < height; y += gridSpacing) {
+          if (!isInBorder(x, y, width, height, borderWidth)) continue;
 
-        let radius: number;
-        if (gradientDirection === 0) {
-          // Gradient: larger dots toward outer edge
-          const dist = distanceFromContentEdge(x, y, width, height, borderWidth);
-          const t = Math.min(dist / borderWidth, 1);
-          radius = minDotRadius + (maxDotRadius - minDotRadius) * t;
-        } else {
-          // Uniform size
-          radius = (maxDotRadius + minDotRadius) / 2;
-        }
+          let radius: number;
+          if (gradientDirection === 0) {
+            const dist = distanceFromContentEdge(x, y, width, height, borderWidth);
+            const t = Math.min(dist / borderWidth, 1);
+            radius = minDotRadius + (maxDotRadius - minDotRadius) * t;
+          } else {
+            radius = (maxDotRadius + minDotRadius) / 2;
+          }
 
-        if (radius <= 0) continue;
-
-        if (dotShape === 0) {
-          // Circle
-          ctx.beginPath();
+          if (radius <= 0) continue;
+          ctx.moveTo(x + radius, y);
           ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (dotShape === 1) {
-          // Diamond (rotated square)
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(Math.PI / 4);
-          ctx.fillRect(-radius * 0.7, -radius * 0.7, radius * 1.4, radius * 1.4);
-          ctx.restore();
-        } else {
-          // Square
-          ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+        }
+      }
+      ctx.fill();
+    } else {
+      // Diamond and square shapes need individual draws (translate/rotate per dot)
+      for (let x = gridSpacing / 2; x < width; x += gridSpacing) {
+        for (let y = gridSpacing / 2; y < height; y += gridSpacing) {
+          if (!isInBorder(x, y, width, height, borderWidth)) continue;
+
+          let radius: number;
+          if (gradientDirection === 0) {
+            const dist = distanceFromContentEdge(x, y, width, height, borderWidth);
+            const t = Math.min(dist / borderWidth, 1);
+            radius = minDotRadius + (maxDotRadius - minDotRadius) * t;
+          } else {
+            radius = (maxDotRadius + minDotRadius) / 2;
+          }
+
+          if (radius <= 0) continue;
+
+          if (dotShape === 1) {
+            // Diamond (rotated square)
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-radius * 0.7, -radius * 0.7, radius * 1.4, radius * 1.4);
+            ctx.restore();
+          } else {
+            // Square
+            ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+          }
         }
       }
     }

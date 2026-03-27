@@ -1,5 +1,5 @@
 import type { FrameGenerator, FrameParamDef } from '../core/frame-types.js';
-import { resetShadow } from './frame-utils.js';
+import { hexToRgba, resetShadow } from './frame-utils.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -85,7 +85,7 @@ export const polaroid: FrameGenerator = {
     }
 
     // Draw outer frame
-    ctx.fillStyle = borderColor;
+    ctx.fillStyle = hexToRgba(borderColor);
     ctx.beginPath();
     ctx.rect(0, 0, width, height);
     // Cut out the inner content area

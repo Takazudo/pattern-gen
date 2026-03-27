@@ -104,8 +104,9 @@ export const roundedCorner: FrameGenerator = {
       ctx.fill('evenodd');
     }
 
-    // Clear shadow before stroke so border doesn't get double-shadowed
-    if (shadowBlur > 0) {
+    // If fill was drawn, clear shadow before stroke so it doesn't double-shadow.
+    // If fill was skipped (transparent), keep shadow for the stroke.
+    if (shadowBlur > 0 && !isTransparent) {
       resetShadow(ctx);
     }
 
@@ -115,6 +116,11 @@ export const roundedCorner: FrameGenerator = {
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, cornerRadius);
     ctx.stroke();
+
+    // Reset shadow after stroke if it was kept for stroke-only shadow
+    if (shadowBlur > 0 && isTransparent) {
+      resetShadow(ctx);
+    }
 
     ctx.restore();
   },

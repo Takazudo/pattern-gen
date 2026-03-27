@@ -67,9 +67,8 @@ export const stamp: FrameGenerator = {
 
     // Render stamp border to an offscreen canvas to avoid destination-out
     // erasing the underlying OGP content (background, images, text layers)
-    const offscreen = document.createElement('canvas');
-    offscreen.width = width;
-    offscreen.height = height;
+    // Use OffscreenCanvas for browser+Node.js compat (avoids document.createElement)
+    const offscreen = new OffscreenCanvas(width, height);
     const oc = offscreen.getContext('2d')!;
 
     // Build the outer border shape with bumpy perforated edges

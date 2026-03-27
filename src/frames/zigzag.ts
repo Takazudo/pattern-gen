@@ -70,8 +70,6 @@ function drawZigzagLine(
   const angle = Math.atan2(dy, dx);
   const perpAngle = angle + Math.PI / 2;
 
-  const zigWidth = length / numZigs;
-
   if (filled) {
     // Draw filled triangles
     for (let i = 0; i < numZigs; i++) {

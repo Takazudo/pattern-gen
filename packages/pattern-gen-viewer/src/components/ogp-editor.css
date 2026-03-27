@@ -328,17 +328,6 @@
   min-width: 0;
 }
 
-.ogp-prop-color-picker {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid oklch(100% 0 0 / 15%);
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
 /* ── Source row (image layers) ── */
 
 .ogp-prop-src-row {
