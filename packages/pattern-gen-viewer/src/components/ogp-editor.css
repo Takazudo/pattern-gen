@@ -468,7 +468,6 @@
 
 .ogp-props input[type="checkbox"],
 .ogp-props-section input[type="checkbox"],
-.ogp-grid-panel input[type="checkbox"],
 .ogp-panel-section input[type="checkbox"] {
   accent-color: oklch(60% 0 0);
   margin-right: 4px;
