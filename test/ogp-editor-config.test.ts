@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest';
 import {
   serializeOgpEditorConfig,
   parseOgpEditorConfig,
-} from '../src/core/ogp-editor-config.js';
+} from '@takazudo/pattern-gen-core';
 import type {
   OgpEditorConfig,
   ImageLayerData,
   TextLayerData,
-} from '../src/core/ogp-editor-config.js';
-import type { OgpConfig } from '../src/core/ogp-config.js';
+  OgpConfig,
+} from '@takazudo/pattern-gen-core';
 
 function makeValidBackground(): OgpConfig {
   return {

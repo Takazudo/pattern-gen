@@ -1,13 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { hashString } from '../src/core/hash.js';
-import { createRandom } from '../src/core/seeded-random.js';
-import { createNoise2D, fbm } from '../src/core/noise.js';
-import { hexToRgb, rgbToHex, lerpColor, darken, lighten } from '../src/core/color-utils.js';
-import { COLOR_SCHEMES, normalizeSchemeKey, colorSchemesByKey } from '../src/core/color-schemes.js';
-import { patternRegistry, patternsByName, getPatternNames } from '../src/patterns/index.js';
-import { getParam } from '../src/core/param-utils.js';
-import { shuffleArray } from '../src/core/array-utils.js';
-import type { ParamDef, PatternOptions } from '../src/core/types.js';
+import {
+  hashString,
+  createRandom,
+  createNoise2D,
+  fbm,
+  hexToRgb,
+  rgbToHex,
+  lerpColor,
+  darken,
+  lighten,
+  COLOR_SCHEMES,
+  normalizeSchemeKey,
+  colorSchemesByKey,
+  getParam,
+  shuffleArray,
+} from '@takazudo/pattern-gen-core';
+import type { ParamDef, PatternOptions } from '@takazudo/pattern-gen-core';
+import { patternRegistry, patternsByName, getPatternNames } from '@takazudo/pattern-gen-generators';
 
 describe('hashString', () => {
   it('returns a consistent hash for the same input', () => {

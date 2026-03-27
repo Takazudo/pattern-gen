@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { centerDetentToZoom, zoomToCenterDetent } from '../src/core/center-detent.js';
+import { centerDetentToZoom, zoomToCenterDetent } from '@takazudo/pattern-gen-core';
 
 describe('centerDetentToZoom', () => {
   it('maps slider=50 to zoom=1 (center/detent)', () => {

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { randomizeDefaults } from '../src/core/randomize-defaults.js';
-import { createRandom } from '../src/core/seeded-random.js';
-import type { ParamDef, PatternOptions } from '../src/core/types.js';
+import { randomizeDefaults, createRandom } from '@takazudo/pattern-gen-core';
+import type { ParamDef, PatternOptions } from '@takazudo/pattern-gen-core';
 
 const testDefs: ParamDef[] = [
   { key: 'size', label: 'Size', type: 'slider', min: 10, max: 100, step: 1, defaultValue: 50 },
