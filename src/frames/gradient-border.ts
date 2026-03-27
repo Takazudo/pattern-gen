@@ -56,8 +56,8 @@ export const gradientBorder: FrameGenerator = {
     const endRgba = hexToRgba(colorEnd);
 
     if (direction === 0) {
-      // Clockwise: top=start, right=25%, bottom=50%, left=75%
-      // Top side
+      // Clockwise sweep: start at top-left, transition through end at bottom, back to start
+      // Top side: start -> end (left to right)
       const topGrad = ctx.createLinearGradient(0, 0, width, 0);
       topGrad.addColorStop(0, startRgba);
       topGrad.addColorStop(1, endRgba);
@@ -70,10 +70,10 @@ export const gradientBorder: FrameGenerator = {
       ctx.closePath();
       ctx.fill();
 
-      // Right side
+      // Right side: end -> end (continues end color down)
       const rightGrad = ctx.createLinearGradient(0, 0, 0, height);
       rightGrad.addColorStop(0, endRgba);
-      rightGrad.addColorStop(1, startRgba);
+      rightGrad.addColorStop(1, endRgba);
       ctx.fillStyle = rightGrad;
       ctx.beginPath();
       ctx.moveTo(width, 0);
@@ -83,10 +83,10 @@ export const gradientBorder: FrameGenerator = {
       ctx.closePath();
       ctx.fill();
 
-      // Bottom side
+      // Bottom side: end -> start (right to left = end to start)
       const bottomGrad = ctx.createLinearGradient(width, 0, 0, 0);
-      bottomGrad.addColorStop(0, startRgba);
-      bottomGrad.addColorStop(1, endRgba);
+      bottomGrad.addColorStop(0, endRgba);
+      bottomGrad.addColorStop(1, startRgba);
       ctx.fillStyle = bottomGrad;
       ctx.beginPath();
       ctx.moveTo(width, height);
@@ -96,9 +96,9 @@ export const gradientBorder: FrameGenerator = {
       ctx.closePath();
       ctx.fill();
 
-      // Left side
+      // Left side: start -> start (continues start color up)
       const leftGrad = ctx.createLinearGradient(0, height, 0, 0);
-      leftGrad.addColorStop(0, endRgba);
+      leftGrad.addColorStop(0, startRgba);
       leftGrad.addColorStop(1, startRgba);
       ctx.fillStyle = leftGrad;
       ctx.beginPath();

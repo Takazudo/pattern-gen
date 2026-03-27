@@ -119,9 +119,10 @@ export const roundedCorner: FrameGenerator = {
       ctx.fill('evenodd');
     }
 
-    // Reset shadow for stroke (shadow was already applied on fill)
-    if (shadowBlur === 0) {
+    // Clear shadow before stroke so border doesn't get double-shadowed
+    if (shadowBlur > 0) {
       ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
     }
 
     // Draw the border stroke

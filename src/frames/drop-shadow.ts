@@ -118,21 +118,6 @@ export const dropShadow: FrameGenerator = {
     ctx.roundRect(cx, cy, cw, ch, cornerRadius);
     ctx.stroke();
 
-    // Clear the inner area so content shows through
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-out';
-    const clearInset = 1;
-    ctx.beginPath();
-    ctx.roundRect(
-      cx + clearInset,
-      cy + clearInset,
-      cw - 2 * clearInset,
-      ch - 2 * clearInset,
-      Math.max(0, cornerRadius - clearInset),
-    );
-    ctx.fill();
-    ctx.restore();
-
     ctx.restore();
   },
 };
