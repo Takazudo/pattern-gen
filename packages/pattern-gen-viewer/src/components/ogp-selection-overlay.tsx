@@ -418,7 +418,7 @@ export function OgpSelectionOverlay({
       })}
 
       {/* Aspect ratio toolbar */}
-      <div className="ogp-aspect-toolbar" style={{ top: barTop - 50 }}>
+      <div className="ogp-aspect-toolbar" style={{ top: barTop - 70 }}>
         <div className="ogp-clip-toolbar-row">
           {(['ogp', 'square', 'free', 'fixed'] as const).map(mode => (
             <button
@@ -431,28 +431,28 @@ export function OgpSelectionOverlay({
           ))}
         </div>
         <div className="ogp-clip-detail">
-          {aspectConfig.mode === 'ogp' && <span>1200 : 630</span>}
+          {aspectConfig.mode === 'ogp' && <span>{OGP_WIDTH} : {OGP_HEIGHT}</span>}
           {aspectConfig.mode === 'square' && <span>1 : 1</span>}
           {aspectConfig.mode === 'free' && (
             <>
               <input type="number" className="ogp-clip-detail-input" min={1}
                 value={aspectConfig.freeW}
-                onChange={e => handleAspectChange({ ...aspectConfig, freeW: Number(e.target.value) || 1 })} />
+                onChange={e => { const v = Number(e.target.value); if (v >= 1) handleAspectChange({ ...aspectConfig, freeW: v }); }} />
               <span className="ogp-clip-detail-separator">:</span>
               <input type="number" className="ogp-clip-detail-input" min={1}
                 value={aspectConfig.freeH}
-                onChange={e => handleAspectChange({ ...aspectConfig, freeH: Number(e.target.value) || 1 })} />
+                onChange={e => { const v = Number(e.target.value); if (v >= 1) handleAspectChange({ ...aspectConfig, freeH: v }); }} />
             </>
           )}
           {aspectConfig.mode === 'fixed' && (
             <>
               <input type="number" className="ogp-clip-detail-input" min={1}
                 value={aspectConfig.fixedW}
-                onChange={e => handleAspectChange({ ...aspectConfig, fixedW: Number(e.target.value) || 1 })} />
+                onChange={e => { const v = Number(e.target.value); if (v >= 1) handleAspectChange({ ...aspectConfig, fixedW: v }); }} />
               <span className="ogp-clip-detail-separator">&times;</span>
               <input type="number" className="ogp-clip-detail-input" min={1}
                 value={aspectConfig.fixedH}
-                onChange={e => handleAspectChange({ ...aspectConfig, fixedH: Number(e.target.value) || 1 })} />
+                onChange={e => { const v = Number(e.target.value); if (v >= 1) handleAspectChange({ ...aspectConfig, fixedH: v }); }} />
               <span>px</span>
             </>
           )}
