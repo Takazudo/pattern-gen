@@ -152,7 +152,7 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
     throw new Error(`${label}: textAlign must be "left", "center", or "right"`);
   }
   // Default textVAlign to 'top' for backwards compat
-  const textVAlign = raw.textVAlign === undefined ? 'top' : raw.textVAlign;
+  const textVAlign = raw.textVAlign == null ? 'top' : raw.textVAlign;
   if (
     textVAlign !== 'top' &&
     textVAlign !== 'middle' &&

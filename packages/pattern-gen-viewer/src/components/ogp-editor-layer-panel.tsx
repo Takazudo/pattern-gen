@@ -120,6 +120,7 @@ export function OgpEditorLayerPanel({
               <span className="ogp-layer-name">{layer.name}</span>
               <button
                 className="ogp-layer-delete"
+                aria-label={`Delete ${layer.name}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(layer.id);
@@ -331,7 +332,7 @@ export function OgpEditorLayerPanel({
               onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
             }
           />
-          {gridConfig.lineColor.startsWith('#') && (
+          {/^#[0-9a-fA-F]{6}$/.test(gridConfig.lineColor) && (
             <input
               type="color"
               className="ogp-prop-color-picker"

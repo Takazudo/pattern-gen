@@ -204,12 +204,6 @@
 
 /* ── Alignment panel ── */
 
-.ogp-align-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .ogp-align-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -233,12 +227,6 @@
 }
 
 /* ── Properties panel ── */
-
-.ogp-props {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
 .ogp-props-title {
   font-size: 11px;
@@ -477,9 +465,6 @@
 
 .ogp-grid-panel {
   margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 /* Reuses .ogp-props-title for the grid panel header */
