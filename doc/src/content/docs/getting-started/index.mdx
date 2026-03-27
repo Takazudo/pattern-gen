@@ -10,8 +10,10 @@ Generate deterministic visual patterns from text seeds. 30 algorithms spanning g
 ## Features
 
 - **30 pattern types** — from wood-block grids to reaction-diffusion simulations
+- **20 decorative frames** — borders, shadows, neon glow, filmstrip, polaroid, and more for OGP images
 - **Deterministic** — same seed always produces the same output
 - **36 color schemes** — terminal-inspired palettes (Dracula, Nord, Catppuccin, etc.)
+- **HSLA color picker** — full hue/saturation/lightness/alpha control in the OGP editor
 - **CLI tool** — generate PNGs from the command line
 - **Library** — use programmatically in Node.js or browser
 - **Interactive viewer** — browse and customize patterns in real-time
@@ -83,6 +85,7 @@ renderPatternToCanvas(ctx, 'hello-world', 'voronoi', {
 | `--out` | `-o` | Output file path | `{slug}.png` |
 | `--out-dir` | | Output directory | cwd |
 | `--ogp-config` | | OGP config JSON file path | |
+| `--ogp-editor-config` | | OGP editor config JSON file path (supports layers + frames) | |
 | `--hue` | | Hue shift (-180 to 180) | `0` |
 | `--saturation` | | Saturation shift (-100 to 100) | `0` |
 | `--lightness` | | Lightness shift (-100 to 100) | `0` |
@@ -111,3 +114,38 @@ pattern-gen --ogp-config ogp-config.json --out ogp-image.png
 ```
 
 The CLI re-renders the pattern at high resolution and crops to the same region, producing an identical 1200×630 PNG.
+
+## OGP Editor
+
+The OGP Editor extends OGP mode with a full layer-based composition system.
+
+### Layers
+
+Click **Edit** in OGP mode to open the editor. Add image and text layers with configurable properties:
+
+- **Text layers** — font family (140+ Google Fonts), size, weight, style, color (HSLA), alignment, letter spacing, line height, shadow, stroke
+- **Image layers** — drag to position/resize, opacity control
+- Layer reordering via drag-and-drop, multi-select alignment tools, snap-to-grid
+
+### Frames
+
+The editor includes 20 decorative frame patterns that render on top of the OGP image. Select a frame from the dropdown and configure its parameters:
+
+| Category | Frames |
+|----------|--------|
+| Minimal | Simple Line, Rounded Corner, Drop Shadow, Double Line |
+| Gradient & Glow | Gradient Border, Neon Glow, Vignette |
+| Classical | Art Deco, Greek Key, Corner Ornament |
+| Patterned | Dotted, Scalloped, Zigzag, Halftone |
+| Photographic | Filmstrip, Polaroid, Stamp |
+| Textural | Torn Edge, Washi Tape, Brush Stroke |
+
+Each frame has configurable parameters (width, color with HSLA alpha support, style options). Frame configuration is included in the exported JSON and supported by the CLI:
+
+```bash
+pattern-gen --ogp-editor-config editor-config.json --out ogp-with-frame.png
+```
+
+### HSLA Color Picker
+
+All color inputs in the OGP editor use an HSLA color picker with four sliders (Hue, Saturation, Lightness, Alpha). The picker supports both `#RRGGBB` and `#RRGGBBAA` hex formats, enabling semi-transparent colors for text, frames, and grid overlays.
