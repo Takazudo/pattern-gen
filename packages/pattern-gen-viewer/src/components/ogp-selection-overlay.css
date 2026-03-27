@@ -63,35 +63,90 @@
   box-shadow: 0 0 6px oklch(100% 0 0 / 50%);
 }
 
-/* ── Action bar ── */
+/* ── Floating Clip Toolbar ── */
 
-.ogp-action-bar {
+.ogp-clip-toolbar {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  padding: 8px 16px;
-  background: oklch(0% 0 0 / 75%);
+  z-index: 102;
+  background: oklch(0% 0 0 / 80%);
   backdrop-filter: blur(12px);
   border-radius: 8px;
-  border: 1px solid oklch(100% 0 0 / 10%);
-  z-index: 101;
-  white-space: nowrap;
+  border: 1px solid oklch(100% 0 0 / 12%);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+  min-width: 280px;
 }
 
-.ogp-btn-generate {
+.ogp-clip-toolbar-drag {
+  cursor: grab;
+  padding: 2px 0;
+  text-align: center;
+  color: oklch(50% 0 0);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+
+.ogp-clip-toolbar-drag:active {
+  cursor: grabbing;
+}
+
+.ogp-clip-toolbar-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.ogp-clip-mode-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: oklch(100% 0 0 / 6%);
+  border: 1px solid oklch(100% 0 0 / 10%);
+  border-radius: 4px;
+  color: oklch(75% 0 0);
+  cursor: pointer;
+}
+
+.ogp-clip-mode-btn:hover {
   background: oklch(100% 0 0 / 12%);
 }
 
-.ogp-btn-generate:hover {
-  background: oklch(100% 0 0 / 20%);
+.ogp-clip-mode-btn.active {
+  background: oklch(100% 0 0 / 18%);
+  border-color: oklch(100% 0 0 / 25%);
+  color: oklch(95% 0 0);
 }
 
-.ogp-btn-json {
-  background: oklch(100% 0 0 / 8%);
+.ogp-clip-detail {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 11px;
+  color: oklch(70% 0 0);
 }
 
-.ogp-btn-json:hover {
-  background: oklch(100% 0 0 / 15%);
+.ogp-clip-detail-input {
+  width: 60px;
+  padding: 3px 6px;
+  background: oklch(100% 0 0 / 6%);
+  border: 1px solid oklch(100% 0 0 / 10%);
+  border-radius: 4px;
+  color: oklch(90% 0 0);
+  font-size: 11px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ogp-clip-detail-separator {
+  color: oklch(50% 0 0);
+  font-weight: 600;
+}
+
+.ogp-clip-actions {
+  display: flex;
+  gap: 6px;
+  border-top: 1px solid oklch(100% 0 0 / 8%);
+  padding-top: 6px;
 }
