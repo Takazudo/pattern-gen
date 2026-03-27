@@ -151,4 +151,28 @@
   padding-top: 6px;
 }
 
-/* Duplicate aspect-ratio toolbar block removed — styles live in the clip-toolbar section above */
+/* ── Action buttons inside toolbar ── */
+
+.ogp-btn-generate {
+  background: oklch(100% 0 0 / 12%);
+}
+
+.ogp-btn-generate:hover {
+  background: oklch(100% 0 0 / 20%);
+}
+
+.ogp-btn-json {
+  background: oklch(100% 0 0 / 8%);
+}
+
+.ogp-btn-json:hover {
+  background: oklch(100% 0 0 / 15%);
+}
+
+.ogp-btn-exit {
+  background: oklch(100% 0 0 / 6%);
+}
+
+.ogp-btn-exit:hover {
+  background: oklch(100% 0 0 / 12%);
+}
