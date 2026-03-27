@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
-import { getAspect, getOutputDimensions } from 'pattern-gen/core/aspect-config';
-import type { AspectMode, AspectConfig } from 'pattern-gen/core/aspect-config';
+import { OGP_WIDTH, OGP_HEIGHT, getAspect, getOutputDimensions } from '@takazudo/pattern-gen-core';
+import type { AspectMode, AspectConfig } from '@takazudo/pattern-gen-core';
 import './ogp-selection-overlay.css';
 
 export type { AspectMode, AspectConfig };

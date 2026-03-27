@@ -1,20 +1,23 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { hashString } from 'pattern-gen/core/hash';
-import { createRandom } from 'pattern-gen/core/seeded-random';
-import { COLOR_SCHEMES } from 'pattern-gen/core/color-schemes';
-import { patternRegistry, patternsByName } from 'pattern-gen/patterns/index';
-import { applyHslAdjust } from 'pattern-gen/core/hsl-adjust';
-import { getEffectiveParams } from 'pattern-gen/core/randomize-defaults';
-import type { PatternOptions, ParamDef } from 'pattern-gen/core/types';
+import {
+  hashString,
+  createRandom,
+  COLOR_SCHEMES,
+  applyHslAdjust,
+  getEffectiveParams,
+  centerDetentToZoom,
+  serializeOgpConfig,
+  OGP_WIDTH,
+  OGP_HEIGHT,
+} from '@takazudo/pattern-gen-core';
+import type { PatternOptions, ParamDef, OgpConfig } from '@takazudo/pattern-gen-core';
+import { patternRegistry, patternsByName } from '@takazudo/pattern-gen-generators';
 import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
-import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { OgpSelectionOverlay, getOutputDimensions } from './components/ogp-selection-overlay.js';
 import type { AspectConfig } from './components/ogp-selection-overlay.js';
 import { OgpEditor } from './components/ogp-editor.js';
-import { serializeOgpConfig, OGP_WIDTH, OGP_HEIGHT } from 'pattern-gen/core/ogp-config';
-import type { OgpConfig } from 'pattern-gen/core/ogp-config';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;

@@ -129,6 +129,12 @@ importers:
 
   packages/pattern-gen-viewer:
     dependencies:
+      '@takazudo/pattern-gen-core':
+        specifier: workspace:*
+        version: link:../core
+      '@takazudo/pattern-gen-generators':
+        specifier: workspace:*
+        version: link:../generators
       react:
         specifier: ^19.0.0
         version: 19.2.4

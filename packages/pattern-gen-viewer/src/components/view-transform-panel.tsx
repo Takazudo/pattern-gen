@@ -1,4 +1,4 @@
-import { centerDetentToZoom } from 'pattern-gen/core/center-detent';
+import { centerDetentToZoom } from '@takazudo/pattern-gen-core';
 
 interface ViewTransformPanelProps {
   zoomSlider: number; // 0-100 slider value

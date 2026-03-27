@@ -11,10 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "noEmit": true,
-    "paths": {
-      "pattern-gen/*": ["../../src/*"]
-    }
+    "noEmit": true
   },
-  "include": ["src", "../../src"]
+  "include": ["src"]
 }
