@@ -16,7 +16,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build:deps": "pnpm --filter @takazudo/pattern-gen-core run build && pnpm --filter @takazudo/pattern-gen-generators run build",
+    "build:deps": "pnpm --filter @takazudo/pattern-gen-core run build && pnpm --filter @takazudo/pattern-gen-image-processor run build && pnpm --filter @takazudo/pattern-gen-generators run build",
     "build": "pnpm run build:deps && tsup",
     "test": "vitest run",
     "test:watch": "vitest --watch",
@@ -31,7 +31,7 @@
     "// ── Validation ──────────────────────────────────": "",
     "b4push": "./scripts/run-b4push.sh",
     "// ── Typecheck ───────────────────────────────────": "",
-    "typecheck": "pnpm --filter @takazudo/pattern-gen-core run typecheck && pnpm --filter @takazudo/pattern-gen-generators run typecheck && tsc --noEmit"
+    "typecheck": "pnpm --filter @takazudo/pattern-gen-core run typecheck && pnpm --filter @takazudo/pattern-gen-image-processor run typecheck && pnpm --filter @takazudo/pattern-gen-generators run typecheck && tsc --noEmit"
   },
   "keywords": ["pattern", "generative", "geometric", "texture", "canvas", "cli", "deterministic"],
   "author": "Takazudo",

@@ -18,6 +18,9 @@ import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { OgpSelectionOverlay, getOutputDimensions } from './components/ogp-selection-overlay.js';
 import type { AspectConfig } from './components/ogp-selection-overlay.js';
 import { OgpEditor } from './components/ogp-editor.js';
+import { ImageOverlayPanel } from './components/image-overlay-panel.js';
+import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
+import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -194,8 +197,15 @@ export function App() {
   // Params locked to their current value across seed changes
   const [fixedParams, setFixedParams] = useState<Set<string>>(new Set());
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
+  // Image overlay state
+  const [importedImage, setImportedImage] = useState<ProcessedImage | null>(null);
+  const [bgThreshold, setBgThreshold] = useState(0);
+  const [overlayOpacity, setOverlayOpacity] = useState(100);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
+  const thresholdedRef = useRef<ImageData | null>(null);
 
   // Get current pattern's paramDefs
   const currentParamDefs = useMemo(() => {
@@ -268,10 +278,50 @@ export function App() {
     generateAndCache();
   }, [generateAndCache]);
 
-  // Re-apply HSL when either pattern or HSL changes
+  // Cache thresholded image data — only recompute when threshold or image changes,
+  // not on every opacity slider move
+  useEffect(() => {
+    if (!importedImage) {
+      thresholdedRef.current = null;
+      return;
+    }
+    thresholdedRef.current = applyThreshold(importedImage, { threshold: bgThreshold });
+  }, [importedImage, bgThreshold]);
+
+  // Unified rendering pipeline: pattern → HSL → optional image overlay.
+  // Consolidates into a single effect to avoid canvas race conditions between
+  // multiple effects writing to the same canvas.
   useEffect(() => {
     applyHsl();
-  }, [applyHsl, generateAndCache]);
+
+    // Composite image overlay on top if present
+    const thresholded = thresholdedRef.current;
+    if (!importedImage || !thresholded) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return;
+    tempCtx.putImageData(thresholded, 0, 0);
+
+    // Scale to fit (contain) within the main canvas
+    const scale = Math.min(
+      canvas.width / thresholded.width,
+      canvas.height / thresholded.height,
+    );
+    const drawW = thresholded.width * scale;
+    const drawH = thresholded.height * scale;
+    const drawX = (canvas.width - drawW) / 2;
+    const drawY = (canvas.height - drawH) / 2;
+
+    ctx.save();
+    ctx.globalAlpha = overlayOpacity / 100;
+    ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
+    ctx.restore();
+  }, [applyHsl, generateAndCache, importedImage, bgThreshold, overlayOpacity]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
@@ -309,6 +359,32 @@ export function App() {
     }
   }, []);
 
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const handleImageImport = useCallback(async (file: File) => {
+    setIsProcessing(true);
+    setProcessingProgress(0);
+    setImportError(null);
+    try {
+      const processed = await removeBackground(file, {
+        onProgress: (p: number) => setProcessingProgress(Math.round(p * 100)),
+      });
+      setImportedImage(processed);
+      setBgThreshold(0);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Background removal failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
+
+  const handleImageClear = useCallback(() => {
+    setImportedImage(null);
+    setBgThreshold(0);
+    setOverlayOpacity(100);
+    setImportError(null);
+  }, []);
+
   // Randomize only changes slug (seed) — keeps current pattern type
   const randomize = useCallback(() => {
     setSlug(randomSlug());
@@ -323,6 +399,28 @@ export function App() {
     const url = canvas.toDataURL('image/png');
     triggerDownload(url, `pattern-${patternType}-${slug}.png`);
   }, [patternType, slug]);
+
+  // Composite the imported image overlay onto a canvas (used by OGP export paths)
+  const compositeOverlay = useCallback((ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) => {
+    const thresholded = thresholdedRef.current;
+    if (!importedImage || !thresholded) return;
+
+    const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return;
+    tempCtx.putImageData(thresholded, 0, 0);
+
+    const scale = Math.min(canvasW / thresholded.width, canvasH / thresholded.height);
+    const drawW = thresholded.width * scale;
+    const drawH = thresholded.height * scale;
+    const drawX = (canvasW - drawW) / 2;
+    const drawY = (canvasH - drawH) / 2;
+
+    ctx.save();
+    ctx.globalAlpha = overlayOpacity / 100;
+    ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
+    ctx.restore();
+  }, [importedImage, overlayOpacity]);
 
   const handleOgpGenerate = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
@@ -358,6 +456,9 @@ export function App() {
         applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
       }
 
+      // Composite image overlay if present
+      compositeOverlay(hiResCtx, renderSize, renderSize);
+
       // Crop and scale to OGP dimensions
       const cx = Math.round(cropX * renderSize);
       const cy = Math.round(cropY * renderSize);
@@ -374,7 +475,7 @@ export function App() {
       const url = ogpCanvas.toDataURL('image/png');
       triggerDownload(url, `ogp-${patternType}-${slug}.png`);
     },
-    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust],
+    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, compositeOverlay],
   );
 
   const exitOgpMode = useCallback(() => setOgpMode(false), []);
@@ -463,6 +564,9 @@ export function App() {
         applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
       }
 
+      // Composite image overlay if present
+      compositeOverlay(hiResCtx, renderSize, renderSize);
+
       const cx = Math.round(cropX * renderSize);
       const cy = Math.round(cropY * renderSize);
       const cw = Math.min(Math.round(cropW * renderSize), renderSize - cx);
@@ -481,7 +585,7 @@ export function App() {
       setEditorOutputSize(outSize);
       setOgpEditMode(true);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams, compositeOverlay],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
@@ -578,6 +682,19 @@ export function App() {
         <button className="btn btn-ogp-mode" onClick={() => setOgpMode(true)}>
           OGP Mode
         </button>
+
+        <ImageOverlayPanel
+          hasImage={!!importedImage}
+          isProcessing={isProcessing}
+          processingProgress={processingProgress}
+          bgThreshold={bgThreshold}
+          overlayOpacity={overlayOpacity}
+          error={importError}
+          onImport={handleImageImport}
+          onClear={handleImageClear}
+          onThresholdChange={setBgThreshold}
+          onOpacityChange={setOverlayOpacity}
+        />
 
         <button
           className="btn-toggle-details"
