@@ -400,6 +400,28 @@ export function App() {
     triggerDownload(url, `pattern-${patternType}-${slug}.png`);
   }, [patternType, slug]);
 
+  // Composite the imported image overlay onto a canvas (used by OGP export paths)
+  const compositeOverlay = useCallback((ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) => {
+    const thresholded = thresholdedRef.current;
+    if (!importedImage || !thresholded) return;
+
+    const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return;
+    tempCtx.putImageData(thresholded, 0, 0);
+
+    const scale = Math.min(canvasW / thresholded.width, canvasH / thresholded.height);
+    const drawW = thresholded.width * scale;
+    const drawH = thresholded.height * scale;
+    const drawX = (canvasW - drawW) / 2;
+    const drawY = (canvasH - drawH) / 2;
+
+    ctx.save();
+    ctx.globalAlpha = overlayOpacity / 100;
+    ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
+    ctx.restore();
+  }, [importedImage, overlayOpacity]);
+
   const handleOgpGenerate = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
       const canvas = canvasRef.current;
@@ -434,6 +456,9 @@ export function App() {
         applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
       }
 
+      // Composite image overlay if present
+      compositeOverlay(hiResCtx, renderSize, renderSize);
+
       // Crop and scale to OGP dimensions
       const cx = Math.round(cropX * renderSize);
       const cy = Math.round(cropY * renderSize);
@@ -450,7 +475,7 @@ export function App() {
       const url = ogpCanvas.toDataURL('image/png');
       triggerDownload(url, `ogp-${patternType}-${slug}.png`);
     },
-    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust],
+    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, compositeOverlay],
   );
 
   const exitOgpMode = useCallback(() => setOgpMode(false), []);
@@ -539,6 +564,9 @@ export function App() {
         applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
       }
 
+      // Composite image overlay if present
+      compositeOverlay(hiResCtx, renderSize, renderSize);
+
       const cx = Math.round(cropX * renderSize);
       const cy = Math.round(cropY * renderSize);
       const cw = Math.min(Math.round(cropW * renderSize), renderSize - cx);
@@ -557,7 +585,7 @@ export function App() {
       setEditorOutputSize(outSize);
       setOgpEditMode(true);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams, compositeOverlay],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
