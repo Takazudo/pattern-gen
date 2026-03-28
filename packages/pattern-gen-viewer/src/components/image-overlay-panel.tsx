@@ -6,6 +6,7 @@ interface ImageOverlayPanelProps {
   processingProgress: number;
   bgThreshold: number;
   overlayOpacity: number;
+  error: string | null;
   onImport: (file: File) => void;
   onClear: () => void;
   onThresholdChange: (value: number) => void;
@@ -18,6 +19,7 @@ export function ImageOverlayPanel({
   processingProgress,
   bgThreshold,
   overlayOpacity,
+  error,
   onImport,
   onClear,
   onThresholdChange,
@@ -82,7 +84,7 @@ export function ImageOverlayPanel({
                   max={255}
                   step={1}
                   value={bgThreshold}
-                  onChange={(e) => onThresholdChange(parseInt(e.target.value))}
+                  onChange={(e) => onThresholdChange(parseInt(e.target.value, 10))}
                   aria-label="Background removal threshold"
                 />
                 <span className="range-value">{bgThreshold}</span>
@@ -104,7 +106,7 @@ export function ImageOverlayPanel({
                   max={100}
                   step={1}
                   value={overlayOpacity}
-                  onChange={(e) => onOpacityChange(parseInt(e.target.value))}
+                  onChange={(e) => onOpacityChange(parseInt(e.target.value, 10))}
                   aria-label="Overlay opacity"
                 />
                 <span className="range-value">{overlayOpacity}</span>
@@ -113,23 +115,28 @@ export function ImageOverlayPanel({
           </div>
         </>
       ) : (
-        <div
-          className={`image-import-area${isDragging ? ' dragging' : ''}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            hidden
-          />
-          <span>Import Image</span>
-          <span className="image-import-hint">or drag &amp; drop</span>
-        </div>
+        <>
+          <div
+            className={`image-import-area${isDragging ? ' dragging' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              hidden
+            />
+            <span>Import Image</span>
+            <span className="image-import-hint">or drag &amp; drop</span>
+          </div>
+          {error && (
+            <div className="image-overlay-error">{error}</div>
+          )}
+        </>
       )}
     </div>
   );

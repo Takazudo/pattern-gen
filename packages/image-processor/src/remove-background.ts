@@ -6,10 +6,11 @@ export async function removeBackground(
   options?: RemoveBackgroundOptions,
 ): Promise<ProcessedImage> {
   // Run ML background removal
+  const onProgress = options?.onProgress;
   const resultBlob = await imglyRemoveBackground(imageSource, {
-    progress: options?.onProgress
-      ? (key: string, current: number, total: number) => {
-          options.onProgress!(total > 0 ? current / total : 0);
+    progress: onProgress
+      ? (_key: string, current: number, total: number) => {
+          onProgress(total > 0 ? current / total : 0);
         }
       : undefined,
   });

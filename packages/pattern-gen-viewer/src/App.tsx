@@ -277,32 +277,34 @@ export function App() {
     generateAndCache();
   }, [generateAndCache]);
 
-  // Re-apply HSL when either pattern or HSL changes
+  // Cache thresholded image data — only recompute when threshold or image changes,
+  // not on every opacity slider move
+  const thresholdedRef = useRef<ImageData | null>(null);
+  useEffect(() => {
+    if (!importedImage) {
+      thresholdedRef.current = null;
+      return;
+    }
+    thresholdedRef.current = applyThreshold(importedImage, { threshold: bgThreshold });
+  }, [importedImage, bgThreshold]);
+
+  // Unified rendering pipeline: pattern → HSL → optional image overlay.
+  // Consolidates into a single effect to avoid canvas race conditions between
+  // multiple effects writing to the same canvas.
   useEffect(() => {
     applyHsl();
-  }, [applyHsl, generateAndCache]);
 
-  // Overlay processed image on canvas after HSL is applied
-  useEffect(() => {
-    if (!importedImage) return;
+    // Composite image overlay on top if present
+    const thresholded = thresholdedRef.current;
+    if (!importedImage || !thresholded) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // First, re-apply the pattern + HSL
-    const cached = cachedImageDataRef.current;
-    if (cached) {
-      ctx.putImageData(cached, 0, 0);
-      if (hslAdjust.h !== 0 || hslAdjust.s !== 0 || hslAdjust.l !== 0) {
-        applyHslAdjust(ctx, canvas.width, canvas.height, hslAdjust);
-      }
-    }
-
-    // Then overlay the processed image
-    const thresholded = applyThreshold(importedImage, { threshold: bgThreshold });
     const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
-    const tempCtx = tempCanvas.getContext('2d')!;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return;
     tempCtx.putImageData(thresholded, 0, 0);
 
     // Scale to fit (contain) within the main canvas
@@ -319,7 +321,7 @@ export function App() {
     ctx.globalAlpha = overlayOpacity / 100;
     ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
     ctx.restore();
-  }, [importedImage, bgThreshold, overlayOpacity, generateAndCache, hslAdjust]);
+  }, [applyHsl, generateAndCache, importedImage, bgThreshold, overlayOpacity]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
@@ -357,15 +359,20 @@ export function App() {
     }
   }, []);
 
+  const [importError, setImportError] = useState<string | null>(null);
+
   const handleImageImport = useCallback(async (file: File) => {
     setIsProcessing(true);
     setProcessingProgress(0);
+    setImportError(null);
     try {
       const processed = await removeBackground(file, {
         onProgress: (p: number) => setProcessingProgress(Math.round(p * 100)),
       });
       setImportedImage(processed);
       setBgThreshold(0);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Background removal failed');
     } finally {
       setIsProcessing(false);
     }
@@ -375,6 +382,7 @@ export function App() {
     setImportedImage(null);
     setBgThreshold(0);
     setOverlayOpacity(100);
+    setImportError(null);
   }, []);
 
   // Randomize only changes slug (seed) — keeps current pattern type
@@ -653,6 +661,7 @@ export function App() {
           processingProgress={processingProgress}
           bgThreshold={bgThreshold}
           overlayOpacity={overlayOpacity}
+          error={importError}
           onImport={handleImageImport}
           onClear={handleImageClear}
           onThresholdChange={setBgThreshold}
