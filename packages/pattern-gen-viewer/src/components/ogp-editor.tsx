@@ -10,6 +10,8 @@ import type {
   LayerTransform,
 } from '@takazudo/pattern-gen-core';
 import { framesByName } from '@takazudo/pattern-gen-generators';
+import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
+import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont, isFontLoaded } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
@@ -325,6 +327,8 @@ export function OgpEditor({
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const loadedImagesRef = useRef(new Map<string, HTMLImageElement>());
+  const processedImagesRef = useRef(new Map<string, ProcessedImage>());
+  const [processingLayers, setProcessingLayers] = useState<Set<string>>(new Set());
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -371,6 +375,7 @@ export function OgpEditor({
       bg: ImageBitmap | null,
       layerList: (EditorLayer & { id: string })[],
       images: Map<string, HTMLImageElement>,
+      processed: Map<string, ProcessedImage>,
       frame: FrameConfig | null,
       loadingFontSet?: Set<string>,
     ) => {
@@ -383,9 +388,21 @@ export function OgpEditor({
         ctx.globalAlpha = isLoading ? layer.opacity * LOADING_FONT_DIM_FACTOR : layer.opacity;
 
         if (layer.type === 'image' && images.has(layer.id)) {
-          const img = images.get(layer.id)!;
           const t = layer.transform;
-          ctx.drawImage(img, t.x, t.y, t.width, t.height);
+          const proc = processed.get(layer.id);
+          if (proc && layer.bgRemoval?.enabled) {
+            // Draw with background removed
+            const thresholded = applyThreshold(proc, { threshold: layer.bgRemoval.threshold });
+            const tmpCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+            const tmpCtx = tmpCanvas.getContext('2d');
+            if (tmpCtx) {
+              tmpCtx.putImageData(thresholded, 0, 0);
+              ctx.drawImage(tmpCanvas, t.x, t.y, t.width, t.height);
+            }
+          } else {
+            const img = images.get(layer.id)!;
+            ctx.drawImage(img, t.x, t.y, t.width, t.height);
+          }
         }
 
         if (layer.type === 'text') {
@@ -422,7 +439,7 @@ export function OgpEditor({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, frameConfig, loadingFonts);
+    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, processedImagesRef.current, frameConfig, loadingFonts);
 
     // Draw selection handles for all selected layers
     for (const id of selectedIds) {
@@ -470,7 +487,7 @@ export function OgpEditor({
     exportCanvas.width = outputWidth;
     exportCanvas.height = outputHeight;
     const ctx = exportCanvas.getContext('2d')!;
-    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, frameConfig);
+    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, processedImagesRef.current, frameConfig);
     return exportCanvas;
   }, [layers, backgroundImage, drawLayers, frameConfig, outputWidth, outputHeight]);
 
@@ -798,8 +815,9 @@ export function OgpEditor({
         trackFontLoad(updates.fontFamily);
       }
 
-      // If image src changed, reload the HTMLImageElement
+      // If image src changed, reload the HTMLImageElement and clear processed cache
       if ('src' in updates && typeof updates.src === 'string') {
+        processedImagesRef.current.delete(id);
         const img = new Image();
         img.onload = () => {
           loadedImagesRef.current.set(id, img);
@@ -818,10 +836,83 @@ export function OgpEditor({
     [trackFontLoad],
   );
 
+  // Toggle bg removal on an image layer — runs ML processing
+  const handleBgRemovalToggle = useCallback(
+    async (id: string, enabled: boolean) => {
+      if (!enabled) {
+        // Just disable — keep cached data for quick re-enable
+        setLayers((prev) =>
+          prev.map((l) =>
+            l.id === id && l.type === 'image'
+              ? { ...l, bgRemoval: { enabled: false, threshold: l.bgRemoval?.threshold ?? 0 } }
+              : l,
+          ),
+        );
+        return;
+      }
+
+      // Enable bg removal
+      const layer = layers.find((l) => l.id === id);
+      if (!layer || layer.type !== 'image') return;
+
+      // If already processed, just enable
+      if (processedImagesRef.current.has(id)) {
+        setLayers((prev) =>
+          prev.map((l) =>
+            l.id === id && l.type === 'image'
+              ? { ...l, bgRemoval: { enabled: true, threshold: l.bgRemoval?.threshold ?? 0 } }
+              : l,
+          ),
+        );
+        return;
+      }
+
+      // Run ML background removal
+      setProcessingLayers((prev) => new Set(prev).add(id));
+      try {
+        // Convert data URI to Blob for the removeBackground API
+        const res = await fetch(layer.src);
+        const blob = await res.blob();
+        const processed = await removeBackground(blob);
+        processedImagesRef.current.set(id, processed);
+        setLayers((prev) =>
+          prev.map((l) =>
+            l.id === id && l.type === 'image'
+              ? { ...l, bgRemoval: { enabled: true, threshold: l.bgRemoval?.threshold ?? 0 } }
+              : l,
+          ),
+        );
+      } catch (err) {
+        console.error('Background removal failed:', err);
+      } finally {
+        setProcessingLayers((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [layers],
+  );
+
+  const handleBgThresholdChange = useCallback(
+    (id: string, threshold: number) => {
+      setLayers((prev) =>
+        prev.map((l) =>
+          l.id === id && l.type === 'image' && l.bgRemoval
+            ? { ...l, bgRemoval: { ...l.bgRemoval, threshold } }
+            : l,
+        ),
+      );
+    },
+    [],
+  );
+
   const handleLayerDelete = useCallback(
     (id: string) => {
       setLayers((prev) => prev.filter((l) => l.id !== id));
       loadedImagesRef.current.delete(id);
+      processedImagesRef.current.delete(id);
       setSelectedIds((prev) => prev.filter((sid) => sid !== id));
     },
     [],
@@ -1042,6 +1133,9 @@ export function OgpEditor({
           onGridConfigChange={setGridConfig}
           frameConfig={frameConfig}
           onFrameConfigChange={setFrameConfig}
+          processingLayers={processingLayers}
+          onBgRemovalToggle={handleBgRemovalToggle}
+          onBgThresholdChange={handleBgThresholdChange}
         />
       </div>
     </div>

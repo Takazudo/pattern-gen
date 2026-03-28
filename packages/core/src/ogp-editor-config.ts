@@ -14,6 +14,10 @@ export interface ImageLayerData {
   src: string; // URL or data URI
   transform: LayerTransform;
   opacity: number; // 0-1
+  bgRemoval?: {
+    enabled: boolean;
+    threshold: number; // 0-255
+  };
 }
 
 export interface TextLayerData {
