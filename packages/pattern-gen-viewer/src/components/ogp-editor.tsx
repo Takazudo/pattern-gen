@@ -626,6 +626,23 @@ export function OgpEditor({
               }
             }
 
+            // Shift+drag: lock to start aspect ratio
+            if (e.shiftKey) {
+              const startAspect = st.width / st.height;
+              newT.height = newT.width / startAspect;
+              if (newT.height < MIN_LAYER_SIZE) {
+                newT.height = MIN_LAYER_SIZE;
+                newT.width = newT.height * startAspect;
+              }
+              // Re-anchor for handles that move the origin
+              if (drag.handle === 'nw' || drag.handle === 'ne') {
+                newT.y = st.y + st.height - newT.height;
+              }
+              if (drag.handle === 'nw' || drag.handle === 'sw') {
+                newT.x = st.x + st.width - newT.width;
+              }
+            }
+
             // Center-anchored resize when Alt is held
             if (altKey) {
               const centerX = st.x + st.width / 2;

@@ -227,7 +227,7 @@ export function ImageOverlayTransform({
         return;
       }
 
-      const aspect = keepAspectRef.current ? imageAspectRef.current : null;
+      const aspect = (keepAspectRef.current || e.shiftKey) ? imageAspectRef.current : null;
       const centerAnchored = e.altKey;
       onChange(resizeFromHandle(drag.handle, sr, dx, dy, aspect, centerAnchored));
     };
