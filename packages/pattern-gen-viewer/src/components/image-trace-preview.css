@@ -73,6 +73,11 @@
   display: block;
 }
 
+.image-trace-svg-container.is-retracing {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
 /* ── Loading state ── */
 
 .image-trace-loading {

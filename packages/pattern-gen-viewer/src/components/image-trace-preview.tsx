@@ -29,45 +29,51 @@ const PARAM_DEFS: ParamDef[] = [
   { key: 'curveErrorMargin', label: 'Curve Error Margin', min: 0, max: 10, step: 0.1 },
 ];
 
+function formatValue(value: number, step: number): string {
+  if (step >= 1) return String(value);
+  const decimals = String(step).split('.')[1]?.length ?? 0;
+  return value.toFixed(decimals);
+}
+
 export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePreviewProps) {
   const [options, setOptions] = useState<ImageTraceOptions>({ ...DEFAULT_TRACE_OPTIONS });
   const [svgString, setSvgString] = useState<string>('');
   const [isTracing, setIsTracing] = useState(true);
   const imageDataRef = useRef<ImageData | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(0 as unknown as ReturnType<typeof setTimeout>);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
+  const traceIdRef = useRef(0);
 
-  // Get image data once on mount
+  // Get image data once on mount and run initial trace
   useEffect(() => {
+    mountedRef.current = true;
     const canvas = getSourceCanvas();
     const ctx = canvas.getContext('2d')!;
     imageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    runTrace(options);
     return () => {
       mountedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getSourceCanvas]);
 
-  // Run trace
+  // Run trace with generation counter to discard stale results
   const runTrace = useCallback(async (opts: ImageTraceOptions) => {
     if (!imageDataRef.current) return;
+    const thisId = ++traceIdRef.current;
     setIsTracing(true);
     try {
       const svg = await traceImageData(imageDataRef.current, opts);
-      if (mountedRef.current) {
+      if (mountedRef.current && thisId === traceIdRef.current) {
         setSvgString(svg);
       }
+    } catch (err) {
+      console.error('Image trace failed:', err);
     } finally {
-      if (mountedRef.current) {
+      if (mountedRef.current && thisId === traceIdRef.current) {
         setIsTracing(false);
       }
     }
-  }, []);
-
-  // Initial trace on mount
-  useEffect(() => {
-    runTrace(options);
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debounced re-trace when options change (skip initial)
@@ -77,11 +83,13 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
       initialRef.current = false;
       return;
     }
-    clearTimeout(debounceRef.current);
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       runTrace(options);
     }, 300);
-    return () => clearTimeout(debounceRef.current);
+    return () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    };
   }, [options, runTrace]);
 
   const handleOptionChange = useCallback((key: keyof ImageTraceOptions, value: number) => {
@@ -128,7 +136,7 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
             <div className="image-trace-loading">Tracing...</div>
           ) : (
             <div
-              className="image-trace-svg-container"
+              className={`image-trace-svg-container${isTracing ? ' is-retracing' : ''}`}
               dangerouslySetInnerHTML={{ __html: svgString }}
             />
           )}
@@ -141,11 +149,12 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
                 <div className="image-trace-param-header">
                   <span className="image-trace-param-label">{param.label}</span>
                   <span className="image-trace-param-value">
-                    {options[param.key]}
+                    {formatValue(options[param.key], param.step)}
                   </span>
                 </div>
                 <input
                   type="range"
+                  aria-label={param.label}
                   min={param.min}
                   max={param.max}
                   step={param.step}
