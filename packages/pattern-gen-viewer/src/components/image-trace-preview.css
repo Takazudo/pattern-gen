@@ -1,0 +1,162 @@
+/* ── Image Trace Preview — full-screen overlay ── */
+
+.image-trace-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  flex-direction: column;
+  background: oklch(10% 0 0);
+  user-select: none;
+}
+
+/* ── Toolbar ── */
+
+.image-trace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: oklch(0% 0 0 / 80%);
+  border-bottom: 1px solid oklch(100% 0 0 / 10%);
+  flex-shrink: 0;
+}
+
+.image-trace-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: oklch(90% 0 0);
+}
+
+.image-trace-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Workspace ── */
+
+.image-trace-workspace {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── SVG Preview area ── */
+
+.image-trace-preview-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+  background:
+    repeating-conic-gradient(
+      oklch(18% 0 0) 0% 25%,
+      oklch(14% 0 0) 0% 50%
+    )
+    50% / 20px 20px;
+}
+
+.image-trace-svg-container {
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 24px oklch(0% 0 0 / 40%);
+}
+
+.image-trace-svg-container svg {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
+/* ── Loading state ── */
+
+.image-trace-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: oklch(60% 0 0);
+  font-size: 14px;
+  animation: image-trace-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes image-trace-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Panel (right side) ── */
+
+.image-trace-panel {
+  width: 320px;
+  background: oklch(0% 0 0 / 75%);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid oklch(100% 0 0 / 10%);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Parameter row ── */
+
+.image-trace-param {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.image-trace-param-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.image-trace-param-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: oklch(65% 0 0);
+}
+
+.image-trace-param-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: oklch(80% 0 0);
+}
+
+.image-trace-param input[type='range'] {
+  width: 100%;
+  accent-color: oklch(60% 0 0);
+}
+
+/* ── Reset button ── */
+
+.image-trace-reset-btn {
+  margin-top: 4px;
+  font-size: 11px;
+  padding: 6px 8px;
+  text-align: center;
+  background: oklch(100% 0 0 / 6%);
+  border: 1px solid oklch(100% 0 0 / 10%);
+  border-radius: 4px;
+  color: oklch(80% 0 0);
+  cursor: pointer;
+}
+
+.image-trace-reset-btn:hover {
+  background: oklch(100% 0 0 / 14%);
+  color: oklch(95% 0 0);
+}

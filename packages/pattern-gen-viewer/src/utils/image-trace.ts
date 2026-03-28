@@ -1,4 +1,4 @@
-import { ImageTracerBrowser } from "@image-tracer-ts/browser";
+import { ImageTracerBrowser } from '@image-tracer-ts/browser';
 
 export interface ImageTraceOptions {
   /** How many colors to quantize to (2-64) */
@@ -32,8 +32,7 @@ export async function traceImageData(
   options?: Partial<ImageTraceOptions>,
 ): Promise<string> {
   const merged = { ...DEFAULT_TRACE_OPTIONS, ...options };
-
-  const result = await ImageTracerBrowser.fromImageData(imageData, {
+  const svgString = await ImageTracerBrowser.fromImageData(imageData, {
     numberOfColors: merged.numberOfColors,
     minShapeOutline: merged.minPathSegments,
     blurRadius: merged.blurRadius,
@@ -42,6 +41,5 @@ export async function traceImageData(
     lineErrorMargin: merged.lineErrorMargin,
     curveErrorMargin: merged.curveErrorMargin,
   });
-
-  return result as string;
+  return svgString;
 }
