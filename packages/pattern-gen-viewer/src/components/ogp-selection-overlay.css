@@ -63,6 +63,20 @@
   box-shadow: 0 0 6px oklch(100% 0 0 / 50%);
 }
 
+/* ── Center indicator for Alt+resize ── */
+
+.ogp-center-indicator {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid oklch(0% 0 0 / 50%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 101;
+}
+
 /* ── Floating Clip Toolbar ── */
 
 .ogp-clip-toolbar {

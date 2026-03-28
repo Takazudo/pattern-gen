@@ -233,6 +233,21 @@ function resizeFromHandle(
   }
 }
 
+function applyCenterAnchor(sr: OgpRect, resized: OgpRect, aspect: number): OgpRect {
+  const centerX = sr.x + sr.width / 2;
+  const centerY = sr.y + sr.height / 2;
+  const dw = resized.width - sr.width;
+  let newWidth = sr.width + dw * 2;
+  if (newWidth < MIN_WIDTH) newWidth = MIN_WIDTH;
+  const newHeight = newWidth / aspect;
+  return {
+    x: centerX - newWidth / 2,
+    y: centerY - newHeight / 2,
+    width: newWidth,
+    height: newHeight,
+  };
+}
+
 function reclampToAspect(rect: OgpRect, aspect: number): OgpRect {
   const centerX = rect.x + rect.width / 2;
   const centerY = rect.y + rect.height / 2;
@@ -277,6 +292,7 @@ export function OgpSelectionOverlay({
 
   const [rect, setRect] = useState<OgpRect>(() => getInitialRect(OGP_ASPECT));
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [isAltResize, setIsAltResize] = useState(false);
   const rectRef = useRef(rect);
   rectRef.current = rect;
 
@@ -358,18 +374,19 @@ export function OgpSelectionOverlay({
       }
 
       if (drag.type === 'resize') {
-        setRect(
-          clampRect(
-            resizeFromHandle(drag.handle, sr, dx, dy, aspectRef.current),
-            aspectRef.current,
-          ),
-        );
+        let resized = resizeFromHandle(drag.handle, sr, dx, dy, aspectRef.current);
+        if (e.altKey) {
+          resized = applyCenterAnchor(sr, resized, aspectRef.current);
+        }
+        setIsAltResize(e.altKey);
+        setRect(clampRect(resized, aspectRef.current));
       }
     };
 
     const handleMouseUp = () => {
       dragRef.current = null;
       toolbarDragRef.current = null;
+      setIsAltResize(false);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -496,6 +513,17 @@ export function OgpSelectionOverlay({
           />
         );
       })}
+
+      {/* Center indicator when Alt+resize is active */}
+      {isAltResize && (
+        <div
+          className="ogp-center-indicator"
+          style={{
+            left: x + width / 2,
+            top: y + height / 2,
+          }}
+        />
+      )}
 
       {/* Floating toolbar */}
       <div

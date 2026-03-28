@@ -10,6 +10,8 @@ import type {
   LayerTransform,
 } from '@takazudo/pattern-gen-core';
 import { framesByName } from '@takazudo/pattern-gen-generators';
+import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
+import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
 import { loadGoogleFont, isFontLoaded } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
@@ -321,9 +323,12 @@ export function OgpEditor({
     startTransform: LayerTransform;
     handle?: ResizeHandle;
   } | null>(null);
+  const [isAltResize, setIsAltResize] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const loadedImagesRef = useRef(new Map<string, HTMLImageElement>());
+  const processedImagesRef = useRef(new Map<string, ProcessedImage>());
+  const [processingLayers, setProcessingLayers] = useState<Set<string>>(new Set());
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -370,6 +375,7 @@ export function OgpEditor({
       bg: ImageBitmap | null,
       layerList: (EditorLayer & { id: string })[],
       images: Map<string, HTMLImageElement>,
+      processed: Map<string, ProcessedImage>,
       frame: FrameConfig | null,
       loadingFontSet?: Set<string>,
     ) => {
@@ -382,9 +388,21 @@ export function OgpEditor({
         ctx.globalAlpha = isLoading ? layer.opacity * LOADING_FONT_DIM_FACTOR : layer.opacity;
 
         if (layer.type === 'image' && images.has(layer.id)) {
-          const img = images.get(layer.id)!;
           const t = layer.transform;
-          ctx.drawImage(img, t.x, t.y, t.width, t.height);
+          const proc = processed.get(layer.id);
+          if (proc && layer.bgRemoval?.enabled) {
+            // Draw with background removed
+            const thresholded = applyThreshold(proc, { threshold: layer.bgRemoval.threshold });
+            const tmpCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+            const tmpCtx = tmpCanvas.getContext('2d');
+            if (tmpCtx) {
+              tmpCtx.putImageData(thresholded, 0, 0);
+              ctx.drawImage(tmpCanvas, t.x, t.y, t.width, t.height);
+            }
+          } else {
+            const img = images.get(layer.id)!;
+            ctx.drawImage(img, t.x, t.y, t.width, t.height);
+          }
         }
 
         if (layer.type === 'text') {
@@ -421,12 +439,32 @@ export function OgpEditor({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, frameConfig, loadingFonts);
+    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, processedImagesRef.current, frameConfig, loadingFonts);
 
     // Draw selection handles for all selected layers
     for (const id of selectedIds) {
       const layer = layers.find((l) => l.id === id);
       if (layer) drawSelectionHandles(ctx, layer.transform);
+    }
+
+    // Draw center indicator when Alt+resize is active
+    const currentDrag = dragStateRef.current;
+    if (isAltResize && currentDrag?.type === 'resize') {
+      const layer = layers.find((l) => l.id === currentDrag.id);
+      if (layer) {
+        const t = layer.transform;
+        const cx = t.x + t.width / 2;
+        const cy = t.y + t.height / 2;
+        ctx.save();
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     // Draw grid overlay on top
@@ -436,7 +474,7 @@ export function OgpEditor({
     ) {
       drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor, outputWidth, outputHeight);
     }
-  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig]);
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig, isAltResize]);
 
   // Re-render when state changes
   useEffect(() => {
@@ -449,7 +487,7 @@ export function OgpEditor({
     exportCanvas.width = outputWidth;
     exportCanvas.height = outputHeight;
     const ctx = exportCanvas.getContext('2d')!;
-    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, frameConfig);
+    drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, processedImagesRef.current, frameConfig);
     return exportCanvas;
   }, [layers, backgroundImage, drawLayers, frameConfig, outputWidth, outputHeight]);
 
@@ -569,6 +607,8 @@ export function OgpEditor({
         );
       } else if (drag.type === 'resize' && drag.handle) {
         const grid = gridConfigRef.current;
+        const altKey = e.altKey;
+        setIsAltResize(altKey);
         setLayers((prev) =>
           prev.map((l) => {
             if (l.id !== drag.id) return l;
@@ -603,8 +643,37 @@ export function OgpEditor({
               }
             }
 
-            // Snap resize edges to grid
-            if (grid.snap) {
+            // Shift+drag: lock to start aspect ratio
+            if (e.shiftKey) {
+              const startAspect = st.width / st.height;
+              newT.height = newT.width / startAspect;
+              if (newT.height < MIN_LAYER_SIZE) {
+                newT.height = MIN_LAYER_SIZE;
+                newT.width = newT.height * startAspect;
+              }
+              // Re-anchor for handles that move the origin
+              if (drag.handle === 'nw' || drag.handle === 'ne') {
+                newT.y = st.y + st.height - newT.height;
+              }
+              if (drag.handle === 'nw' || drag.handle === 'sw') {
+                newT.x = st.x + st.width - newT.width;
+              }
+            }
+
+            // Center-anchored resize when Alt is held
+            if (altKey) {
+              const centerX = st.x + st.width / 2;
+              const centerY = st.y + st.height / 2;
+              const dw = newT.width - st.width;
+              const dh = newT.height - st.height;
+              newT.width = Math.max(MIN_LAYER_SIZE, st.width + dw * 2);
+              newT.height = Math.max(MIN_LAYER_SIZE, st.height + dh * 2);
+              newT.x = centerX - newT.width / 2;
+              newT.y = centerY - newT.height / 2;
+            }
+
+            // Snap resize edges to grid (skip when center-anchored to preserve symmetry)
+            if (grid.snap && !altKey) {
               const handle = drag.handle!;
 
               if (handle === 'se' || handle === 'ne') {
@@ -637,6 +706,7 @@ export function OgpEditor({
 
     const handleMouseUp = () => {
       setDragState(null);
+      setIsAltResize(false);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -745,8 +815,9 @@ export function OgpEditor({
         trackFontLoad(updates.fontFamily);
       }
 
-      // If image src changed, reload the HTMLImageElement
+      // If image src changed, reload the HTMLImageElement and clear processed cache
       if ('src' in updates && typeof updates.src === 'string') {
+        processedImagesRef.current.delete(id);
         const img = new Image();
         img.onload = () => {
           loadedImagesRef.current.set(id, img);
@@ -765,10 +836,83 @@ export function OgpEditor({
     [trackFontLoad],
   );
 
+  // Toggle bg removal on an image layer — runs ML processing
+  const handleBgRemovalToggle = useCallback(
+    async (id: string, enabled: boolean) => {
+      if (!enabled) {
+        // Just disable — keep cached data for quick re-enable
+        setLayers((prev) =>
+          prev.map((l) =>
+            l.id === id && l.type === 'image'
+              ? { ...l, bgRemoval: { enabled: false, threshold: l.bgRemoval?.threshold ?? 0 } }
+              : l,
+          ),
+        );
+        return;
+      }
+
+      // Enable bg removal
+      const layer = layers.find((l) => l.id === id);
+      if (!layer || layer.type !== 'image') return;
+
+      // If already processed, just enable
+      if (processedImagesRef.current.has(id)) {
+        setLayers((prev) =>
+          prev.map((l) =>
+            l.id === id && l.type === 'image'
+              ? { ...l, bgRemoval: { enabled: true, threshold: l.bgRemoval?.threshold ?? 0 } }
+              : l,
+          ),
+        );
+        return;
+      }
+
+      // Run ML background removal
+      setProcessingLayers((prev) => new Set(prev).add(id));
+      try {
+        // Convert data URI to Blob for the removeBackground API
+        const res = await fetch(layer.src);
+        const blob = await res.blob();
+        const processed = await removeBackground(blob);
+        processedImagesRef.current.set(id, processed);
+        setLayers((prev) =>
+          prev.map((l) =>
+            l.id === id && l.type === 'image'
+              ? { ...l, bgRemoval: { enabled: true, threshold: l.bgRemoval?.threshold ?? 0 } }
+              : l,
+          ),
+        );
+      } catch (err) {
+        console.error('Background removal failed:', err);
+      } finally {
+        setProcessingLayers((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [layers],
+  );
+
+  const handleBgThresholdChange = useCallback(
+    (id: string, threshold: number) => {
+      setLayers((prev) =>
+        prev.map((l) =>
+          l.id === id && l.type === 'image' && l.bgRemoval
+            ? { ...l, bgRemoval: { ...l.bgRemoval, threshold } }
+            : l,
+        ),
+      );
+    },
+    [],
+  );
+
   const handleLayerDelete = useCallback(
     (id: string) => {
       setLayers((prev) => prev.filter((l) => l.id !== id));
       loadedImagesRef.current.delete(id);
+      processedImagesRef.current.delete(id);
       setSelectedIds((prev) => prev.filter((sid) => sid !== id));
     },
     [],
@@ -989,6 +1133,9 @@ export function OgpEditor({
           onGridConfigChange={setGridConfig}
           frameConfig={frameConfig}
           onFrameConfigChange={setFrameConfig}
+          processingLayers={processingLayers}
+          onBgRemovalToggle={handleBgRemovalToggle}
+          onBgThresholdChange={handleBgThresholdChange}
         />
       </div>
     </div>

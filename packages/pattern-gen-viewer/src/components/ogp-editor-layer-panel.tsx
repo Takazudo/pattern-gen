@@ -22,6 +22,9 @@ interface LayerPanelProps {
   onGridConfigChange: (config: GridConfig) => void;
   frameConfig: FrameConfig | null;
   onFrameConfigChange: (config: FrameConfig | null) => void;
+  processingLayers: Set<string>;
+  onBgRemovalToggle: (id: string, enabled: boolean) => void;
+  onBgThresholdChange: (id: string, threshold: number) => void;
 }
 
 /* ── Component ── */
@@ -41,6 +44,9 @@ export function OgpEditorLayerPanel({
   onGridConfigChange,
   frameConfig,
   onFrameConfigChange,
+  processingLayers,
+  onBgRemovalToggle,
+  onBgThresholdChange,
 }: LayerPanelProps) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
@@ -336,7 +342,10 @@ export function OgpEditorLayerPanel({
           {selected.type === 'image' && (
             <ImageProps
               layer={selected}
+              isProcessing={processingLayers.has(selected.id)}
               onUpdate={(updates) => onUpdate(selected.id, updates)}
+              onBgRemovalToggle={(enabled) => onBgRemovalToggle(selected.id, enabled)}
+              onBgThresholdChange={(threshold) => onBgThresholdChange(selected.id, threshold)}
             />
           )}
 
@@ -442,10 +451,16 @@ export function OgpEditorLayerPanel({
 
 function ImageProps({
   layer,
+  isProcessing,
   onUpdate,
+  onBgRemovalToggle,
+  onBgThresholdChange,
 }: {
   layer: ImageLayerData & { id: string };
+  isProcessing: boolean;
   onUpdate: (updates: Partial<ImageLayerData>) => void;
+  onBgRemovalToggle: (enabled: boolean) => void;
+  onBgThresholdChange: (threshold: number) => void;
 }) {
   const truncatedSrc =
     layer.src.length > 40
@@ -468,6 +483,9 @@ function ImageProps({
     input.click();
   }, [onUpdate]);
 
+  const bgEnabled = layer.bgRemoval?.enabled ?? false;
+  const bgThreshold = layer.bgRemoval?.threshold ?? 0;
+
   return (
     <div className="ogp-props-section">
       <label className="ogp-prop-label">Source</label>
@@ -477,6 +495,43 @@ function ImageProps({
           Replace
         </button>
       </div>
+
+      <label className="ogp-prop-label" style={{ marginTop: 8 }}>BG Removal</label>
+      {isProcessing ? (
+        <div style={{ fontSize: 11, color: 'var(--color-fg-muted)', padding: '4px 0' }}>
+          Processing...
+        </div>
+      ) : (
+        <>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={bgEnabled}
+              onChange={(e) => onBgRemovalToggle(e.target.checked)}
+              style={{ accentColor: 'var(--color-accent)' }}
+            />
+            Remove background
+          </label>
+          {bgEnabled && (
+            <div style={{ marginTop: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="range"
+                  min={0}
+                  max={255}
+                  step={1}
+                  value={bgThreshold}
+                  onChange={(e) => onBgThresholdChange(parseInt(e.target.value, 10))}
+                  style={{ flex: 1, accentColor: 'var(--color-accent)' }}
+                />
+                <span style={{ fontSize: 11, minWidth: 24, textAlign: 'right', color: 'var(--color-fg-muted)' }}>
+                  {bgThreshold}
+                </span>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

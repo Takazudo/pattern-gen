@@ -19,6 +19,8 @@ import { OgpSelectionOverlay, getOutputDimensions } from './components/ogp-selec
 import type { AspectConfig } from './components/ogp-selection-overlay.js';
 import { OgpEditor } from './components/ogp-editor.js';
 import { ImageOverlayPanel } from './components/image-overlay-panel.js';
+import { ImageOverlayTransform } from './components/image-overlay-transform.js';
+import type { ImageTransform } from './components/image-overlay-transform.js';
 import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 
@@ -34,11 +36,8 @@ function triggerDownload(dataUrl: string, filename: string) {
   document.body.removeChild(a);
 }
 
-/** Map a viewport rect to canvas buffer coordinates, accounting for object-fit: cover. */
-function viewportRectToBufferRect(
-  viewportRect: { x: number; y: number; width: number; height: number },
-  canvas: HTMLCanvasElement,
-): { srcX: number; srcY: number; srcW: number; srcH: number } {
+/** Get the scale/offset info for mapping viewport → canvas buffer (object-fit: cover). */
+function getCanvasScaleInfo(canvas: HTMLCanvasElement) {
   const canvasRect = canvas.getBoundingClientRect();
   const bufW = canvas.width;
   const bufH = canvas.height;
@@ -59,12 +58,34 @@ function viewportRectToBufferRect(
   }
 
   const scale = bufW / renderSize;
+  return { canvasRect, bufW, bufH, offsetX, offsetY, scale };
+}
+
+/** Map a viewport rect to canvas buffer coordinates, accounting for object-fit: cover. */
+function viewportRectToBufferRect(
+  viewportRect: { x: number; y: number; width: number; height: number },
+  canvas: HTMLCanvasElement,
+): { srcX: number; srcY: number; srcW: number; srcH: number } {
+  const { canvasRect, bufW, bufH, offsetX, offsetY, scale } = getCanvasScaleInfo(canvas);
   const srcX = Math.max(0, (viewportRect.x - canvasRect.left - offsetX) * scale);
   const srcY = Math.max(0, (viewportRect.y - canvasRect.top - offsetY) * scale);
   const srcW = Math.min(viewportRect.width * scale, bufW - srcX);
   const srcH = Math.min(viewportRect.height * scale, bufH - srcY);
-
   return { srcX, srcY, srcW, srcH };
+}
+
+/** Convert viewport CSS coordinates to canvas buffer coordinates (unclamped). */
+function viewportToBufferCoords(
+  vpRect: { x: number; y: number; width: number; height: number },
+  canvas: HTMLCanvasElement,
+): { x: number; y: number; width: number; height: number } {
+  const { canvasRect, offsetX, offsetY, scale } = getCanvasScaleInfo(canvas);
+  return {
+    x: (vpRect.x - canvasRect.left - offsetX) * scale,
+    y: (vpRect.y - canvasRect.top - offsetY) * scale,
+    width: vpRect.width * scale,
+    height: vpRect.height * scale,
+  };
 }
 
 function buildOgpConfig(
@@ -203,8 +224,11 @@ export function App() {
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [imageTransform, setImageTransform] = useState<ImageTransform | null>(null);
+  const [keepAspectRatio, setKeepAspectRatio] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
+  const hslAdjustedRef = useRef<ImageData | null>(null);
   const thresholdedRef = useRef<ImageData | null>(null);
 
   // Get current pattern's paramDefs
@@ -258,8 +282,8 @@ export function App() {
     }
   }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate]);
 
-  // Apply HSL adjustment from cached ImageData (fast — no re-generation)
-  const applyHsl = useCallback(() => {
+  // Apply HSL adjustment from cached ImageData and cache the result
+  const applyHslAndCache = useCallback(() => {
     const canvas = canvasRef.current;
     const cached = cachedImageDataRef.current;
     if (!canvas || !cached) return;
@@ -271,7 +295,18 @@ export function App() {
       s: hslAdjust.s,
       l: hslAdjust.l,
     });
+    hslAdjustedRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
   }, [hslAdjust]);
+
+  // Restore HSL-adjusted canvas from cache (fast putImageData, no per-pixel HSL)
+  const restoreHslAdjusted = useCallback(() => {
+    const canvas = canvasRef.current;
+    const data = hslAdjustedRef.current;
+    if (!canvas || !data) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.putImageData(data, 0, 0);
+  }, []);
 
   // Re-generate pattern when pattern params change
   useEffect(() => {
@@ -288,15 +323,45 @@ export function App() {
     thresholdedRef.current = applyThreshold(importedImage, { threshold: bgThreshold });
   }, [importedImage, bgThreshold]);
 
-  // Unified rendering pipeline: pattern → HSL → optional image overlay.
-  // Consolidates into a single effect to avoid canvas race conditions between
-  // multiple effects writing to the same canvas.
+  // Auto-fit image transform on import
   useEffect(() => {
-    applyHsl();
+    if (!importedImage) return;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const imgAspect = importedImage.width / importedImage.height;
+    const maxW = vw * 0.8;
+    const maxH = vh * 0.8;
+    let w: number;
+    let h: number;
+    if (maxW / maxH > imgAspect) {
+      h = maxH;
+      w = h * imgAspect;
+    } else {
+      w = maxW;
+      h = w / imgAspect;
+    }
+    setImageTransform({
+      x: (vw - w) / 2,
+      y: (vh - h) / 2,
+      width: w,
+      height: h,
+    });
+  }, [importedImage]);
+
+  // Cache HSL-adjusted pattern when pattern or HSL params change
+  useEffect(() => {
+    applyHslAndCache();
+  }, [applyHslAndCache, generateAndCache]);
+
+  // Composite rendering: restore HSL-adjusted pattern + optional image overlay.
+  // This runs on overlay-only changes (transform, opacity, threshold) without
+  // re-running the expensive HSL per-pixel loop.
+  useEffect(() => {
+    restoreHslAdjusted();
 
     // Composite image overlay on top if present
     const thresholded = thresholdedRef.current;
-    if (!importedImage || !thresholded) return;
+    if (!importedImage || !thresholded || !imageTransform) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -307,21 +372,14 @@ export function App() {
     if (!tempCtx) return;
     tempCtx.putImageData(thresholded, 0, 0);
 
-    // Scale to fit (contain) within the main canvas
-    const scale = Math.min(
-      canvas.width / thresholded.width,
-      canvas.height / thresholded.height,
-    );
-    const drawW = thresholded.width * scale;
-    const drawH = thresholded.height * scale;
-    const drawX = (canvas.width - drawW) / 2;
-    const drawY = (canvas.height - drawH) / 2;
+    // Convert viewport transform to canvas buffer coordinates
+    const buf = viewportToBufferCoords(imageTransform, canvas);
 
     ctx.save();
     ctx.globalAlpha = overlayOpacity / 100;
-    ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
+    ctx.drawImage(tempCanvas, buf.x, buf.y, buf.width, buf.height);
     ctx.restore();
-  }, [applyHsl, generateAndCache, importedImage, bgThreshold, overlayOpacity]);
+  }, [restoreHslAdjusted, applyHslAndCache, importedImage, bgThreshold, overlayOpacity, imageTransform]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
@@ -365,6 +423,8 @@ export function App() {
     setIsProcessing(true);
     setProcessingProgress(0);
     setImportError(null);
+    setImageTransform(null);
+    setKeepAspectRatio(true);
     try {
       const processed = await removeBackground(file, {
         onProgress: (p: number) => setProcessingProgress(Math.round(p * 100)),
@@ -380,10 +440,27 @@ export function App() {
 
   const handleImageClear = useCallback(() => {
     setImportedImage(null);
+    setImageTransform(null);
+    setKeepAspectRatio(true);
     setBgThreshold(0);
     setOverlayOpacity(100);
     setImportError(null);
   }, []);
+
+  const handleKeepAspectRatioChange = useCallback((keep: boolean) => {
+    setKeepAspectRatio(keep);
+    if (keep && importedImage) {
+      const aspect = importedImage.width / importedImage.height;
+      setImageTransform((prev) => {
+        if (!prev) return prev;
+        const cx = prev.x + prev.width / 2;
+        const cy = prev.y + prev.height / 2;
+        const w = prev.width;
+        const h = w / aspect;
+        return { x: cx - w / 2, y: cy - h / 2, width: w, height: h };
+      });
+    }
+  }, [importedImage]);
 
   // Randomize only changes slug (seed) — keeps current pattern type
   const randomize = useCallback(() => {
@@ -410,17 +487,34 @@ export function App() {
     if (!tempCtx) return;
     tempCtx.putImageData(thresholded, 0, 0);
 
-    const scale = Math.min(canvasW / thresholded.width, canvasH / thresholded.height);
-    const drawW = thresholded.width * scale;
-    const drawH = thresholded.height * scale;
-    const drawX = (canvasW - drawW) / 2;
-    const drawY = (canvasH - drawH) / 2;
+    let drawX: number;
+    let drawY: number;
+    let drawW: number;
+    let drawH: number;
+
+    if (imageTransform && canvasRef.current) {
+      // Map viewport transform → main buffer → target canvas
+      const mainCanvas = canvasRef.current;
+      const buf = viewportToBufferCoords(imageTransform, mainCanvas);
+      const scaleFactor = canvasW / mainCanvas.width;
+      drawX = buf.x * scaleFactor;
+      drawY = buf.y * scaleFactor;
+      drawW = buf.width * scaleFactor;
+      drawH = buf.height * scaleFactor;
+    } else {
+      // Fallback: contain-fit
+      const scale = Math.min(canvasW / thresholded.width, canvasH / thresholded.height);
+      drawW = thresholded.width * scale;
+      drawH = thresholded.height * scale;
+      drawX = (canvasW - drawW) / 2;
+      drawY = (canvasH - drawH) / 2;
+    }
 
     ctx.save();
     ctx.globalAlpha = overlayOpacity / 100;
     ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
     ctx.restore();
-  }, [importedImage, overlayOpacity]);
+  }, [importedImage, overlayOpacity, imageTransform]);
 
   const handleOgpGenerate = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
@@ -625,6 +719,16 @@ export function App() {
         </>
       )}
 
+      {!ogpMode && importedImage && imageTransform && (
+        <ImageOverlayTransform
+          transform={imageTransform}
+          onChange={setImageTransform}
+          keepAspectRatio={keepAspectRatio}
+          onKeepAspectRatioChange={handleKeepAspectRatioChange}
+          imageAspect={importedImage.width / importedImage.height}
+        />
+      )}
+
       {ogpMode && !ogpEditMode && (
         <OgpSelectionOverlay
           onGenerate={handleOgpGenerate}
@@ -689,11 +793,13 @@ export function App() {
           processingProgress={processingProgress}
           bgThreshold={bgThreshold}
           overlayOpacity={overlayOpacity}
+          keepAspectRatio={keepAspectRatio}
           error={importError}
           onImport={handleImageImport}
           onClear={handleImageClear}
           onThresholdChange={setBgThreshold}
           onOpacityChange={setOverlayOpacity}
+          onKeepAspectRatioChange={handleKeepAspectRatioChange}
         />
 
         <button
