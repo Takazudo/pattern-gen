@@ -18,6 +18,9 @@ import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { OgpSelectionOverlay, getOutputDimensions } from './components/ogp-selection-overlay.js';
 import type { AspectConfig } from './components/ogp-selection-overlay.js';
 import { OgpEditor } from './components/ogp-editor.js';
+import { ImageOverlayPanel } from './components/image-overlay-panel.js';
+import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
+import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -194,6 +197,12 @@ export function App() {
   // Params locked to their current value across seed changes
   const [fixedParams, setFixedParams] = useState<Set<string>>(new Set());
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
+  // Image overlay state
+  const [importedImage, setImportedImage] = useState<ProcessedImage | null>(null);
+  const [bgThreshold, setBgThreshold] = useState(0);
+  const [overlayOpacity, setOverlayOpacity] = useState(100);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
 
@@ -273,6 +282,45 @@ export function App() {
     applyHsl();
   }, [applyHsl, generateAndCache]);
 
+  // Overlay processed image on canvas after HSL is applied
+  useEffect(() => {
+    if (!importedImage) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // First, re-apply the pattern + HSL
+    const cached = cachedImageDataRef.current;
+    if (cached) {
+      ctx.putImageData(cached, 0, 0);
+      if (hslAdjust.h !== 0 || hslAdjust.s !== 0 || hslAdjust.l !== 0) {
+        applyHslAdjust(ctx, canvas.width, canvas.height, hslAdjust);
+      }
+    }
+
+    // Then overlay the processed image
+    const thresholded = applyThreshold(importedImage, { threshold: bgThreshold });
+    const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.putImageData(thresholded, 0, 0);
+
+    // Scale to fit (contain) within the main canvas
+    const scale = Math.min(
+      canvas.width / thresholded.width,
+      canvas.height / thresholded.height,
+    );
+    const drawW = thresholded.width * scale;
+    const drawH = thresholded.height * scale;
+    const drawX = (canvas.width - drawW) / 2;
+    const drawY = (canvas.height - drawH) / 2;
+
+    ctx.save();
+    ctx.globalAlpha = overlayOpacity / 100;
+    ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
+    ctx.restore();
+  }, [importedImage, bgThreshold, overlayOpacity, generateAndCache, hslAdjust]);
+
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
   }, []);
@@ -307,6 +355,26 @@ export function App() {
       setTranslateX(0);
       setTranslateY(0);
     }
+  }, []);
+
+  const handleImageImport = useCallback(async (file: File) => {
+    setIsProcessing(true);
+    setProcessingProgress(0);
+    try {
+      const processed = await removeBackground(file, {
+        onProgress: (p: number) => setProcessingProgress(Math.round(p * 100)),
+      });
+      setImportedImage(processed);
+      setBgThreshold(0);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
+
+  const handleImageClear = useCallback(() => {
+    setImportedImage(null);
+    setBgThreshold(0);
+    setOverlayOpacity(100);
   }, []);
 
   // Randomize only changes slug (seed) — keeps current pattern type
@@ -578,6 +646,18 @@ export function App() {
         <button className="btn btn-ogp-mode" onClick={() => setOgpMode(true)}>
           OGP Mode
         </button>
+
+        <ImageOverlayPanel
+          hasImage={!!importedImage}
+          isProcessing={isProcessing}
+          processingProgress={processingProgress}
+          bgThreshold={bgThreshold}
+          overlayOpacity={overlayOpacity}
+          onImport={handleImageImport}
+          onClear={handleImageClear}
+          onThresholdChange={setBgThreshold}
+          onOpacityChange={setOverlayOpacity}
+        />
 
         <button
           className="btn-toggle-details"

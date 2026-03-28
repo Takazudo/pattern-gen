@@ -12,6 +12,7 @@
   "dependencies": {
     "@takazudo/pattern-gen-core": "workspace:*",
     "@takazudo/pattern-gen-generators": "workspace:*",
+    "@takazudo/pattern-gen-image-processor": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
