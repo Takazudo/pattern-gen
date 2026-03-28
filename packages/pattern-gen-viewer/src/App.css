@@ -544,3 +544,96 @@ select:focus {
 .ogp-btn-edit:hover {
   background: oklch(100% 0 0 / 15%);
 }
+
+/* ── Image Overlay Section ── */
+
+.image-overlay-section {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-md);
+}
+
+.image-overlay-section .section-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-fg-faint);
+  margin-bottom: var(--spacing-sp-sm);
+}
+
+.image-import-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sp-2xs);
+  padding: var(--spacing-sp-lg) var(--spacing-sp-md);
+  border: 1px dashed var(--color-border-hover);
+  border-radius: var(--radius-md);
+  background: var(--color-control-bg);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.image-import-area:hover {
+  border-color: var(--color-border-focus);
+  background: var(--color-control-bg-hover);
+}
+
+.image-import-area.dragging {
+  border-color: var(--color-border-focus);
+  background: var(--color-control-bg-hover);
+}
+
+.image-import-hint {
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-faint);
+}
+
+.processing-indicator {
+  text-align: center;
+  padding: var(--spacing-sp-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+}
+
+.image-overlay-clear-btn {
+  width: 100%;
+  margin-bottom: var(--spacing-sp-sm);
+}
+
+.image-overlay-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sp-sm);
+}
+
+.image-overlay-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sp-2xs);
+}
+
+.image-overlay-label {
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-subtle);
+}
+
+.image-overlay-reset-btn {
+  padding: var(--spacing-sp-2xs) var(--spacing-sp-md);
+  border: 1px solid var(--color-border-hover);
+  border-radius: var(--radius-md);
+  background: var(--color-control-bg);
+  color: var(--color-fg);
+  font-size: var(--font-size-2xs);
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.image-overlay-reset-btn:hover {
+  background: var(--color-control-bg-hover);
+}
