@@ -321,6 +321,7 @@ export function OgpEditor({
     startTransform: LayerTransform;
     handle?: ResizeHandle;
   } | null>(null);
+  const [isAltResize, setIsAltResize] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const loadedImagesRef = useRef(new Map<string, HTMLImageElement>());
@@ -429,6 +430,26 @@ export function OgpEditor({
       if (layer) drawSelectionHandles(ctx, layer.transform);
     }
 
+    // Draw center indicator when Alt+resize is active
+    const currentDrag = dragStateRef.current;
+    if (isAltResize && currentDrag?.type === 'resize') {
+      const layer = layers.find((l) => l.id === currentDrag.id);
+      if (layer) {
+        const t = layer.transform;
+        const cx = t.x + t.width / 2;
+        const cy = t.y + t.height / 2;
+        ctx.save();
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
     // Draw grid overlay on top
     if (
       gridConfig.visible &&
@@ -436,7 +457,7 @@ export function OgpEditor({
     ) {
       drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor, outputWidth, outputHeight);
     }
-  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig]);
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig, isAltResize]);
 
   // Re-render when state changes
   useEffect(() => {
@@ -569,6 +590,8 @@ export function OgpEditor({
         );
       } else if (drag.type === 'resize' && drag.handle) {
         const grid = gridConfigRef.current;
+        const altKey = e.altKey;
+        setIsAltResize(altKey);
         setLayers((prev) =>
           prev.map((l) => {
             if (l.id !== drag.id) return l;
@@ -603,8 +626,20 @@ export function OgpEditor({
               }
             }
 
-            // Snap resize edges to grid
-            if (grid.snap) {
+            // Center-anchored resize when Alt is held
+            if (altKey) {
+              const centerX = st.x + st.width / 2;
+              const centerY = st.y + st.height / 2;
+              const dw = newT.width - st.width;
+              const dh = newT.height - st.height;
+              newT.width = Math.max(MIN_LAYER_SIZE, st.width + dw * 2);
+              newT.height = Math.max(MIN_LAYER_SIZE, st.height + dh * 2);
+              newT.x = centerX - newT.width / 2;
+              newT.y = centerY - newT.height / 2;
+            }
+
+            // Snap resize edges to grid (skip when center-anchored to preserve symmetry)
+            if (grid.snap && !altKey) {
               const handle = drag.handle!;
 
               if (handle === 'se' || handle === 'ne') {
@@ -637,6 +672,7 @@ export function OgpEditor({
 
     const handleMouseUp = () => {
       setDragState(null);
+      setIsAltResize(false);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
