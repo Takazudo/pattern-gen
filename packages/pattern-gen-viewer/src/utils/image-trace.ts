@@ -31,17 +31,10 @@ export async function traceImageData(
   imageData: ImageData,
   options?: Partial<ImageTraceOptions>,
 ): Promise<string> {
-  const merged = { ...DEFAULT_TRACE_OPTIONS, ...options };
+  const { minPathSegments, ...rest } = { ...DEFAULT_TRACE_OPTIONS, ...options };
 
-  const result = await ImageTracerBrowser.fromImageData(imageData, {
-    numberOfColors: merged.numberOfColors,
-    minShapeOutline: merged.minPathSegments,
-    blurRadius: merged.blurRadius,
-    blurDelta: merged.blurDelta,
-    strokeWidth: merged.strokeWidth,
-    lineErrorMargin: merged.lineErrorMargin,
-    curveErrorMargin: merged.curveErrorMargin,
+  return ImageTracerBrowser.fromImageData(imageData, {
+    ...rest,
+    minShapeOutline: minPathSegments,
   });
-
-  return result as string;
 }
