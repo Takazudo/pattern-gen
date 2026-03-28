@@ -148,6 +148,9 @@ importers:
       '@takazudo/pattern-gen-generators':
         specifier: workspace:*
         version: link:../generators
+      '@takazudo/pattern-gen-image-processor':
+        specifier: workspace:*
+        version: link:../image-processor
       react:
         specifier: ^19.0.0
         version: 19.2.4
