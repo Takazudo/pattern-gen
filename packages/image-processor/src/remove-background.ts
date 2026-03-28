@@ -10,7 +10,7 @@ export async function removeBackground(
   const resultBlob = await imglyRemoveBackground(imageSource, {
     progress: onProgress
       ? (_key: string, current: number, total: number) => {
-          onProgress(total > 0 ? current / total : 0);
+          onProgress(total > 0 ? Math.min(1, current / total) : 0);
         }
       : undefined,
   });
@@ -18,26 +18,35 @@ export async function removeBackground(
   // Convert result blob to ImageData to extract alpha mask
   const bitmap = await createImageBitmap(resultBlob);
   const { width, height } = bitmap;
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(bitmap, 0, 0);
-  const resultImageData = ctx.getImageData(0, 0, width, height);
 
-  // Extract alpha channel as the soft mask
-  const alphaMask = new Uint8ClampedArray(width * height);
-  for (let i = 0; i < alphaMask.length; i++) {
-    alphaMask[i] = resultImageData.data[i * 4 + 3]; // Alpha channel
+  let alphaMask: Uint8ClampedArray;
+  let originalImageData: ImageData;
+
+  try {
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(bitmap, 0, 0);
+    const resultImageData = ctx.getImageData(0, 0, width, height);
+
+    // Extract alpha channel as the soft mask
+    alphaMask = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < alphaMask.length; i++) {
+      alphaMask[i] = resultImageData.data[i * 4 + 3]; // Alpha channel
+    }
+
+    // Also load original image data at the same dimensions as the ML output
+    const origCanvas = new OffscreenCanvas(width, height);
+    const origCtx = origCanvas.getContext("2d")!;
+    const origBitmap = await createImageBitmap(imageSource);
+    try {
+      origCtx.drawImage(origBitmap, 0, 0, width, height);
+      originalImageData = origCtx.getImageData(0, 0, width, height);
+    } finally {
+      origBitmap.close();
+    }
+  } finally {
+    bitmap.close();
   }
-
-  // Also load original image data
-  const origCanvas = new OffscreenCanvas(width, height);
-  const origCtx = origCanvas.getContext("2d")!;
-  const origBitmap = await createImageBitmap(imageSource);
-  origCtx.drawImage(origBitmap, 0, 0, width, height);
-  const originalImageData = origCtx.getImageData(0, 0, width, height);
-
-  bitmap.close();
-  origBitmap.close();
 
   return {
     original: originalImageData,
