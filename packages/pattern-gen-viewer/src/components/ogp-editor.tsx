@@ -13,6 +13,7 @@ import { framesByName } from '@takazudo/pattern-gen-generators';
 import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
+import { ImageTracePreview } from './image-trace-preview.js';
 import { loadGoogleFont, isFontLoaded } from './ogp-editor-font-picker.js';
 import './ogp-editor.css';
 
@@ -305,6 +306,7 @@ export function OgpEditor({
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [showImageTrace, setShowImageTrace] = useState(false);
   const [gridConfig, setGridConfig] = useState<GridConfig>({
     vDivide: 2,
     hDivide: 2,
@@ -1104,6 +1106,12 @@ export function OgpEditor({
           >
             {copyFeedback ? 'Copied!' : 'Copy JSON'}
           </button>
+          <button
+            className="btn ogp-editor-btn"
+            onClick={() => setShowImageTrace(true)}
+          >
+            Image Trace
+          </button>
           <button className="btn ogp-editor-btn-exit" onClick={onExit}>
             Exit Editor
           </button>
@@ -1138,6 +1146,12 @@ export function OgpEditor({
           onBgThresholdChange={handleBgThresholdChange}
         />
       </div>
+      {showImageTrace && (
+        <ImageTracePreview
+          getSourceCanvas={renderExportCanvas}
+          onClose={() => setShowImageTrace(false)}
+        />
+      )}
     </div>
   );
 }
