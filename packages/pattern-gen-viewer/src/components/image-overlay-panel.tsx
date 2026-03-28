@@ -6,11 +6,13 @@ interface ImageOverlayPanelProps {
   processingProgress: number;
   bgThreshold: number;
   overlayOpacity: number;
+  keepAspectRatio: boolean;
   error: string | null;
   onImport: (file: File) => void;
   onClear: () => void;
   onThresholdChange: (value: number) => void;
   onOpacityChange: (value: number) => void;
+  onKeepAspectRatioChange: (keep: boolean) => void;
 }
 
 export function ImageOverlayPanel({
@@ -19,11 +21,13 @@ export function ImageOverlayPanel({
   processingProgress,
   bgThreshold,
   overlayOpacity,
+  keepAspectRatio,
   error,
   onImport,
   onClear,
   onThresholdChange,
   onOpacityChange,
+  onKeepAspectRatioChange,
 }: ImageOverlayPanelProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +77,24 @@ export function ImageOverlayPanel({
           <button className="btn image-overlay-clear-btn" onClick={onClear}>
             Clear
           </button>
+
+          <div className="image-overlay-aspect-row">
+            <span className="image-overlay-label">Aspect Ratio</span>
+            <div className="image-overlay-aspect-btns">
+              <button
+                className={`btn image-overlay-aspect-btn${keepAspectRatio ? ' active' : ''}`}
+                onClick={() => onKeepAspectRatioChange(true)}
+              >
+                Original
+              </button>
+              <button
+                className={`btn image-overlay-aspect-btn${!keepAspectRatio ? ' active' : ''}`}
+                onClick={() => onKeepAspectRatioChange(false)}
+              >
+                Free
+              </button>
+            </div>
+          </div>
 
           <div className="image-overlay-controls">
             <div className="image-overlay-slider-row">
