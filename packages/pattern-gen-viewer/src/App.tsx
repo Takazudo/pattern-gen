@@ -205,6 +205,7 @@ export function App() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
+  const thresholdedRef = useRef<ImageData | null>(null);
 
   // Get current pattern's paramDefs
   const currentParamDefs = useMemo(() => {
@@ -279,7 +280,6 @@ export function App() {
 
   // Cache thresholded image data — only recompute when threshold or image changes,
   // not on every opacity slider move
-  const thresholdedRef = useRef<ImageData | null>(null);
   useEffect(() => {
     if (!importedImage) {
       thresholdedRef.current = null;
