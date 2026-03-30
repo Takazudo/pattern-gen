@@ -23,7 +23,7 @@ import { ImageOverlayTransform } from './components/image-overlay-transform.js';
 import type { ImageTransform } from './components/image-overlay-transform.js';
 import { StepIndicator } from './components/step-indicator.js';
 import type { AppStep } from './components/step-indicator.js';
-import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
+import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { triggerDownload } from './utils/trigger-download.js';
 
@@ -420,7 +420,7 @@ export function App() {
     setImageTransform(null);
     setKeepAspectRatio(true);
     try {
-      const processed = await removeBackground(file, {
+      const processed = await removeBackgroundViaWorker(file, {
         onProgress: (p: number) => setProcessingProgress(Math.round(p * 100)),
       });
       setImportedImage(processed);
