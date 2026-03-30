@@ -236,4 +236,14 @@ describe('traceImageData SVG output', () => {
     expect(svg).not.toContain('viewBox');
     expect(svg).toContain('<path');
   });
+
+  it('traceImageData handles semi-transparent input via flattenAlpha', async () => {
+    // Semi-transparent black → flattenAlpha composites onto white → gray
+    const imageData = createTestImageData(10, 10, [0, 0, 0, 128]);
+    const svg = await traceImageData(imageData);
+    expect(svg).toContain('width="10"');
+    expect(svg).toContain('<path');
+    // The path fill should be gray-ish (not black, not white) from compositing
+    expect(svg).toMatch(/rgb\(\d+,\d+,\d+\)/);
+  });
 });

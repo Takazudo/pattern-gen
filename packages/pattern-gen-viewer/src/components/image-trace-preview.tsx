@@ -50,7 +50,12 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
   useEffect(() => {
     mountedRef.current = true;
     const canvas = getSourceCanvas();
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      setTraceError('Could not get canvas context');
+      setIsTracing(false);
+      return;
+    }
     imageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     runTrace(options);
     return () => {
@@ -142,8 +147,7 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
           ) : (
             <div
               className={`image-trace-svg-container${isTracing ? ' is-retracing' : ''}`}
-              role="img"
-              aria-label="Traced SVG preview"
+              aria-busy={isTracing}
               dangerouslySetInnerHTML={{ __html: svgString }}
             />
           )}
