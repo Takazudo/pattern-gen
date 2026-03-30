@@ -10,7 +10,7 @@ import type {
   LayerTransform,
 } from '@takazudo/pattern-gen-core';
 import { framesByName } from '@takazudo/pattern-gen-generators';
-import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
+import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { ComposerLayerPanel } from './composer-layer-panel.js';
 import { ImageTracePreview } from './image-trace-preview.js';
@@ -868,7 +868,7 @@ export function Composer({
         // Convert data URI to Blob for the removeBackground API
         const res = await fetch(layer.src);
         const blob = await res.blob();
-        const processed = await removeBackground(blob);
+        const processed = await removeBackgroundViaWorker(blob);
         processedImagesRef.current.set(id, processed);
         setLayers((prev) =>
           prev.map((l) =>
@@ -879,6 +879,7 @@ export function Composer({
         );
       } catch (err) {
         console.error('Background removal failed:', err);
+        alert(`Background removal failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       } finally {
         setProcessingLayers((prev) => {
           const next = new Set(prev);

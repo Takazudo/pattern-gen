@@ -23,7 +23,7 @@ import { ImageOverlayTransform } from './components/image-overlay-transform.js';
 import type { ImageTransform } from './components/image-overlay-transform.js';
 import { StepIndicator } from './components/step-indicator.js';
 import type { AppStep } from './components/step-indicator.js';
-import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
+import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { triggerDownload } from './utils/trigger-download.js';
 
@@ -420,7 +420,7 @@ export function App() {
     setImageTransform(null);
     setKeepAspectRatio(true);
     try {
-      const processed = await removeBackground(file, {
+      const processed = await removeBackgroundViaWorker(file, {
         onProgress: (p: number) => setProcessingProgress(Math.round(p * 100)),
       });
       setImportedImage(processed);
@@ -690,6 +690,11 @@ export function App() {
     <div className="app">
       <div className="canvas-layer">
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
+        {isProcessing && (
+          <div className="canvas-processing-overlay" aria-hidden="true">
+            <div className="processing-spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
+          </div>
+        )}
       </div>
 
       {showStepIndicator && (
