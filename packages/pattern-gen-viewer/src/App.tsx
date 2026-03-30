@@ -373,7 +373,7 @@ export function App() {
     ctx.globalAlpha = overlayOpacity / 100;
     ctx.drawImage(tempCanvas, buf.x, buf.y, buf.width, buf.height);
     ctx.restore();
-  }, [restoreHslAdjusted, applyHslAndCache, importedImage, bgThreshold, overlayOpacity, imageTransform]);
+  }, [restoreHslAdjusted, applyHslAndCache, generateAndCache, importedImage, bgThreshold, overlayOpacity, imageTransform]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
