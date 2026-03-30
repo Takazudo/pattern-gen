@@ -21,6 +21,8 @@ import { Composer } from './components/composer.js';
 import { ImageOverlayPanel } from './components/image-overlay-panel.js';
 import { ImageOverlayTransform } from './components/image-overlay-transform.js';
 import type { ImageTransform } from './components/image-overlay-transform.js';
+import { StepIndicator } from './components/step-indicator.js';
+import type { AppStep } from './components/step-indicator.js';
 import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 
@@ -208,8 +210,8 @@ export function App() {
   const [translateY, setTranslateY] = useState(0);
   const [useTranslate, setUseTranslate] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [ogpMode, setOgpMode] = useState(false);
-  const [composerMode, setComposerMode] = useState(false);
+  const [currentStep, setCurrentStep] = useState<AppStep>('background');
+  const [composerActive, setComposerActive] = useState(false);
   const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
   const [composerBgConfig, setComposerBgConfig] = useState<OgpConfig | null>(null);
   const [composerOutputSize, setComposerOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
@@ -572,8 +574,6 @@ export function App() {
     [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, compositeOverlay],
   );
 
-  const exitOgpMode = useCallback(() => setOgpMode(false), []);
-
   const getOgpJson = useCallback(
     (rect: { x: number; y: number; width: number; height: number }): string | null => {
       const canvas = canvasRef.current;
@@ -677,12 +677,19 @@ export function App() {
       setComposerBgImage(bitmap);
       setComposerBgConfig(config);
       setComposerOutputSize(outSize);
-      setComposerMode(true);
+      setComposerActive(true);
     },
     [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams, compositeOverlay],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
+
+  const handleStepChange = useCallback((step: AppStep) => {
+    setCurrentStep(step);
+    setComposerActive(false);
+  }, []);
+
+  const showStepIndicator = !composerActive;
 
   return (
     <div className="app">
@@ -690,7 +697,11 @@ export function App() {
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
       </div>
 
-      {!ogpMode && (
+      {showStepIndicator && (
+        <StepIndicator currentStep={currentStep} onStepChange={handleStepChange} />
+      )}
+
+      {currentStep === 'background' && (
         <>
           {/* Site logo link (top-right) */}
           <a
@@ -719,7 +730,7 @@ export function App() {
         </>
       )}
 
-      {!ogpMode && importedImage && imageTransform && (
+      {currentStep === 'background' && importedImage && imageTransform && (
         <ImageOverlayTransform
           transform={imageTransform}
           onChange={setImageTransform}
@@ -729,27 +740,27 @@ export function App() {
         />
       )}
 
-      {ogpMode && !composerMode && (
+      {currentStep === 'compose' && !composerActive && (
         <SelectionOverlay
           onGenerate={handleOgpGenerate}
-          onExit={exitOgpMode}
+          onExit={() => setCurrentStep('background')}
           onDownloadJson={handleOgpDownloadJson}
           onCopyJson={handleOgpCopyJson}
           onEdit={handleEnterComposer}
         />
       )}
 
-      {composerMode && (
+      {composerActive && (
         <Composer
           backgroundImage={composerBgImage}
           backgroundConfig={composerBgConfig}
           outputWidth={composerOutputSize.width}
           outputHeight={composerOutputSize.height}
-          onExit={() => setComposerMode(false)}
+          onExit={() => setComposerActive(false)}
         />
       )}
 
-      {!ogpMode && (
+      {currentStep === 'background' && (
         <div className="controls">
         <h1>zudo-pattern-gen</h1>
 
@@ -783,8 +794,8 @@ export function App() {
           </div>
         </div>
 
-        <button className="btn btn-compose-mode" onClick={() => setOgpMode(true)}>
-          OGP Mode
+        <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
+          Compose &rarr;
         </button>
 
         <ImageOverlayPanel
