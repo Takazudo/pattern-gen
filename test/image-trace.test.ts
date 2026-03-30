@@ -169,3 +169,61 @@ describe('DEFAULT_TRACE_OPTIONS', () => {
     });
   });
 });
+
+describe('traceImageData SVG output', () => {
+  // Use the core ImageTracer directly to test SVG structure
+  // (the browser wrapper just delegates to the core for fromImageData)
+  let ImageTracer: typeof import('@image-tracer-ts/browser').ImageTracer;
+
+  beforeAll(async () => {
+    // The browser bundle assigns to window.imageTracer at module scope
+    if (typeof globalThis.window === 'undefined') {
+      (globalThis as Record<string, unknown>).window = globalThis;
+    }
+    const mod = await import(
+      '../node_modules/.pnpm/@image-tracer-ts+browser@1.0.3/node_modules/@image-tracer-ts/browser/dist/image-tracer-browser.mjs'
+    );
+    ImageTracer = mod.ImageTracer;
+  });
+
+  it('produces SVG with explicit width and height when viewBox is false', () => {
+    const width = 20, height = 10;
+    const imageData = createTestImageData(width, height, [255, 0, 0, 255]);
+    const tracer = new ImageTracer({
+      numberOfColors: 4,
+      minShapeOutline: 0,
+      viewBox: false,
+    });
+    const svg = tracer.traceImageToSvg(imageData);
+    expect(svg).toContain(`width="${width}"`);
+    expect(svg).toContain(`height="${height}"`);
+    expect(svg).not.toContain('viewBox');
+  });
+
+  it('produces SVG with viewBox only when viewBox is true', () => {
+    const width = 20, height = 10;
+    const imageData = createTestImageData(width, height, [255, 0, 0, 255]);
+    const tracer = new ImageTracer({
+      numberOfColors: 4,
+      minShapeOutline: 0,
+      viewBox: true,
+    });
+    const svg = tracer.traceImageToSvg(imageData);
+    expect(svg).toContain(`viewBox="0 0 ${width} ${height}"`);
+    expect(svg).not.toContain('width="20"');
+    expect(svg).not.toContain('height="10"');
+  });
+
+  it('produces SVG with valid path elements', () => {
+    const imageData = createTestImageData(10, 10, [0, 128, 255, 255]);
+    const tracer = new ImageTracer({
+      numberOfColors: 4,
+      minShapeOutline: 0,
+      viewBox: false,
+    });
+    const svg = tracer.traceImageToSvg(imageData);
+    expect(svg).toContain('<path');
+    expect(svg).toContain('<svg');
+    expect(svg).toContain('</svg>');
+  });
+});
