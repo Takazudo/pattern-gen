@@ -65,7 +65,8 @@ export type WorkerResponse =
 
     try {
       const canvas = new OffscreenCanvas(width, height);
-      const ctx = canvas.getContext("2d")!;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Failed to get 2D context from OffscreenCanvas");
       ctx.drawImage(bitmap, 0, 0);
       const resultImageData = ctx.getImageData(0, 0, width, height);
 
@@ -77,7 +78,8 @@ export type WorkerResponse =
 
       // Load original image data at the same dimensions as the ML output
       const origCanvas = new OffscreenCanvas(width, height);
-      const origCtx = origCanvas.getContext("2d")!;
+      const origCtx = origCanvas.getContext("2d");
+      if (!origCtx) throw new Error("Failed to get 2D context from OffscreenCanvas");
       const origBitmap = await createImageBitmap(blob);
       let originalBuffer: ArrayBuffer;
       try {

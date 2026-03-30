@@ -6,10 +6,15 @@ let idCounter = 0;
 
 function getWorker(): Worker {
   if (!worker) {
-    worker = new Worker(
+    const w = new Worker(
       new URL("./bg-removal-worker.ts", import.meta.url),
       { type: "module" },
     );
+    // Reset singleton if worker crashes so next call creates a fresh one
+    w.addEventListener("error", () => {
+      worker = null;
+    });
+    worker = w;
   }
   return worker;
 }
@@ -22,6 +27,11 @@ export function removeBackgroundViaWorker(
     const id = String(++idCounter);
     const w = getWorker();
 
+    const cleanup = () => {
+      w.removeEventListener("message", onMessage);
+      w.removeEventListener("error", onError);
+    };
+
     const onMessage = (e: MessageEvent<WorkerResponse>) => {
       const msg = e.data;
       if (msg.id !== id) return;
@@ -31,8 +41,7 @@ export function removeBackgroundViaWorker(
           options?.onProgress?.(msg.progress);
           break;
         case "result": {
-          w.removeEventListener("message", onMessage);
-          w.removeEventListener("error", onError);
+          cleanup();
           const original = new ImageData(
             new Uint8ClampedArray(msg.originalBuffer),
             msg.width,
@@ -47,16 +56,14 @@ export function removeBackgroundViaWorker(
           break;
         }
         case "error":
-          w.removeEventListener("message", onMessage);
-          w.removeEventListener("error", onError);
+          cleanup();
           reject(new Error(msg.message));
           break;
       }
     };
 
     const onError = (e: ErrorEvent) => {
-      w.removeEventListener("message", onMessage);
-      w.removeEventListener("error", onError);
+      cleanup();
       reject(new Error(e.message || "Worker error"));
     };
 
@@ -70,6 +77,9 @@ export function removeBackgroundViaWorker(
         { type: "process", id, buffer, mimeType } satisfies WorkerRequest,
         [buffer],
       );
-    }).catch(reject);
+    }).catch((err) => {
+      cleanup();
+      reject(err);
+    });
   });
 }

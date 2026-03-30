@@ -75,6 +75,7 @@ export function ImageOverlayPanel({
           <div
             className="processing-progress-bar"
             role="progressbar"
+            aria-label="Background removal progress"
             aria-valuenow={processingProgress}
             aria-valuemin={0}
             aria-valuemax={100}
