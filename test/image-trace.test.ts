@@ -171,19 +171,20 @@ describe('DEFAULT_TRACE_OPTIONS', () => {
 });
 
 describe('traceImageData SVG output', () => {
-  // Use the core ImageTracer directly to test SVG structure
-  // (the browser wrapper just delegates to the core for fromImageData)
+  // The browser wrapper needs `window` at module scope
   let ImageTracer: typeof import('@image-tracer-ts/browser').ImageTracer;
+  let traceImageData: typeof import('../packages/pattern-gen-viewer/src/utils/image-trace.js').traceImageData;
 
   beforeAll(async () => {
-    // The browser bundle assigns to window.imageTracer at module scope
     if (typeof globalThis.window === 'undefined') {
       (globalThis as Record<string, unknown>).window = globalThis;
     }
-    const mod = await import(
-      '../node_modules/.pnpm/@image-tracer-ts+browser@1.0.3/node_modules/@image-tracer-ts/browser/dist/image-tracer-browser.mjs'
+    const coreMod = await import('@image-tracer-ts/browser');
+    ImageTracer = coreMod.ImageTracer;
+    const traceMod = await import(
+      '../packages/pattern-gen-viewer/src/utils/image-trace.js'
     );
-    ImageTracer = mod.ImageTracer;
+    traceImageData = traceMod.traceImageData;
   });
 
   it('produces SVG with explicit width and height when viewBox is false', () => {
@@ -225,5 +226,14 @@ describe('traceImageData SVG output', () => {
     expect(svg).toContain('<path');
     expect(svg).toContain('<svg');
     expect(svg).toContain('</svg>');
+  });
+
+  it('traceImageData wrapper emits width/height (not viewBox)', async () => {
+    const imageData = createTestImageData(30, 20, [100, 50, 200, 255]);
+    const svg = await traceImageData(imageData);
+    expect(svg).toContain('width="30"');
+    expect(svg).toContain('height="20"');
+    expect(svg).not.toContain('viewBox');
+    expect(svg).toContain('<path');
   });
 });

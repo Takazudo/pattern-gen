@@ -78,21 +78,21 @@
 
 /* ── Loading / error state ── */
 
-.image-trace-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: oklch(60% 0 0);
-  font-size: 14px;
-  animation: image-trace-pulse 1.5s ease-in-out infinite;
-}
-
+.image-trace-loading,
 .image-trace-error {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: oklch(70% 0.15 25);
   font-size: 14px;
+}
+
+.image-trace-loading {
+  color: oklch(60% 0 0);
+  animation: image-trace-pulse 1.5s ease-in-out infinite;
+}
+
+.image-trace-error {
+  color: oklch(70% 0.15 25);
 }
 
 @keyframes image-trace-pulse {
