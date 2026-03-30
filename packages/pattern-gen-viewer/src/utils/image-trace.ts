@@ -1,38 +1,17 @@
 import { ImageTracerBrowser } from '@image-tracer-ts/browser';
+import { flattenAlpha, DEFAULT_TRACE_OPTIONS } from './image-trace-utils.js';
+import type { ImageTraceOptions } from './image-trace-utils.js';
 
-export interface ImageTraceOptions {
-  /** How many colors to quantize to (2-64) */
-  numberOfColors: number;
-  /** Filter out tiny paths below this outline length (0-20) */
-  minPathSegments: number;
-  /** Pre-blur amount (0-5) */
-  blurRadius: number;
-  /** Edge detection threshold for blur (0-1000) */
-  blurDelta: number;
-  /** SVG stroke width (0-5) */
-  strokeWidth: number;
-  /** Line fitting tolerance (0-10) */
-  lineErrorMargin: number;
-  /** Curve fitting tolerance (0-10) */
-  curveErrorMargin: number;
-}
-
-export const DEFAULT_TRACE_OPTIONS: ImageTraceOptions = {
-  numberOfColors: 16,
-  minPathSegments: 0,
-  blurRadius: 0,
-  blurDelta: 20,
-  strokeWidth: 1,
-  lineErrorMargin: 1,
-  curveErrorMargin: 1,
-};
+export { flattenAlpha, DEFAULT_TRACE_OPTIONS };
+export type { ImageTraceOptions };
 
 export async function traceImageData(
   imageData: ImageData,
   options?: Partial<ImageTraceOptions>,
 ): Promise<string> {
   const merged = { ...DEFAULT_TRACE_OPTIONS, ...options };
-  const svgString = await ImageTracerBrowser.fromImageData(imageData, {
+  const opaqueData = flattenAlpha(imageData);
+  const svgString = await ImageTracerBrowser.fromImageData(opaqueData, {
     numberOfColors: merged.numberOfColors,
     minShapeOutline: merged.minPathSegments,
     blurRadius: merged.blurRadius,
