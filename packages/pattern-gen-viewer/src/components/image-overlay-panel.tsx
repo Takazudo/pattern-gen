@@ -69,8 +69,21 @@ export function ImageOverlayPanel({
       <label className="section-label">Image Overlay</label>
 
       {isProcessing ? (
-        <div className="processing-indicator">
-          Processing... {processingProgress}%
+        <div className="processing-indicator" role="status" aria-busy="true">
+          <div className="processing-spinner" aria-hidden="true" />
+          <span>Removing background... {processingProgress}%</span>
+          <div
+            className="processing-progress-bar"
+            role="progressbar"
+            aria-valuenow={processingProgress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className="processing-progress-fill"
+              style={{ width: `${processingProgress}%` }}
+            />
+          </div>
         </div>
       ) : hasImage ? (
         <>

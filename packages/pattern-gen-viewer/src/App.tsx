@@ -690,6 +690,11 @@ export function App() {
     <div className="app">
       <div className="canvas-layer">
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
+        {isProcessing && (
+          <div className="canvas-processing-overlay" aria-hidden="true">
+            <div className="processing-spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
+          </div>
+        )}
       </div>
 
       {showStepIndicator && (
