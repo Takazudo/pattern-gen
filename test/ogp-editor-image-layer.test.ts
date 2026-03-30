@@ -197,15 +197,18 @@ describe('OGP editor — image layer CLI rendering', () => {
     expect(rightPixel.b).toBe(bgPixel.b);
   });
 
-  it('handles invalid image src gracefully (no crash)', async () => {
+  it('handles invalid image src gracefully (no crash, matches background)', async () => {
     const config = makeEditorConfig([
       makeImageLayer({ src: 'data:image/png;base64,NOT_VALID_BASE64' }),
     ]);
 
+    const bgOnly = await renderBackgroundOnly();
     const result = await renderOgpEditorFromConfig(config);
     expect(result.buffer[0]).toBe(0x89);
     expect(result.width).toBe(1200);
     expect(result.height).toBe(630);
+    // Failed image load is a no-op — output should match background only
+    expect(bgOnly.equals(result.buffer)).toBe(true);
   });
 
   it('renders image layer at correct position and size', async () => {
