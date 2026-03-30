@@ -209,10 +209,10 @@ export function App() {
   const [useTranslate, setUseTranslate] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [ogpMode, setOgpMode] = useState(false);
-  const [composerMode, setOgpEditMode] = useState(false);
-  const [composerBgImage, setEditorBgImage] = useState<ImageBitmap | null>(null);
-  const [composerBgConfig, setEditorBgConfig] = useState<OgpConfig | null>(null);
-  const [composerOutputSize, setEditorOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
+  const [composerMode, setComposerMode] = useState(false);
+  const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
+  const [composerBgConfig, setComposerBgConfig] = useState<OgpConfig | null>(null);
+  const [composerOutputSize, setComposerOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   // Params locked to their current value across seed changes
@@ -674,10 +674,10 @@ export function App() {
       bgCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, outSize.width, outSize.height);
 
       const bitmap = await createImageBitmap(bgCanvas);
-      setEditorBgImage(bitmap);
-      setEditorBgConfig(config);
-      setEditorOutputSize(outSize);
-      setOgpEditMode(true);
+      setComposerBgImage(bitmap);
+      setComposerBgConfig(config);
+      setComposerOutputSize(outSize);
+      setComposerMode(true);
     },
     [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams, compositeOverlay],
   );
@@ -745,7 +745,7 @@ export function App() {
           backgroundConfig={composerBgConfig}
           outputWidth={composerOutputSize.width}
           outputHeight={composerOutputSize.height}
-          onExit={() => setOgpEditMode(false)}
+          onExit={() => setComposerMode(false)}
         />
       )}
 

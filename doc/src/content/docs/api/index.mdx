@@ -63,16 +63,16 @@ const result = await renderOgpFromConfig(config);
 fs.writeFileSync('ogp-image.png', result.buffer);
 ```
 
-### `renderOgpEditorFromConfig(config)`
+### `renderComposerFromConfig(config)`
 
 Render an OGP image from an editor config with layers and frames (Node.js only).
 
 ```typescript
-import { renderOgpEditorFromConfig, parseOgpEditorConfig } from '@takazudo/pattern-gen';
+import { renderComposerFromConfig, parseComposerConfig } from '@takazudo/pattern-gen';
 
 const json = fs.readFileSync('editor-config.json', 'utf-8');
-const config = parseOgpEditorConfig(json);
-const result = await renderOgpEditorFromConfig(config);
+const config = parseComposerConfig(json);
+const result = await renderComposerFromConfig(config);
 
 // result.buffer: Buffer (1200×630 PNG with background + layers + frame)
 fs.writeFileSync('ogp-image.png', result.buffer);
@@ -238,12 +238,12 @@ import {
 } from '@takazudo/pattern-gen';
 ```
 
-### `OgpEditorConfig` Type
+### `ComposerConfig` Type
 
 ```typescript
-import type { OgpEditorConfig, FrameConfig } from '@takazudo/pattern-gen';
+import type { ComposerConfig, FrameConfig } from '@takazudo/pattern-gen';
 
-interface OgpEditorConfig {
+interface ComposerConfig {
   version: 1;
   background: OgpConfig;
   layers: EditorLayer[];  // Image and text layers
@@ -256,15 +256,15 @@ interface FrameConfig {
 }
 ```
 
-### `parseOgpEditorConfig(json)` / `serializeOgpEditorConfig(config)`
+### `parseComposerConfig(json)` / `serializeComposerConfig(config)`
 
 Parse and validate / serialize editor configs including frame configuration.
 
 ```typescript
-import { parseOgpEditorConfig, serializeOgpEditorConfig } from '@takazudo/pattern-gen';
+import { parseComposerConfig, serializeComposerConfig } from '@takazudo/pattern-gen';
 
-const config = parseOgpEditorConfig(jsonString);
-const json = serializeOgpEditorConfig(config);
+const config = parseComposerConfig(jsonString);
+const json = serializeComposerConfig(config);
 ```
 
 ## Color Schemes
