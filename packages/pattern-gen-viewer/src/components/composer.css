@@ -1,6 +1,6 @@
-/* ── OGP Editor — full-screen overlay ── */
+/* ── Composer — full-screen overlay ── */
 
-.ogp-editor {
+.composer {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -12,7 +12,7 @@
 
 /* ── Toolbar ── */
 
-.ogp-editor-toolbar {
+.composer-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -22,26 +22,26 @@
   flex-shrink: 0;
 }
 
-.ogp-editor-title {
+.composer-title {
   font-size: 16px;
   font-weight: 600;
   color: oklch(90% 0 0);
 }
 
-.ogp-editor-toolbar-actions {
+.composer-toolbar-actions {
   display: flex;
   gap: 8px;
 }
 
-.ogp-editor-btn {
+.composer-btn {
   background: var(--color-control-bg);
 }
 
-.ogp-editor-btn:hover {
+.composer-btn:hover {
   background: var(--color-control-bg-hover);
 }
 
-.ogp-editor-btn-exit {
+.composer-btn-exit {
   padding: var(--spacing-sp-xs) var(--spacing-sp-md);
   border: 1px solid oklch(100% 0 0 / 20%);
   border-radius: var(--radius-md);
@@ -51,14 +51,14 @@
   cursor: pointer;
 }
 
-.ogp-editor-btn-exit:hover {
+.composer-btn-exit:hover {
   background: oklch(100% 0 0 / 12%);
   color: oklch(95% 0 0);
 }
 
 /* ── Workspace (canvas + panel) ── */
 
-.ogp-editor-workspace {
+.composer-workspace {
   flex: 1;
   display: flex;
   overflow: hidden;
@@ -66,7 +66,7 @@
 
 /* ── Canvas area ── */
 
-.ogp-editor-canvas-area {
+.composer-canvas-area {
   flex: 1;
   display: flex;
   align-items: center;
@@ -75,7 +75,7 @@
   overflow: hidden;
 }
 
-.ogp-editor-canvas-area canvas {
+.composer-canvas-area canvas {
   max-width: 100%;
   max-height: 100%;
   box-shadow: 0 4px 24px oklch(0% 0 0 / 40%);
@@ -84,7 +84,7 @@
 
 /* ── Layer panel (right side) ── */
 
-.ogp-editor-panel {
+.composer-panel {
   width: 320px;
   background: oklch(0% 0 0 / 75%);
   backdrop-filter: blur(12px);
@@ -99,7 +99,7 @@
 
 /* ── Panel section card ── */
 
-.ogp-panel-section {
+.composer-panel-section {
   background: oklch(100% 0 0 / 4%);
   border: 1px solid oklch(100% 0 0 / 8%);
   border-radius: 6px;
@@ -111,12 +111,12 @@
 
 /* ── Panel action buttons ── */
 
-.ogp-panel-actions {
+.composer-panel-actions {
   display: flex;
   gap: 6px;
 }
 
-.ogp-panel-btn {
+.composer-panel-btn {
   flex: 1;
   font-size: 11px;
   padding: 4px 6px;
@@ -125,7 +125,7 @@
 
 /* ── Layer list ── */
 
-.ogp-layer-list {
+.composer-layer-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -136,7 +136,7 @@
   padding: 4px;
 }
 
-.ogp-layer-item {
+.composer-layer-item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -148,34 +148,34 @@
   transition: background 0.1s;
 }
 
-.ogp-layer-item:hover {
+.composer-layer-item:hover {
   background: oklch(100% 0 0 / 8%);
 }
 
-.ogp-layer-item.selected {
+.composer-layer-item.selected {
   background: oklch(100% 0 0 / 14%);
   color: oklch(95% 0 0);
 }
 
-.ogp-layer-item.dragging {
+.composer-layer-item.dragging {
   opacity: 0.4;
 }
 
-.ogp-layer-icon {
+.composer-layer-icon {
   flex-shrink: 0;
   width: 18px;
   text-align: center;
   font-size: 13px;
 }
 
-.ogp-layer-name {
+.composer-layer-name {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ogp-layer-delete {
+.composer-layer-delete {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
@@ -190,12 +190,12 @@
   border-radius: 3px;
 }
 
-.ogp-layer-delete:hover {
+.composer-layer-delete:hover {
   background: oklch(100% 0 0 / 10%);
   color: oklch(90% 0 0);
 }
 
-.ogp-layer-empty {
+.composer-layer-empty {
   padding: 12px;
   text-align: center;
   color: oklch(50% 0 0);
@@ -204,13 +204,13 @@
 
 /* ── Alignment panel ── */
 
-.ogp-align-grid {
+.composer-align-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 4px;
 }
 
-.ogp-align-btn {
+.composer-align-btn {
   font-size: 11px;
   padding: 6px 4px;
   text-align: center;
@@ -221,14 +221,14 @@
   cursor: pointer;
 }
 
-.ogp-align-btn:hover {
+.composer-align-btn:hover {
   background: oklch(100% 0 0 / 14%);
   color: oklch(95% 0 0);
 }
 
 /* ── Properties panel ── */
 
-.ogp-props-title {
+.composer-props-title {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -237,7 +237,7 @@
   margin-bottom: 2px;
 }
 
-.ogp-prop-label {
+.composer-prop-label {
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;
@@ -247,7 +247,7 @@
   margin-bottom: 2px;
 }
 
-.ogp-prop-input {
+.composer-prop-input {
   width: 100%;
   padding: 4px 6px;
   background: oklch(100% 0 0 / 6%);
@@ -258,11 +258,11 @@
   outline: none;
 }
 
-.ogp-prop-input:focus {
+.composer-prop-input:focus {
   border-color: oklch(100% 0 0 / 25%);
 }
 
-.ogp-prop-textarea {
+.composer-prop-textarea {
   width: 100%;
   padding: 4px 6px;
   background: oklch(100% 0 0 / 6%);
@@ -275,68 +275,68 @@
   font-family: inherit;
 }
 
-.ogp-prop-textarea:focus {
+.composer-prop-textarea:focus {
   border-color: oklch(100% 0 0 / 25%);
 }
 
 /* ── Grid for transform fields ── */
 
-.ogp-prop-grid {
+.composer-prop-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px 8px;
 }
 
-.ogp-prop-field {
+.composer-prop-field {
   display: flex;
   flex-direction: column;
 }
 
-.ogp-prop-num {
+.composer-prop-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
 /* ── Toggle buttons ── */
 
-.ogp-prop-toggle-row {
+.composer-prop-toggle-row {
   display: flex;
   gap: 4px;
   align-items: center;
 }
 
-.ogp-prop-toggle {
+.composer-prop-toggle {
   font-size: 11px;
   padding: 3px 8px;
 }
 
-.ogp-prop-toggle.active {
+.composer-prop-toggle.active {
   background: oklch(100% 0 0 / 18%);
   border-color: oklch(100% 0 0 / 25%);
 }
 
 /* ── Color row ── */
 
-.ogp-prop-color-row {
+.composer-prop-color-row {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.ogp-prop-color-text {
+.composer-prop-color-text {
   flex: 1;
   min-width: 0;
 }
 
 /* ── Source row (image layers) ── */
 
-.ogp-prop-src-row {
+.composer-prop-src-row {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.ogp-prop-src-text {
+.composer-prop-src-text {
   flex: 1;
   font-size: 10px;
   color: oklch(60% 0 0);
@@ -345,33 +345,33 @@
   white-space: nowrap;
 }
 
-.ogp-prop-btn-sm {
+.composer-prop-btn-sm {
   font-size: 10px;
   padding: 2px 8px;
 }
 
 /* ── Props sub-sections (shadow, stroke) ── */
 
-.ogp-props-section {
+.composer-props-section {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.ogp-props-subsection {
+.composer-props-subsection {
   border-top: 1px solid oklch(100% 0 0 / 6%);
   padding-top: 6px;
 }
 
 /* ── Font picker ── */
 
-.ogp-font-picker {
+.composer-font-picker {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.ogp-font-picker select {
+.composer-font-picker select {
   width: 100%;
   padding: 4px 6px;
   background: oklch(100% 0 0 / 6%);
@@ -381,13 +381,13 @@
   font-size: 12px;
 }
 
-.ogp-font-more-btn {
+.composer-font-more-btn {
   font-size: 10px;
   padding: 2px 8px;
   align-self: flex-start;
 }
 
-.ogp-font-search {
+.composer-font-search {
   padding: 4px 6px;
   background: oklch(100% 0 0 / 6%);
   border: 1px solid oklch(100% 0 0 / 10%);
@@ -397,11 +397,11 @@
   outline: none;
 }
 
-.ogp-font-search:focus {
+.composer-font-search:focus {
   border-color: oklch(100% 0 0 / 25%);
 }
 
-.ogp-font-list {
+.composer-font-list {
   max-height: 150px;
   overflow-y: auto;
   display: flex;
@@ -412,7 +412,7 @@
   padding: 2px;
 }
 
-.ogp-font-item {
+.composer-font-item {
   padding: 3px 8px;
   background: none;
   border: none;
@@ -423,40 +423,40 @@
   border-radius: 3px;
 }
 
-.ogp-font-item:hover {
+.composer-font-item:hover {
   background: oklch(100% 0 0 / 8%);
 }
 
-.ogp-font-item.active {
+.composer-font-item.active {
   background: oklch(100% 0 0 / 14%);
   color: oklch(95% 0 0);
 }
 
 /* ── Range sliders in panel ── */
 
-.ogp-props input[type="range"],
-.ogp-props-section input[type="range"],
-.ogp-panel-section input[type="range"] {
+.composer-props input[type="range"],
+.composer-props-section input[type="range"],
+.composer-panel-section input[type="range"] {
   width: 100%;
   accent-color: oklch(60% 0 0);
 }
 
 /* ── Checkboxes in panel ── */
 
-.ogp-props input[type="checkbox"],
-.ogp-props-section input[type="checkbox"],
-.ogp-panel-section input[type="checkbox"] {
+.composer-props input[type="checkbox"],
+.composer-props-section input[type="checkbox"],
+.composer-panel-section input[type="checkbox"] {
   accent-color: oklch(60% 0 0);
   margin-right: 4px;
 }
 
 /* ── Frame section ── */
 
-.ogp-frame-section {
-  /* Inherits from .ogp-panel-section */
+.composer-frame-section {
+  /* Inherits from .composer-panel-section */
 }
 
-.ogp-frame-select {
+.composer-frame-select {
   width: 100%;
   padding: 4px 6px;
   background: oklch(100% 0 0 / 6%);
@@ -466,14 +466,14 @@
   font-size: 12px;
 }
 
-.ogp-frame-params {
+.composer-frame-params {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-top: 4px;
 }
 
-.ogp-frame-param-row {
+.composer-frame-param-row {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -481,8 +481,8 @@
 
 /* ── Grid panel ── */
 
-.ogp-grid-panel {
+.composer-grid-panel {
   margin-top: auto;
 }
 
-/* Reuses .ogp-props-title for the grid panel header */
+/* Reuses .composer-props-title for the grid panel header */

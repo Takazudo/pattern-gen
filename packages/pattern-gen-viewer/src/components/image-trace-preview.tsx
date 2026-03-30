@@ -106,7 +106,7 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'ogp-traced.svg';
+    a.download = 'traced.svg';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -142,8 +142,8 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
           )}
         </div>
         <div className="image-trace-panel">
-          <div className="ogp-panel-section">
-            <span className="ogp-props-title">Trace Parameters</span>
+          <div className="composer-panel-section">
+            <span className="composer-props-title">Trace Parameters</span>
             {PARAM_DEFS.map((param) => (
               <div key={param.key} className="image-trace-param">
                 <div className="image-trace-param-header">

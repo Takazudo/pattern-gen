@@ -537,11 +537,11 @@ select:focus {
   margin-bottom: var(--spacing-sp-sm);
 }
 
-.compose-btn-edit {
+.selection-btn-edit {
   background: oklch(100% 0 0 / 8%);
 }
 
-.compose-btn-edit:hover {
+.selection-btn-edit:hover {
   background: oklch(100% 0 0 / 15%);
 }
 
