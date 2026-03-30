@@ -15,9 +15,9 @@ import { patternRegistry, patternsByName } from '@takazudo/pattern-gen-generator
 import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
-import { OgpSelectionOverlay, getOutputDimensions } from './components/ogp-selection-overlay.js';
-import type { AspectConfig } from './components/ogp-selection-overlay.js';
-import { OgpEditor } from './components/ogp-editor.js';
+import { SelectionOverlay, getOutputDimensions } from './components/selection-overlay.js';
+import type { AspectConfig } from './components/selection-overlay.js';
+import { Composer } from './components/composer.js';
 import { ImageOverlayPanel } from './components/image-overlay-panel.js';
 import { ImageOverlayTransform } from './components/image-overlay-transform.js';
 import type { ImageTransform } from './components/image-overlay-transform.js';
@@ -209,10 +209,10 @@ export function App() {
   const [useTranslate, setUseTranslate] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [ogpMode, setOgpMode] = useState(false);
-  const [ogpEditMode, setOgpEditMode] = useState(false);
-  const [editorBgImage, setEditorBgImage] = useState<ImageBitmap | null>(null);
-  const [editorBgConfig, setEditorBgConfig] = useState<OgpConfig | null>(null);
-  const [editorOutputSize, setEditorOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
+  const [composerMode, setComposerMode] = useState(false);
+  const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
+  const [composerBgConfig, setComposerBgConfig] = useState<OgpConfig | null>(null);
+  const [composerOutputSize, setComposerOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   // Params locked to their current value across seed changes
@@ -615,7 +615,7 @@ export function App() {
     [getOgpJson],
   );
 
-  const handleEnterOgpEdit = useCallback(
+  const handleEnterComposer = useCallback(
     async (rect: { x: number; y: number; width: number; height: number }, aspectConfig: AspectConfig) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -674,10 +674,10 @@ export function App() {
       bgCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, outSize.width, outSize.height);
 
       const bitmap = await createImageBitmap(bgCanvas);
-      setEditorBgImage(bitmap);
-      setEditorBgConfig(config);
-      setEditorOutputSize(outSize);
-      setOgpEditMode(true);
+      setComposerBgImage(bitmap);
+      setComposerBgConfig(config);
+      setComposerOutputSize(outSize);
+      setComposerMode(true);
     },
     [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams, compositeOverlay],
   );
@@ -729,23 +729,23 @@ export function App() {
         />
       )}
 
-      {ogpMode && !ogpEditMode && (
-        <OgpSelectionOverlay
+      {ogpMode && !composerMode && (
+        <SelectionOverlay
           onGenerate={handleOgpGenerate}
           onExit={exitOgpMode}
           onDownloadJson={handleOgpDownloadJson}
           onCopyJson={handleOgpCopyJson}
-          onEdit={handleEnterOgpEdit}
+          onEdit={handleEnterComposer}
         />
       )}
 
-      {ogpEditMode && (
-        <OgpEditor
-          backgroundImage={editorBgImage}
-          backgroundConfig={editorBgConfig}
-          outputWidth={editorOutputSize.width}
-          outputHeight={editorOutputSize.height}
-          onExit={() => setOgpEditMode(false)}
+      {composerMode && (
+        <Composer
+          backgroundImage={composerBgImage}
+          backgroundConfig={composerBgConfig}
+          outputWidth={composerOutputSize.width}
+          outputHeight={composerOutputSize.height}
+          onExit={() => setComposerMode(false)}
         />
       )}
 
@@ -783,7 +783,7 @@ export function App() {
           </div>
         </div>
 
-        <button className="btn btn-ogp-mode" onClick={() => setOgpMode(true)}>
+        <button className="btn btn-compose-mode" onClick={() => setOgpMode(true)}>
           OGP Mode
         </button>
 

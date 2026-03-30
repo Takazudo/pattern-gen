@@ -530,18 +530,18 @@ select:focus {
   flex: 1;
 }
 
-/* ── OGP Mode ── */
+/* ── Compose Mode ── */
 
-.btn-ogp-mode {
+.btn-compose-mode {
   width: 100%;
   margin-bottom: var(--spacing-sp-sm);
 }
 
-.ogp-btn-edit {
+.selection-btn-edit {
   background: oklch(100% 0 0 / 8%);
 }
 
-.ogp-btn-edit:hover {
+.selection-btn-edit:hover {
   background: oklch(100% 0 0 / 15%);
 }
 

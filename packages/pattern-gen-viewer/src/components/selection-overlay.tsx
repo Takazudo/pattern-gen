@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT, getAspect, getOutputDimensions } from '@takazudo/pattern-gen-core';
 import type { AspectMode, AspectConfig } from '@takazudo/pattern-gen-core';
-import './ogp-selection-overlay.css';
+import './selection-overlay.css';
 
 export type { AspectMode, AspectConfig };
 export { getOutputDimensions };
@@ -9,24 +9,24 @@ export { getOutputDimensions };
 const OGP_ASPECT = OGP_WIDTH / OGP_HEIGHT;
 const MIN_WIDTH = 100;
 
-export interface OgpRect {
+export interface SelectionRect {
   x: number;
   y: number;
   width: number;
   height: number;
 }
 
-interface OgpSelectionOverlayProps {
+interface SelectionOverlayProps {
   /** Callback when user clicks Generate or presses Enter */
-  onGenerate: (rect: OgpRect) => void;
+  onGenerate: (rect: SelectionRect) => void;
   /** Callback when user presses Escape or clicks Exit */
   onExit: () => void;
   /** Callback to download OGP config as JSON file */
-  onDownloadJson: (rect: OgpRect) => void;
+  onDownloadJson: (rect: SelectionRect) => void;
   /** Callback to copy OGP config JSON to clipboard; resolves on success */
-  onCopyJson: (rect: OgpRect) => Promise<void>;
+  onCopyJson: (rect: SelectionRect) => Promise<void>;
   /** Callback to enter the OGP editor with current selection */
-  onEdit: (rect: OgpRect, aspectConfig: AspectConfig) => void;
+  onEdit: (rect: SelectionRect, aspectConfig: AspectConfig) => void;
 }
 
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -40,8 +40,8 @@ const DEFAULT_ASPECT_CONFIG: AspectConfig = {
 };
 
 type DragState =
-  | { type: 'move'; startMouseX: number; startMouseY: number; startRect: OgpRect }
-  | { type: 'resize'; handle: HandleId; startMouseX: number; startMouseY: number; startRect: OgpRect };
+  | { type: 'move'; startMouseX: number; startMouseY: number; startRect: SelectionRect }
+  | { type: 'resize'; handle: HandleId; startMouseX: number; startMouseY: number; startRect: SelectionRect };
 
 interface ToolbarDragState {
   startMouseX: number;
@@ -52,7 +52,7 @@ interface ToolbarDragState {
 interface HandleDef {
   id: HandleId;
   cursor: string;
-  getPos: (r: OgpRect) => { left: number; top: number };
+  getPos: (r: SelectionRect) => { left: number; top: number };
 }
 
 const HANDLES: HandleDef[] = [
@@ -105,7 +105,7 @@ const ASPECT_MODE_LABELS: { mode: AspectMode; label: string }[] = [
   { mode: 'fixed', label: 'Fixed' },
 ];
 
-function clampRect(rect: OgpRect, aspect: number): OgpRect {
+function clampRect(rect: SelectionRect, aspect: number): SelectionRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   let { x, y, width, height } = rect;
@@ -130,7 +130,7 @@ function clampRect(rect: OgpRect, aspect: number): OgpRect {
   return { x, y, width, height };
 }
 
-function getInitialRect(aspect: number): OgpRect {
+function getInitialRect(aspect: number): SelectionRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const width = vw * 0.6;
@@ -142,11 +142,11 @@ function getInitialRect(aspect: number): OgpRect {
 
 function resizeFromHandle(
   handle: HandleId,
-  sr: OgpRect,
+  sr: SelectionRect,
   dx: number,
   dy: number,
   aspect: number,
-): OgpRect {
+): SelectionRect {
   switch (handle) {
     case 'se': {
       let w = sr.width + dx;
@@ -233,7 +233,7 @@ function resizeFromHandle(
   }
 }
 
-function applyCenterAnchor(sr: OgpRect, resized: OgpRect, aspect: number): OgpRect {
+function applyCenterAnchor(sr: SelectionRect, resized: SelectionRect, aspect: number): SelectionRect {
   const centerX = sr.x + sr.width / 2;
   const centerY = sr.y + sr.height / 2;
   const dw = resized.width - sr.width;
@@ -248,7 +248,7 @@ function applyCenterAnchor(sr: OgpRect, resized: OgpRect, aspect: number): OgpRe
   };
 }
 
-function reclampToAspect(rect: OgpRect, aspect: number): OgpRect {
+function reclampToAspect(rect: SelectionRect, aspect: number): SelectionRect {
   const centerX = rect.x + rect.width / 2;
   const centerY = rect.y + rect.height / 2;
   let width = rect.width;
@@ -276,13 +276,13 @@ function clampToolbarPos(
   };
 }
 
-export function OgpSelectionOverlay({
+export function SelectionOverlay({
   onGenerate,
   onExit,
   onDownloadJson,
   onCopyJson,
   onEdit,
-}: OgpSelectionOverlayProps) {
+}: SelectionOverlayProps) {
   const [aspectConfig, setAspectConfig] = useState<AspectConfig>(DEFAULT_ASPECT_CONFIG);
   const aspect = getAspect(aspectConfig);
   const aspectRef = useRef(aspect);
@@ -290,7 +290,7 @@ export function OgpSelectionOverlay({
   const aspectConfigRef = useRef(aspectConfig);
   aspectConfigRef.current = aspectConfig;
 
-  const [rect, setRect] = useState<OgpRect>(() => getInitialRect(OGP_ASPECT));
+  const [rect, setRect] = useState<SelectionRect>(() => getInitialRect(OGP_ASPECT));
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [isAltResize, setIsAltResize] = useState(false);
   const rectRef = useRef(rect);
@@ -402,7 +402,7 @@ export function OgpSelectionOverlay({
   useEffect(() => () => clearTimeout(copyTimerRef.current), []);
 
   const handleCopy = useCallback(
-    (r: OgpRect) => {
+    (r: SelectionRect) => {
       onCopyJson(r)
         .then(() => {
           setCopyFeedback(true);
@@ -473,19 +473,19 @@ export function OgpSelectionOverlay({
   const vh = window.innerHeight;
 
   return (
-    <div className="ogp-overlay">
+    <div className="selection-overlay">
       {/* Dim regions around selection */}
-      <div className="ogp-dim ogp-dim-top" style={{ height: y }} />
+      <div className="selection-dim selection-dim-top" style={{ height: y }} />
       <div
-        className="ogp-dim ogp-dim-bottom"
+        className="selection-dim selection-dim-bottom"
         style={{ top: y + height, height: vh - y - height }}
       />
       <div
-        className="ogp-dim ogp-dim-left"
+        className="selection-dim selection-dim-left"
         style={{ top: y, width: x, height }}
       />
       <div
-        className="ogp-dim ogp-dim-right"
+        className="selection-dim selection-dim-right"
         style={{
           top: y,
           left: x + width,
@@ -496,7 +496,7 @@ export function OgpSelectionOverlay({
 
       {/* Draggable selection area */}
       <div
-        className="ogp-selection"
+        className="selection-box"
         style={{ left: x, top: y, width, height }}
         onMouseDown={handleMoveStart}
       />
@@ -507,7 +507,7 @@ export function OgpSelectionOverlay({
         return (
           <div
             key={h.id}
-            className="ogp-handle"
+            className="selection-handle"
             style={{ left: pos.left, top: pos.top, cursor: h.cursor }}
             onMouseDown={(e) => handleResizeStart(h.id, e)}
           />
@@ -517,7 +517,7 @@ export function OgpSelectionOverlay({
       {/* Center indicator when Alt+resize is active */}
       {isAltResize && (
         <div
-          className="ogp-center-indicator"
+          className="selection-center-indicator"
           style={{
             left: x + width / 2,
             top: y + height / 2,
@@ -528,24 +528,24 @@ export function OgpSelectionOverlay({
       {/* Floating toolbar */}
       <div
         ref={toolbarRef}
-        className="ogp-clip-toolbar"
+        className="selection-toolbar"
         style={{ left: toolbarPos.x, top: toolbarPos.y }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
         <div
-          className="ogp-clip-toolbar-drag"
+          className="selection-toolbar-drag"
           onMouseDown={handleToolbarDragStart}
         >
           ⋮⋮⋮
         </div>
 
         {/* Aspect mode buttons */}
-        <div className="ogp-clip-toolbar-row">
+        <div className="selection-toolbar-row">
           {ASPECT_MODE_LABELS.map(({ mode, label }) => (
             <button
               key={mode}
-              className={`ogp-clip-mode-btn${aspectConfig.mode === mode ? ' active' : ''}`}
+              className={`selection-mode-btn${aspectConfig.mode === mode ? ' active' : ''}`}
               onClick={() => handleModeChange(mode)}
             >
               {label}
@@ -554,19 +554,19 @@ export function OgpSelectionOverlay({
         </div>
 
         {/* Detail row */}
-        <div className="ogp-clip-toolbar-row">
-          <div className="ogp-clip-detail">
+        <div className="selection-toolbar-row">
+          <div className="selection-detail">
             {aspectConfig.mode === 'ogp' && (
               <>
                 <span>{OGP_WIDTH}</span>
-                <span className="ogp-clip-detail-separator">:</span>
+                <span className="selection-detail-separator">:</span>
                 <span>{OGP_HEIGHT}</span>
               </>
             )}
             {aspectConfig.mode === 'square' && (
               <>
                 <span>1</span>
-                <span className="ogp-clip-detail-separator">:</span>
+                <span className="selection-detail-separator">:</span>
                 <span>1</span>
               </>
             )}
@@ -574,17 +574,17 @@ export function OgpSelectionOverlay({
               <>
                 <input
                   type="number"
-                  className="ogp-clip-detail-input"
+                  className="selection-detail-input"
                   value={aspectConfig.freeW}
                   min={1}
                   onChange={(e) =>
                     handleAspectInputChange('freeW', e.target.value)
                   }
                 />
-                <span className="ogp-clip-detail-separator">:</span>
+                <span className="selection-detail-separator">:</span>
                 <input
                   type="number"
-                  className="ogp-clip-detail-input"
+                  className="selection-detail-input"
                   value={aspectConfig.freeH}
                   min={1}
                   onChange={(e) =>
@@ -597,53 +597,53 @@ export function OgpSelectionOverlay({
               <>
                 <input
                   type="number"
-                  className="ogp-clip-detail-input"
+                  className="selection-detail-input"
                   value={aspectConfig.fixedW}
                   min={1}
                   onChange={(e) =>
                     handleAspectInputChange('fixedW', e.target.value)
                   }
                 />
-                <span className="ogp-clip-detail-separator">px :</span>
+                <span className="selection-detail-separator">px :</span>
                 <input
                   type="number"
-                  className="ogp-clip-detail-input"
+                  className="selection-detail-input"
                   value={aspectConfig.fixedH}
                   min={1}
                   onChange={(e) =>
                     handleAspectInputChange('fixedH', e.target.value)
                   }
                 />
-                <span className="ogp-clip-detail-separator">px</span>
+                <span className="selection-detail-separator">px</span>
               </>
             )}
           </div>
         </div>
 
         {/* Action buttons */}
-        <div className="ogp-clip-actions">
+        <div className="selection-actions">
           <button
-            className="btn ogp-btn-generate"
+            className="btn selection-btn-generate"
             onClick={() => onGenerate(rect)}
           >
             Generate
           </button>
           <button
-            className="btn ogp-btn-json"
+            className="btn selection-btn-json"
             onClick={() => onDownloadJson(rect)}
           >
             DL JSON
           </button>
           <button
-            className="btn ogp-btn-json"
+            className="btn selection-btn-json"
             onClick={() => handleCopy(rect)}
           >
             {copyFeedback ? 'Copied!' : 'Copy JSON'}
           </button>
-          <button className="btn ogp-btn-edit" onClick={() => onEdit(rect, aspectConfig)}>
+          <button className="btn selection-btn-edit" onClick={() => onEdit(rect, aspectConfig)}>
             Edit
           </button>
-          <button className="btn ogp-btn-exit" onClick={onExit}>
+          <button className="btn selection-btn-exit" onClick={onExit}>
             Exit
           </button>
         </div>

@@ -85,7 +85,7 @@ renderPatternToCanvas(ctx, 'hello-world', 'voronoi', {
 | `--out` | `-o` | Output file path | `{slug}.png` |
 | `--out-dir` | | Output directory | cwd |
 | `--ogp-config` | | OGP config JSON file path | |
-| `--ogp-editor-config` | | OGP editor config JSON file path (supports layers + frames) | |
+| `--composer-config` | | Composer config JSON file path (supports layers + frames) | |
 | `--hue` | | Hue shift (-180 to 180) | `0` |
 | `--saturation` | | Saturation shift (-100 to 100) | `0` |
 | `--lightness` | | Lightness shift (-100 to 100) | `0` |
@@ -143,7 +143,7 @@ The editor includes 20 decorative frame patterns that render on top of the OGP i
 Each frame has configurable parameters (width, color with HSLA alpha support, style options). Frame configuration is included in the exported JSON and supported by the CLI:
 
 ```bash
-pattern-gen --ogp-editor-config editor-config.json --out ogp-with-frame.png
+pattern-gen --composer-config editor-config.json --out ogp-with-frame.png
 ```
 
 ### HSLA Color Picker

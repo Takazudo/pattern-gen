@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { renderPattern, renderOgpFromConfig, renderOgpEditorFromConfig } from './renderer.js';
-import { parseOgpConfig, parseOgpEditorConfig, getColorSchemeNames } from '@takazudo/pattern-gen-core';
+import { renderPattern, renderOgpFromConfig, renderComposerFromConfig } from './renderer.js';
+import { parseOgpConfig, parseComposerConfig, getColorSchemeNames } from '@takazudo/pattern-gen-core';
 import type { GenerateOptions } from '@takazudo/pattern-gen-core';
 import { getPatternNames } from '@takazudo/pattern-gen-generators';
 
@@ -115,7 +115,7 @@ Options:
   --out, -o <path>            Output file path
   --out-dir <dir>             Output directory
   --ogp-config <path>         Render OGP image from config JSON file
-  --ogp-editor-config <path>  Render OGP editor config JSON file
+  --composer-config <path>    Render Composer config JSON file
   --list-types                List available pattern types
   --list-color-schemes        List available color schemes
   --help, -h                  Show this help`);
@@ -168,21 +168,21 @@ async function main() {
     return;
   }
 
-  // Handle --ogp-editor-config mode (early exit, no positional slug required)
-  const editorConfigIdx = args.indexOf('--ogp-editor-config');
+  // Handle --composer-config mode (early exit, no positional slug required)
+  const editorConfigIdx = args.indexOf('--composer-config');
   if (editorConfigIdx !== -1) {
     const configPath = args[editorConfigIdx + 1];
-    if (!configPath || configPath.startsWith('-')) fail('--ogp-editor-config requires a file path');
+    if (!configPath || configPath.startsWith('-')) fail('--composer-config requires a file path');
 
     const jsonStr = readFileSync(resolve(configPath), 'utf-8');
-    const config = parseOgpEditorConfig(jsonStr);
-    const result = await renderOgpEditorFromConfig(config);
+    const config = parseComposerConfig(jsonStr);
+    const result = await renderComposerFromConfig(config);
 
     const { outPath, outDir } = extractOutputFlags(args, editorConfigIdx);
-    const outputPath = outPath ?? resolve(outDir ?? process.cwd(), `ogp-editor-${config.background.type}-${config.background.slug}.png`);
+    const outputPath = outPath ?? resolve(outDir ?? process.cwd(), `composer-${config.background.type}-${config.background.slug}.png`);
     mkdirSync(dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, result.buffer);
-    console.log(`Generated OGP Editor: ${outputPath} (${result.patternName}, ${result.width}x${result.height})`);
+    console.log(`Generated Composer: ${outputPath} (${result.patternName}, ${result.width}x${result.height})`);
     return;
   }
 

@@ -12,7 +12,7 @@ import type {
   HslAdjust,
   ColorScheme,
   OgpConfig,
-  OgpEditorConfig,
+  ComposerConfig,
   PatternOptions,
   GenerateOptions,
 } from '@takazudo/pattern-gen-core';
@@ -215,10 +215,10 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
 }
 
 /**
- * Render an OGP image from an OgpEditorConfig (background pattern + layers).
+ * Render an image from a ComposerConfig (background pattern + layers).
  */
-export async function renderOgpEditorFromConfig(
-  config: OgpEditorConfig,
+export async function renderComposerFromConfig(
+  config: ComposerConfig,
 ): Promise<RenderResult> {
   const { createCanvas, loadImage } = await import('canvas');
 

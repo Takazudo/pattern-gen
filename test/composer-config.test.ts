@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
-  serializeOgpEditorConfig,
-  parseOgpEditorConfig,
+  serializeComposerConfig,
+  parseComposerConfig,
 } from '@takazudo/pattern-gen-core';
 import type {
-  OgpEditorConfig,
+  ComposerConfig,
   ImageLayerData,
   TextLayerData,
   OgpConfig,
@@ -63,7 +63,7 @@ function makeTextLayer(): TextLayerData {
   };
 }
 
-function makeValidEditorConfig(): OgpEditorConfig {
+function makeValidComposerConfig(): ComposerConfig {
   return {
     version: 1,
     background: makeValidBackground(),
@@ -71,75 +71,75 @@ function makeValidEditorConfig(): OgpEditorConfig {
   };
 }
 
-describe('serializeOgpEditorConfig / parseOgpEditorConfig', () => {
+describe('serializeComposerConfig / parseComposerConfig', () => {
   it('round-trip: serialize then parse returns deep-equal config', () => {
-    const config = makeValidEditorConfig();
-    const json = serializeOgpEditorConfig(config);
-    const parsed = parseOgpEditorConfig(json);
+    const config = makeValidComposerConfig();
+    const json = serializeComposerConfig(config);
+    const parsed = parseComposerConfig(json);
     expect(parsed).toEqual(config);
   });
 });
 
-describe('parseOgpEditorConfig validation', () => {
+describe('parseComposerConfig validation', () => {
   it('throws on unsupported version', () => {
-    const config = { ...makeValidEditorConfig(), version: 2 };
+    const config = { ...makeValidComposerConfig(), version: 2 };
     const json = JSON.stringify(config);
-    expect(() => parseOgpEditorConfig(json)).toThrow(
-      'Unsupported OGP editor config version: 2',
+    expect(() => parseComposerConfig(json)).toThrow(
+      'Unsupported Composer config version: 2',
     );
   });
 
   it('validates background (delegates to parseOgpConfig)', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     (config.background as Record<string, unknown>).slug = '';
     const json = JSON.stringify(config);
-    expect(() => parseOgpEditorConfig(json)).toThrow(
+    expect(() => parseComposerConfig(json)).toThrow(
       'slug must be a non-empty string',
     );
   });
 
   it('throws on image layer with missing src', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     const layer = config.layers[0] as Record<string, unknown>;
     layer.src = '';
     const json = JSON.stringify(config);
-    expect(() => parseOgpEditorConfig(json)).toThrow(
+    expect(() => parseComposerConfig(json)).toThrow(
       'src must be a non-empty string',
     );
   });
 
   it('throws on image layer with invalid opacity', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     const layer = config.layers[0] as Record<string, unknown>;
     layer.opacity = 1.5;
     const json = JSON.stringify(config);
-    expect(() => parseOgpEditorConfig(json)).toThrow(
+    expect(() => parseComposerConfig(json)).toThrow(
       'opacity must be a number in [0, 1]',
     );
   });
 
   it('throws on text layer with invalid fontSize', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     const layer = config.layers[1] as Record<string, unknown>;
     layer.fontSize = -10;
     const json = JSON.stringify(config);
-    expect(() => parseOgpEditorConfig(json)).toThrow(
+    expect(() => parseComposerConfig(json)).toThrow(
       'fontSize must be a positive finite number',
     );
   });
 
   it('throws on text layer with invalid fontWeight', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     const layer = config.layers[1] as Record<string, unknown>;
     layer.fontWeight = 'bolder';
     const json = JSON.stringify(config);
-    expect(() => parseOgpEditorConfig(json)).toThrow(
+    expect(() => parseComposerConfig(json)).toThrow(
       'fontWeight must be "normal" or "bold"',
     );
   });
 
   it('throws on transform with negative width', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     (config.layers[0] as Record<string, unknown>).transform = {
       x: 0,
       y: 0,
@@ -147,63 +147,63 @@ describe('parseOgpEditorConfig validation', () => {
       height: 50,
     };
     const json = JSON.stringify(config);
-    expect(() => parseOgpEditorConfig(json)).toThrow(
+    expect(() => parseComposerConfig(json)).toThrow(
       'transform.width must be a positive finite number',
     );
   });
 
   it('accepts empty layers array', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     config.layers = [];
     const json = JSON.stringify(config);
-    const parsed = parseOgpEditorConfig(json);
+    const parsed = parseComposerConfig(json);
     expect(parsed.layers).toEqual([]);
   });
 
   it('defaults textVAlign to top when omitted (backward compat)', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     const raw = JSON.parse(JSON.stringify(config));
     // Remove textVAlign from the text layer
     delete raw.layers[1].textVAlign;
-    const parsed = parseOgpEditorConfig(JSON.stringify(raw));
+    const parsed = parseComposerConfig(JSON.stringify(raw));
     const textLayer = parsed.layers[1] as TextLayerData;
     expect(textLayer.textVAlign).toBe('top');
   });
 
   it('throws on text layer with invalid textVAlign', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     const layer = config.layers[1] as Record<string, unknown>;
     layer.textVAlign = 'center';
     const json = JSON.stringify(config);
-    expect(() => parseOgpEditorConfig(json)).toThrow(
+    expect(() => parseComposerConfig(json)).toThrow(
       'textVAlign must be "top", "middle", or "bottom"',
     );
   });
 
   it('parses config with frame field', () => {
     const config = {
-      ...makeValidEditorConfig(),
+      ...makeValidComposerConfig(),
       frame: { type: 'simple-line', params: { borderWidth: 10, color: '#ff0000' } },
     };
     const json = JSON.stringify(config);
-    const parsed = parseOgpEditorConfig(json);
+    const parsed = parseComposerConfig(json);
     expect(parsed.frame).toEqual({ type: 'simple-line', params: { borderWidth: 10, color: '#ff0000' } });
   });
 
   it('parses config without frame field (undefined)', () => {
-    const config = makeValidEditorConfig();
+    const config = makeValidComposerConfig();
     const json = JSON.stringify(config);
-    const parsed = parseOgpEditorConfig(json);
+    const parsed = parseComposerConfig(json);
     expect(parsed.frame).toBeUndefined();
   });
 
   it('round-trips config with frame', () => {
-    const config: OgpEditorConfig = {
-      ...makeValidEditorConfig(),
+    const config: ComposerConfig = {
+      ...makeValidComposerConfig(),
       frame: { type: 'neon-glow', params: { glowColor: '#00ffff', glowRadius: 15 } },
     };
-    const json = serializeOgpEditorConfig(config);
-    const parsed = parseOgpEditorConfig(json);
+    const json = serializeComposerConfig(config);
+    const parsed = parseComposerConfig(json);
     expect(parsed.frame).toEqual(config.frame);
   });
 });

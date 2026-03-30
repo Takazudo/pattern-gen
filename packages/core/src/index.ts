@@ -59,16 +59,16 @@ export { randomizeDefaults, getEffectiveParams } from './randomize-defaults.js';
 export { serializeOgpConfig, parseOgpConfig, OGP_WIDTH, OGP_HEIGHT } from './ogp-config.js';
 export type { OgpConfig, OgpCropRegion } from './ogp-config.js';
 
-// OGP editor config
-export { serializeOgpEditorConfig, parseOgpEditorConfig } from './ogp-editor-config.js';
+// Composer config
+export { serializeComposerConfig, parseComposerConfig } from './composer-config.js';
 export type {
-  OgpEditorConfig,
+  ComposerConfig,
   EditorLayer,
   ImageLayerData,
   TextLayerData,
   LayerTransform,
   FrameConfig,
-} from './ogp-editor-config.js';
+} from './composer-config.js';
 
 // Frame types
 export type {

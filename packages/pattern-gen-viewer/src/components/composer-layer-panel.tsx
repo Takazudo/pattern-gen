@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { FRAME_GENERATORS, framesByName } from '@takazudo/pattern-gen-generators';
-import type { AlignmentType, GridConfig } from './ogp-editor.js';
-import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
+import type { AlignmentType, GridConfig } from './composer.js';
+import { ComposerFontPicker } from './composer-font-picker.js';
 import { HslaColorSwatch } from './hsla-color-picker.js';
 
 /* ── Props ── */
@@ -29,7 +29,7 @@ interface LayerPanelProps {
 
 /* ── Component ── */
 
-export function OgpEditorLayerPanel({
+export function ComposerLayerPanel({
   layers,
   selectedIds,
   onSelect,
@@ -126,26 +126,26 @@ export function OgpEditorLayerPanel({
     : null;
 
   return (
-    <div className="ogp-editor-panel">
+    <div className="composer-panel">
       {/* Layers section (actions + list) */}
-      <div className="ogp-panel-section">
-        <div className="ogp-props-title">Layers</div>
-        <div className="ogp-panel-actions">
-          <button className="btn ogp-panel-btn" onClick={onAddImage}>
+      <div className="composer-panel-section">
+        <div className="composer-props-title">Layers</div>
+        <div className="composer-panel-actions">
+          <button className="btn composer-panel-btn" onClick={onAddImage}>
             Add Image
           </button>
-          <button className="btn ogp-panel-btn" onClick={onAddText}>
+          <button className="btn composer-panel-btn" onClick={onAddText}>
             Add Text
           </button>
-          <button className="btn ogp-panel-btn" onClick={onImportJson}>
+          <button className="btn composer-panel-btn" onClick={onImportJson}>
             Import JSON
           </button>
         </div>
-        <div className="ogp-layer-list">
+        <div className="composer-layer-list">
           {layers.map((layer, idx) => (
             <div
               key={layer.id}
-              className={`ogp-layer-item ${selectedIdSet.has(layer.id) ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
+              className={`composer-layer-item ${selectedIdSet.has(layer.id) ? 'selected' : ''} ${dragIdx === idx ? 'dragging' : ''}`}
               draggable
               onClick={(e) => {
                 if (e.metaKey || e.ctrlKey) {
@@ -164,12 +164,12 @@ export function OgpEditorLayerPanel({
               onDrop={handleDrop}
               onDragEnd={handleDragEnd}
             >
-              <span className="ogp-layer-icon">
+              <span className="composer-layer-icon">
                 {layer.type === 'text' ? 'T' : '\u{1F5BC}'}
               </span>
-              <span className="ogp-layer-name">{layer.name}</span>
+              <span className="composer-layer-name">{layer.name}</span>
               <button
-                className="ogp-layer-delete"
+                className="composer-layer-delete"
                 aria-label={`Delete ${layer.name}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -181,16 +181,16 @@ export function OgpEditorLayerPanel({
             </div>
           ))}
           {layers.length === 0 && (
-            <div className="ogp-layer-empty">No layers yet</div>
+            <div className="composer-layer-empty">No layers yet</div>
           )}
         </div>
       </div>
 
       {/* Frame section */}
-      <div className="ogp-panel-section ogp-frame-section">
-        <div className="ogp-props-title">Frame</div>
+      <div className="composer-panel-section composer-frame-section">
+        <div className="composer-props-title">Frame</div>
         <select
-          className="ogp-frame-select"
+          className="composer-frame-select"
           value={frameConfig?.type ?? ''}
           onChange={handleFrameTypeChange}
         >
@@ -212,11 +212,11 @@ export function OgpEditorLayerPanel({
 
       {/* Alignment panel (2+ layers selected) */}
       {selectedIds.length >= 2 && (
-        <div className="ogp-panel-section ogp-align-panel">
-          <div className="ogp-props-title">
+        <div className="composer-panel-section composer-align-panel">
+          <div className="composer-props-title">
             Align ({selectedIds.length} layers)
           </div>
-          <div className="ogp-align-grid">
+          <div className="composer-align-grid">
             {([
               { type: 'align-left', label: 'Left', title: 'Align Left' },
               { type: 'align-center-h', label: 'Center H', title: 'Align Center (Horizontal)' },
@@ -227,7 +227,7 @@ export function OgpEditorLayerPanel({
             ] as const).map((btn) => (
               <button
                 key={btn.type}
-                className="btn ogp-align-btn"
+                className="btn composer-align-btn"
                 onClick={() => onAlignLayers(selectedIds, btn.type)}
                 title={btn.title}
               >
@@ -240,14 +240,14 @@ export function OgpEditorLayerPanel({
 
       {/* Properties panel */}
       {selected && (
-        <div className="ogp-panel-section ogp-props">
-          <div className="ogp-props-title">Properties</div>
+        <div className="composer-panel-section composer-props">
+          <div className="composer-props-title">Properties</div>
 
           {/* Common: name */}
-          <label className="ogp-prop-label">Name</label>
+          <label className="composer-prop-label">Name</label>
           <input
             type="text"
-            className="ogp-prop-input"
+            className="composer-prop-input"
             value={selected.name}
             onChange={(e) =>
               onUpdate(selected.id, { name: e.target.value })
@@ -255,12 +255,12 @@ export function OgpEditorLayerPanel({
           />
 
           {/* Common: transform */}
-          <div className="ogp-prop-grid">
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">X</label>
+          <div className="composer-prop-grid">
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">X</label>
               <input
                 type="number"
-                className="ogp-prop-input ogp-prop-num"
+                className="composer-prop-input composer-prop-num"
                 value={Math.round(selected.transform.x)}
                 onChange={(e) =>
                   onUpdate(selected.id, {
@@ -272,11 +272,11 @@ export function OgpEditorLayerPanel({
                 }
               />
             </div>
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">Y</label>
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">Y</label>
               <input
                 type="number"
-                className="ogp-prop-input ogp-prop-num"
+                className="composer-prop-input composer-prop-num"
                 value={Math.round(selected.transform.y)}
                 onChange={(e) =>
                   onUpdate(selected.id, {
@@ -288,11 +288,11 @@ export function OgpEditorLayerPanel({
                 }
               />
             </div>
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">W</label>
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">W</label>
               <input
                 type="number"
-                className="ogp-prop-input ogp-prop-num"
+                className="composer-prop-input composer-prop-num"
                 value={Math.round(selected.transform.width)}
                 onChange={(e) =>
                   onUpdate(selected.id, {
@@ -304,11 +304,11 @@ export function OgpEditorLayerPanel({
                 }
               />
             </div>
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">H</label>
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">H</label>
               <input
                 type="number"
-                className="ogp-prop-input ogp-prop-num"
+                className="composer-prop-input composer-prop-num"
                 value={Math.round(selected.transform.height)}
                 onChange={(e) =>
                   onUpdate(selected.id, {
@@ -323,7 +323,7 @@ export function OgpEditorLayerPanel({
           </div>
 
           {/* Common: opacity */}
-          <label className="ogp-prop-label">
+          <label className="composer-prop-label">
             Opacity: {Math.round(selected.opacity * 100)}%
           </label>
           <input
@@ -360,15 +360,15 @@ export function OgpEditorLayerPanel({
       )}
 
       {/* Grid panel — always visible */}
-      <div className="ogp-panel-section ogp-grid-panel">
-        <div className="ogp-props-title">Grid</div>
-        <div className="ogp-prop-grid">
-          <div className="ogp-prop-field">
-            <label className="ogp-prop-label" htmlFor="ogp-grid-vdivide">V Divide</label>
+      <div className="composer-panel-section composer-grid-panel">
+        <div className="composer-props-title">Grid</div>
+        <div className="composer-prop-grid">
+          <div className="composer-prop-field">
+            <label className="composer-prop-label" htmlFor="composer-grid-vdivide">V Divide</label>
             <input
-              id="ogp-grid-vdivide"
+              id="composer-grid-vdivide"
               type="number"
-              className="ogp-prop-input ogp-prop-num"
+              className="composer-prop-input composer-prop-num"
               min={1}
               max={12}
               value={gridConfig.vDivide}
@@ -380,12 +380,12 @@ export function OgpEditorLayerPanel({
               }
             />
           </div>
-          <div className="ogp-prop-field">
-            <label className="ogp-prop-label" htmlFor="ogp-grid-hdivide">H Divide</label>
+          <div className="composer-prop-field">
+            <label className="composer-prop-label" htmlFor="composer-grid-hdivide">H Divide</label>
             <input
-              id="ogp-grid-hdivide"
+              id="composer-grid-hdivide"
               type="number"
-              className="ogp-prop-input ogp-prop-num"
+              className="composer-prop-input composer-prop-num"
               min={1}
               max={12}
               value={gridConfig.hDivide}
@@ -398,12 +398,12 @@ export function OgpEditorLayerPanel({
             />
           </div>
         </div>
-        <label className="ogp-prop-label" htmlFor="ogp-grid-linecolor">Line Color</label>
-        <div className="ogp-prop-color-row">
+        <label className="composer-prop-label" htmlFor="composer-grid-linecolor">Line Color</label>
+        <div className="composer-prop-color-row">
           <input
-            id="ogp-grid-linecolor"
+            id="composer-grid-linecolor"
             type="text"
-            className="ogp-prop-input ogp-prop-color-text"
+            className="composer-prop-input composer-prop-color-text"
             value={gridConfig.lineColor}
             onChange={(e) =>
               onGridConfigChange({ ...gridConfig, lineColor: e.target.value })
@@ -417,7 +417,7 @@ export function OgpEditorLayerPanel({
             label="Line Color"
           />
         </div>
-        <label className="ogp-prop-toggle-row">
+        <label className="composer-prop-toggle-row">
           <input
             type="checkbox"
             checked={gridConfig.snap}
@@ -430,9 +430,9 @@ export function OgpEditorLayerPanel({
               })
             }
           />
-          <span className="ogp-prop-label">Snap to Grid</span>
+          <span className="composer-prop-label">Snap to Grid</span>
         </label>
-        <label className="ogp-prop-toggle-row">
+        <label className="composer-prop-toggle-row">
           <input
             type="checkbox"
             checked={gridConfig.visible}
@@ -440,7 +440,7 @@ export function OgpEditorLayerPanel({
               onGridConfigChange({ ...gridConfig, visible: e.target.checked })
             }
           />
-          <span className="ogp-prop-label">Show Grid</span>
+          <span className="composer-prop-label">Show Grid</span>
         </label>
       </div>
     </div>
@@ -487,16 +487,16 @@ function ImageProps({
   const bgThreshold = layer.bgRemoval?.threshold ?? 0;
 
   return (
-    <div className="ogp-props-section">
-      <label className="ogp-prop-label">Source</label>
-      <div className="ogp-prop-src-row">
-        <span className="ogp-prop-src-text">{truncatedSrc}</span>
-        <button className="btn ogp-prop-btn-sm" onClick={handleReplace}>
+    <div className="composer-props-section">
+      <label className="composer-prop-label">Source</label>
+      <div className="composer-prop-src-row">
+        <span className="composer-prop-src-text">{truncatedSrc}</span>
+        <button className="btn composer-prop-btn-sm" onClick={handleReplace}>
           Replace
         </button>
       </div>
 
-      <label className="ogp-prop-label" style={{ marginTop: 8 }}>BG Removal</label>
+      <label className="composer-prop-label" style={{ marginTop: 8 }}>BG Removal</label>
       {isProcessing ? (
         <div style={{ fontSize: 11, color: 'var(--color-fg-muted)', padding: '4px 0' }}>
           Processing...
@@ -546,25 +546,25 @@ function TextProps({
   onUpdate: (updates: Partial<TextLayerData>) => void;
 }) {
   return (
-    <div className="ogp-props-section">
+    <div className="composer-props-section">
       {/* Content */}
-      <label className="ogp-prop-label">Content</label>
+      <label className="composer-prop-label">Content</label>
       <textarea
-        className="ogp-prop-textarea"
+        className="composer-prop-textarea"
         value={layer.content}
         rows={3}
         onChange={(e) => onUpdate({ content: e.target.value })}
       />
 
       {/* Font family */}
-      <label className="ogp-prop-label">Font</label>
-      <OgpEditorFontPicker
+      <label className="composer-prop-label">Font</label>
+      <ComposerFontPicker
         value={layer.fontFamily}
         onChange={(family) => onUpdate({ fontFamily: family })}
       />
 
       {/* Font size */}
-      <label className="ogp-prop-label">
+      <label className="composer-prop-label">
         Size: {layer.fontSize}px
       </label>
       <input
@@ -578,9 +578,9 @@ function TextProps({
       />
 
       {/* Font weight / style toggles */}
-      <div className="ogp-prop-toggle-row">
+      <div className="composer-prop-toggle-row">
         <button
-          className={`btn ogp-prop-toggle ${layer.fontWeight === 'bold' ? 'active' : ''}`}
+          className={`btn composer-prop-toggle ${layer.fontWeight === 'bold' ? 'active' : ''}`}
           aria-pressed={layer.fontWeight === 'bold'}
           onClick={() =>
             onUpdate({
@@ -591,7 +591,7 @@ function TextProps({
           Bold
         </button>
         <button
-          className={`btn ogp-prop-toggle ${layer.fontStyle === 'italic' ? 'active' : ''}`}
+          className={`btn composer-prop-toggle ${layer.fontStyle === 'italic' ? 'active' : ''}`}
           aria-pressed={layer.fontStyle === 'italic'}
           onClick={() =>
             onUpdate({
@@ -604,11 +604,11 @@ function TextProps({
       </div>
 
       {/* Color */}
-      <label className="ogp-prop-label">Color</label>
-      <div className="ogp-prop-color-row">
+      <label className="composer-prop-label">Color</label>
+      <div className="composer-prop-color-row">
         <input
           type="text"
-          className="ogp-prop-input ogp-prop-color-text"
+          className="composer-prop-input composer-prop-color-text"
           value={layer.color}
           onChange={(e) => onUpdate({ color: e.target.value })}
         />
@@ -620,12 +620,12 @@ function TextProps({
       </div>
 
       {/* Text align */}
-      <label className="ogp-prop-label">Align</label>
-      <div className="ogp-prop-toggle-row">
+      <label className="composer-prop-label">Align</label>
+      <div className="composer-prop-toggle-row">
         {(['left', 'center', 'right'] as const).map((a) => (
           <button
             key={a}
-            className={`btn ogp-prop-toggle ${layer.textAlign === a ? 'active' : ''}`}
+            className={`btn composer-prop-toggle ${layer.textAlign === a ? 'active' : ''}`}
             aria-pressed={layer.textAlign === a}
             onClick={() => onUpdate({ textAlign: a })}
           >
@@ -635,12 +635,12 @@ function TextProps({
       </div>
 
       {/* Vertical text align */}
-      <label className="ogp-prop-label">V Align</label>
-      <div className="ogp-prop-toggle-row">
+      <label className="composer-prop-label">V Align</label>
+      <div className="composer-prop-toggle-row">
         {(['top', 'middle', 'bottom'] as const).map((a) => (
           <button
             key={a}
-            className={`btn ogp-prop-toggle ${layer.textVAlign === a ? 'active' : ''}`}
+            className={`btn composer-prop-toggle ${layer.textVAlign === a ? 'active' : ''}`}
             aria-pressed={layer.textVAlign === a}
             onClick={() => onUpdate({ textVAlign: a })}
           >
@@ -650,7 +650,7 @@ function TextProps({
       </div>
 
       {/* Letter spacing */}
-      <label className="ogp-prop-label">
+      <label className="composer-prop-label">
         Letter Spacing: {layer.letterSpacing}
       </label>
       <input
@@ -665,7 +665,7 @@ function TextProps({
       />
 
       {/* Line height */}
-      <label className="ogp-prop-label">
+      <label className="composer-prop-label">
         Line Height: {layer.lineHeight.toFixed(1)}
       </label>
       <input
@@ -680,8 +680,8 @@ function TextProps({
       />
 
       {/* Shadow */}
-      <div className="ogp-props-subsection">
-        <label className="ogp-prop-toggle-row">
+      <div className="composer-props-subsection">
+        <label className="composer-prop-toggle-row">
           <input
             type="checkbox"
             checked={layer.shadow.enabled}
@@ -691,15 +691,15 @@ function TextProps({
               })
             }
           />
-          <span className="ogp-prop-label">Shadow</span>
+          <span className="composer-prop-label">Shadow</span>
         </label>
         {layer.shadow.enabled && (
-          <div className="ogp-prop-grid">
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">OX</label>
+          <div className="composer-prop-grid">
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">OX</label>
               <input
                 type="number"
-                className="ogp-prop-input ogp-prop-num"
+                className="composer-prop-input composer-prop-num"
                 value={layer.shadow.offsetX}
                 onChange={(e) =>
                   onUpdate({
@@ -711,11 +711,11 @@ function TextProps({
                 }
               />
             </div>
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">OY</label>
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">OY</label>
               <input
                 type="number"
-                className="ogp-prop-input ogp-prop-num"
+                className="composer-prop-input composer-prop-num"
                 value={layer.shadow.offsetY}
                 onChange={(e) =>
                   onUpdate({
@@ -727,11 +727,11 @@ function TextProps({
                 }
               />
             </div>
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">Blur</label>
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">Blur</label>
               <input
                 type="number"
-                className="ogp-prop-input ogp-prop-num"
+                className="composer-prop-input composer-prop-num"
                 value={layer.shadow.blur}
                 onChange={(e) =>
                   onUpdate({
@@ -743,11 +743,11 @@ function TextProps({
                 }
               />
             </div>
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">Color</label>
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">Color</label>
               <input
                 type="text"
-                className="ogp-prop-input"
+                className="composer-prop-input"
                 value={layer.shadow.color}
                 onChange={(e) =>
                   onUpdate({
@@ -764,8 +764,8 @@ function TextProps({
       </div>
 
       {/* Stroke */}
-      <div className="ogp-props-subsection">
-        <label className="ogp-prop-toggle-row">
+      <div className="composer-props-subsection">
+        <label className="composer-prop-toggle-row">
           <input
             type="checkbox"
             checked={layer.stroke.enabled}
@@ -775,15 +775,15 @@ function TextProps({
               })
             }
           />
-          <span className="ogp-prop-label">Stroke</span>
+          <span className="composer-prop-label">Stroke</span>
         </label>
         {layer.stroke.enabled && (
-          <div className="ogp-prop-grid">
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">Color</label>
+          <div className="composer-prop-grid">
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">Color</label>
               <input
                 type="text"
-                className="ogp-prop-input"
+                className="composer-prop-input"
                 value={layer.stroke.color}
                 onChange={(e) =>
                   onUpdate({
@@ -795,11 +795,11 @@ function TextProps({
                 }
               />
             </div>
-            <div className="ogp-prop-field">
-              <label className="ogp-prop-label">Width</label>
+            <div className="composer-prop-field">
+              <label className="composer-prop-label">Width</label>
               <input
                 type="number"
-                className="ogp-prop-input ogp-prop-num"
+                className="composer-prop-input composer-prop-num"
                 value={layer.stroke.width}
                 onChange={(e) =>
                   onUpdate({
@@ -832,7 +832,7 @@ function FrameParams({
   if (paramDefs.length === 0) return null;
 
   return (
-    <div className="ogp-frame-params">
+    <div className="composer-frame-params">
       {paramDefs.map((def) => (
         <FrameParamControl
           key={def.key}
@@ -857,8 +857,8 @@ function FrameParamControl({
   switch (def.type) {
     case 'slider':
       return (
-        <div className="ogp-frame-param-row">
-          <label className="ogp-prop-label">
+        <div className="composer-frame-param-row">
+          <label className="composer-prop-label">
             {def.label}: {Number(value).toFixed(def.step < 1 ? 1 : 0)}
           </label>
           <input
@@ -873,12 +873,12 @@ function FrameParamControl({
       );
     case 'color':
       return (
-        <div className="ogp-frame-param-row">
-          <label className="ogp-prop-label">{def.label}</label>
-          <div className="ogp-prop-color-row">
+        <div className="composer-frame-param-row">
+          <label className="composer-prop-label">{def.label}</label>
+          <div className="composer-prop-color-row">
             <input
               type="text"
-              className="ogp-prop-input ogp-prop-color-text"
+              className="composer-prop-input composer-prop-color-text"
               value={String(value)}
               onChange={(e) => onChange(e.target.value)}
             />
@@ -892,10 +892,10 @@ function FrameParamControl({
       );
     case 'select':
       return (
-        <div className="ogp-frame-param-row">
-          <label className="ogp-prop-label">{def.label}</label>
+        <div className="composer-frame-param-row">
+          <label className="composer-prop-label">{def.label}</label>
           <select
-            className="ogp-frame-select"
+            className="composer-frame-select"
             value={Number(value)}
             onChange={(e) => onChange(Number(e.target.value))}
           >
@@ -909,14 +909,14 @@ function FrameParamControl({
       );
     case 'toggle':
       return (
-        <div className="ogp-frame-param-row">
-          <label className="ogp-prop-toggle-row">
+        <div className="composer-frame-param-row">
+          <label className="composer-prop-toggle-row">
             <input
               type="checkbox"
               checked={Number(value) === 1}
               onChange={(e) => onChange(e.target.checked ? 1 : 0)}
             />
-            <span className="ogp-prop-label">{def.label}</span>
+            <span className="composer-prop-label">{def.label}</span>
           </label>
         </div>
       );

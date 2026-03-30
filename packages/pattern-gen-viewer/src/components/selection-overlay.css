@@ -1,6 +1,6 @@
-/* ── OGP Selection Overlay ── */
+/* ── Selection Overlay ── */
 
-.ogp-overlay {
+.selection-overlay {
   position: fixed;
   inset: 0;
   z-index: 100;
@@ -9,31 +9,31 @@
 
 /* ── Dim regions (4 rects around selection) ── */
 
-.ogp-dim {
+.selection-dim {
   position: absolute;
   background: oklch(0% 0 0 / 60%);
 }
 
-.ogp-dim-top {
+.selection-dim-top {
   top: 0;
   left: 0;
   right: 0;
 }
 
-.ogp-dim-bottom {
+.selection-dim-bottom {
   left: 0;
   right: 0;
 }
 
-.ogp-dim-left {
+.selection-dim-left {
   left: 0;
 }
 
-/* .ogp-dim-right uses inline styles for position/size */
+/* .selection-dim-right uses inline styles for position/size */
 
 /* ── Selection rectangle ── */
 
-.ogp-selection {
+.selection-box {
   position: absolute;
   border: 2px dashed oklch(100% 0 0 / 70%);
   cursor: move;
@@ -42,7 +42,7 @@
 
 /* ── Resize handles ── */
 
-.ogp-handle {
+.selection-handle {
   position: absolute;
   width: 10px;
   height: 10px;
@@ -57,7 +57,7 @@
     box-shadow 0.1s;
 }
 
-.ogp-handle:hover {
+.selection-handle:hover {
   width: 12px;
   height: 12px;
   box-shadow: 0 0 6px oklch(100% 0 0 / 50%);
@@ -65,7 +65,7 @@
 
 /* ── Center indicator for Alt+resize ── */
 
-.ogp-center-indicator {
+.selection-center-indicator {
   position: absolute;
   width: 6px;
   height: 6px;
@@ -77,9 +77,9 @@
   z-index: 101;
 }
 
-/* ── Floating Clip Toolbar ── */
+/* ── Floating Selection Toolbar ── */
 
-.ogp-clip-toolbar {
+.selection-toolbar {
   position: absolute;
   z-index: 102;
   background: oklch(0% 0 0 / 80%);
@@ -94,7 +94,7 @@
   min-width: 280px;
 }
 
-.ogp-clip-toolbar-drag {
+.selection-toolbar-drag {
   cursor: grab;
   padding: 2px 0;
   text-align: center;
@@ -103,17 +103,17 @@
   letter-spacing: 0.2em;
 }
 
-.ogp-clip-toolbar-drag:active {
+.selection-toolbar-drag:active {
   cursor: grabbing;
 }
 
-.ogp-clip-toolbar-row {
+.selection-toolbar-row {
   display: flex;
   gap: 4px;
   align-items: center;
 }
 
-.ogp-clip-mode-btn {
+.selection-mode-btn {
   font-size: 11px;
   padding: 4px 10px;
   background: oklch(100% 0 0 / 6%);
@@ -123,17 +123,17 @@
   cursor: pointer;
 }
 
-.ogp-clip-mode-btn:hover {
+.selection-mode-btn:hover {
   background: oklch(100% 0 0 / 12%);
 }
 
-.ogp-clip-mode-btn.active {
+.selection-mode-btn.active {
   background: oklch(100% 0 0 / 18%);
   border-color: oklch(100% 0 0 / 25%);
   color: oklch(95% 0 0);
 }
 
-.ogp-clip-detail {
+.selection-detail {
   display: flex;
   gap: 4px;
   align-items: center;
@@ -141,7 +141,7 @@
   color: oklch(70% 0 0);
 }
 
-.ogp-clip-detail-input {
+.selection-detail-input {
   width: 60px;
   padding: 3px 6px;
   background: oklch(100% 0 0 / 6%);
@@ -153,12 +153,12 @@
   font-variant-numeric: tabular-nums;
 }
 
-.ogp-clip-detail-separator {
+.selection-detail-separator {
   color: oklch(50% 0 0);
   font-weight: 600;
 }
 
-.ogp-clip-actions {
+.selection-actions {
   display: flex;
   gap: 6px;
   border-top: 1px solid oklch(100% 0 0 / 8%);
@@ -167,26 +167,26 @@
 
 /* ── Action buttons inside toolbar ── */
 
-.ogp-btn-generate {
+.selection-btn-generate {
   background: oklch(100% 0 0 / 12%);
 }
 
-.ogp-btn-generate:hover {
+.selection-btn-generate:hover {
   background: oklch(100% 0 0 / 20%);
 }
 
-.ogp-btn-json {
+.selection-btn-json {
   background: oklch(100% 0 0 / 8%);
 }
 
-.ogp-btn-json:hover {
+.selection-btn-json:hover {
   background: oklch(100% 0 0 / 15%);
 }
 
-.ogp-btn-exit {
+.selection-btn-exit {
   background: oklch(100% 0 0 / 6%);
 }
 
-.ogp-btn-exit:hover {
+.selection-btn-exit:hover {
   background: oklch(100% 0 0 / 12%);
 }
