@@ -39,23 +39,29 @@ export type WorkerResponse =
   | WorkerResultMessage
   | WorkerErrorMessage;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(self as any).onmessage = async (e: MessageEvent<WorkerRequest>) => {
-  const { type, id, buffer, mimeType } = e.data;
-  if (type !== "process") return;
+// Serialize requests so only one ML inference runs at a time
+let processing: Promise<void> = Promise.resolve();
+
+async function handleRequest(id: string, buffer: ArrayBuffer, mimeType: string) {
 
   try {
     // Reconstruct Blob from transferred ArrayBuffer
     const blob = new Blob([buffer], { type: mimeType });
 
     // Run ML background removal
+    // Track peak progress to prevent backwards jumps across ML phases
+    let peakProgress = 0;
     const resultBlob = await imglyRemoveBackground(blob, {
       progress: (_key: string, current: number, total: number) => {
-        workerPostMessage({
-          type: "progress",
-          id,
-          progress: total > 0 ? Math.min(1, current / total) : 0,
-        } satisfies WorkerProgressMessage);
+        const raw = total > 0 ? Math.min(1, current / total) : 0;
+        if (raw > peakProgress) {
+          peakProgress = raw;
+          workerPostMessage({
+            type: "progress",
+            id,
+            progress: peakProgress,
+          } satisfies WorkerProgressMessage);
+        }
       },
     });
 
@@ -113,4 +119,11 @@ export type WorkerResponse =
       message: err instanceof Error ? err.message : "Background removal failed",
     } satisfies WorkerErrorMessage);
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(self as any).onmessage = (e: MessageEvent<WorkerRequest>) => {
+  const { type, id, buffer, mimeType } = e.data;
+  if (type !== "process") return;
+  processing = processing.then(() => handleRequest(id, buffer, mimeType));
 };
