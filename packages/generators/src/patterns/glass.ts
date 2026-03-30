@@ -35,7 +35,7 @@ export const glass: PatternGenerator = {
 
     // Base gradient background
     const bgRgb = hexToRgb(bg);
-    const fgRgb = hexToRgb(fgColors[0]);
+    const fgRgb = hexToRgb(fgColors.length > 0 ? fgColors[0] : bg);
     const grad = ctx.createLinearGradient(0, 0, width, height);
     grad.addColorStop(0, `rgb(${bgRgb[0]},${bgRgb[1]},${bgRgb[2]})`);
     grad.addColorStop(1, `rgb(${fgRgb[0]},${fgRgb[1]},${fgRgb[2]})`);

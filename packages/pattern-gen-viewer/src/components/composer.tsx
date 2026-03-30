@@ -15,6 +15,7 @@ import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { ComposerLayerPanel } from './composer-layer-panel.js';
 import { ImageTracePreview } from './image-trace-preview.js';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
+import { triggerDownload } from '../utils/trigger-download.js';
 import './composer.css';
 
 /* ── Alignment ── */
@@ -49,14 +50,6 @@ export interface GridConfig {
 
 /* ── Helpers ── */
 
-function triggerDownload(dataUrl: string, filename: string) {
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
 
 function renderTextLayer(
   ctx: CanvasRenderingContext2D,

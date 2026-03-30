@@ -25,18 +25,10 @@ import { StepIndicator } from './components/step-indicator.js';
 import type { AppStep } from './components/step-indicator.js';
 import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
+import { triggerDownload } from './utils/trigger-download.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
-
-function triggerDownload(dataUrl: string, filename: string) {
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
 
 /** Get the scale/offset info for mapping viewport → canvas buffer (object-fit: cover). */
 function getCanvasScaleInfo(canvas: HTMLCanvasElement) {
@@ -90,7 +82,7 @@ function viewportToBufferCoords(
   };
 }
 
-function buildOgpConfig(
+function buildBackgroundConfig(
   viewportRect: { x: number; y: number; width: number; height: number },
   canvas: HTMLCanvasElement,
   state: {
@@ -518,7 +510,7 @@ export function App() {
     ctx.restore();
   }, [importedImage, overlayOpacity, imageTransform]);
 
-  const handleOgpGenerate = useCallback(
+  const handleSelectionGenerate = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -569,16 +561,16 @@ export function App() {
       ogpCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
 
       const url = ogpCanvas.toDataURL('image/png');
-      triggerDownload(url, `ogp-${patternType}-${slug}.png`);
+      triggerDownload(url, `crop-${patternType}-${slug}.png`);
     },
     [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, compositeOverlay],
   );
 
-  const getOgpJson = useCallback(
+  const getConfigJson = useCallback(
     (rect: { x: number; y: number; width: number; height: number }): string | null => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
-      const config = buildOgpConfig(rect, canvas, {
+      const config = buildBackgroundConfig(rect, canvas, {
         slug,
         patternType,
         colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
@@ -594,25 +586,25 @@ export function App() {
     [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
   );
 
-  const handleOgpDownloadJson = useCallback(
+  const handleDownloadJson = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
-      const json = getOgpJson(rect);
+      const json = getConfigJson(rect);
       if (!json) return;
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      triggerDownload(url, `ogp-config-${patternType}-${slug}.json`);
+      triggerDownload(url, `config-${patternType}-${slug}.json`);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
-    [getOgpJson, patternType, slug],
+    [getConfigJson, patternType, slug],
   );
 
-  const handleOgpCopyJson = useCallback(
+  const handleCopyJson = useCallback(
     async (rect: { x: number; y: number; width: number; height: number }) => {
-      const json = getOgpJson(rect);
+      const json = getConfigJson(rect);
       if (!json) return;
       await navigator.clipboard.writeText(json);
     },
-    [getOgpJson],
+    [getConfigJson],
   );
 
   const handleEnterComposer = useCallback(
@@ -622,7 +614,7 @@ export function App() {
 
       const outSize = getOutputDimensions(aspectConfig);
 
-      const config = buildOgpConfig(rect, canvas, {
+      const config = buildBackgroundConfig(rect, canvas, {
         slug,
         patternType,
         colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
@@ -689,6 +681,9 @@ export function App() {
     setComposerActive(false);
   }, []);
 
+  const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
+  const handleExitComposer = useCallback(() => setComposerActive(false), []);
+
   const showStepIndicator = !composerActive;
 
   return (
@@ -742,10 +737,10 @@ export function App() {
 
       {currentStep === 'compose' && !composerActive && (
         <SelectionOverlay
-          onGenerate={handleOgpGenerate}
-          onExit={() => setCurrentStep('background')}
-          onDownloadJson={handleOgpDownloadJson}
-          onCopyJson={handleOgpCopyJson}
+          onGenerate={handleSelectionGenerate}
+          onExit={handleExitToBackground}
+          onDownloadJson={handleDownloadJson}
+          onCopyJson={handleCopyJson}
           onEdit={handleEnterComposer}
         />
       )}
@@ -756,7 +751,7 @@ export function App() {
           backgroundConfig={composerBgConfig}
           outputWidth={composerOutputSize.width}
           outputHeight={composerOutputSize.height}
-          onExit={() => setComposerActive(false)}
+          onExit={handleExitComposer}
         />
       )}
 

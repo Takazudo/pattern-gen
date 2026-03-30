@@ -126,17 +126,17 @@ function HslaColorPicker({
   return (
     <div
       ref={containerRef}
-      className="ogp-hsla-picker"
+      className="composer-hsla-picker"
       style={getFixedPopoverStyle(anchorRef.current, 320, 220)}
     >
-      <div className="ogp-hsla-top-row">
-        <div className="ogp-hsla-preview">
-          {hsla.a < 100 && <div className="ogp-hsla-preview-checkerboard" />}
-          <div className="ogp-hsla-preview-color" style={{ backgroundColor: cssColor }} />
+      <div className="composer-hsla-top-row">
+        <div className="composer-hsla-preview">
+          {hsla.a < 100 && <div className="composer-hsla-preview-checkerboard" />}
+          <div className="composer-hsla-preview-color" style={{ backgroundColor: cssColor }} />
         </div>
         <input
           type="text"
-          className="ogp-hsla-hex-input"
+          className="composer-hsla-hex-input"
           value={hexInput}
           onChange={(e) => handleHexChange(e.target.value)}
           spellCheck={false}
@@ -144,8 +144,8 @@ function HslaColorPicker({
         />
       </div>
       {SLIDERS.map(({ label, key, max, suffix }) => (
-        <div key={key} className="ogp-hsla-slider-row">
-          <span className="ogp-hsla-slider-label">{label}</span>
+        <div key={key} className="composer-hsla-slider-row">
+          <span className="composer-hsla-slider-label">{label}</span>
           <input
             type="range"
             min={0}
@@ -164,7 +164,7 @@ function HslaColorPicker({
                     : 'Alpha'
             }
           />
-          <span className="ogp-hsla-slider-value">
+          <span className="composer-hsla-slider-value">
             {hsla[key]}
             {suffix}
           </span>
@@ -198,13 +198,13 @@ export function HslaColorSwatch({
       <button
         ref={buttonRef}
         type="button"
-        className="ogp-hsla-swatch-btn"
+        className="composer-hsla-swatch-btn"
         style={{ width: 28, height: 28 }}
         onClick={() => setIsOpen((prev) => !prev)}
         title={label ? `${label}: ${color}` : color}
       >
-        {showCheckerboard && <div className="ogp-hsla-swatch-checkerboard" />}
-        <div className="ogp-hsla-swatch-color" style={{ backgroundColor: cssColor }} />
+        {showCheckerboard && <div className="composer-hsla-swatch-checkerboard" />}
+        <div className="composer-hsla-swatch-color" style={{ backgroundColor: cssColor }} />
       </button>
       {isOpen &&
         createPortal(

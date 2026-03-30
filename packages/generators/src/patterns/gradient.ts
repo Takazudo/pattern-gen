@@ -65,7 +65,7 @@ export const gradient: PatternGenerator = {
 
     // Add color stops with slight jitter for organic feel
     for (let i = 0; i < stopCount; i++) {
-      const basePosition = i / (stopCount - 1);
+      const basePosition = stopCount > 1 ? i / (stopCount - 1) : 0;
       // Jitter middle stops slightly (keep first and last at 0 and 1)
       let position = basePosition;
       if (i > 0 && i < stopCount - 1) {
