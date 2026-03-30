@@ -40,6 +40,7 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
   const [options, setOptions] = useState<ImageTraceOptions>({ ...DEFAULT_TRACE_OPTIONS });
   const [svgString, setSvgString] = useState<string>('');
   const [isTracing, setIsTracing] = useState(true);
+  const [traceError, setTraceError] = useState<string>('');
   const imageDataRef = useRef<ImageData | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
@@ -49,7 +50,12 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
   useEffect(() => {
     mountedRef.current = true;
     const canvas = getSourceCanvas();
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      setTraceError('Could not get canvas context');
+      setIsTracing(false);
+      return;
+    }
     imageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     runTrace(options);
     return () => {
@@ -62,16 +68,22 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
   const runTrace = useCallback(async (opts: ImageTraceOptions) => {
     if (!imageDataRef.current) return;
     const thisId = ++traceIdRef.current;
+    const isCurrent = () => mountedRef.current && thisId === traceIdRef.current;
     setIsTracing(true);
+    setTraceError('');
     try {
       const svg = await traceImageData(imageDataRef.current, opts);
-      if (mountedRef.current && thisId === traceIdRef.current) {
+      if (isCurrent()) {
         setSvgString(svg);
       }
     } catch (err) {
       console.error('Image trace failed:', err);
+      if (isCurrent()) {
+        setSvgString('');
+        setTraceError(err instanceof Error ? err.message : 'Unknown error');
+      }
     } finally {
-      if (mountedRef.current && thisId === traceIdRef.current) {
+      if (isCurrent()) {
         setIsTracing(false);
       }
     }
@@ -128,11 +140,14 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
       </div>
       <div className="image-trace-workspace">
         <div className="image-trace-preview-area">
-          {isTracing && !svgString ? (
+          {traceError ? (
+            <div className="image-trace-error" role="alert">Trace failed: {traceError}</div>
+          ) : isTracing && !svgString ? (
             <div className="image-trace-loading">Tracing...</div>
           ) : (
             <div
               className={`image-trace-svg-container${isTracing ? ' is-retracing' : ''}`}
+              aria-busy={isTracing}
               dangerouslySetInnerHTML={{ __html: svgString }}
             />
           )}

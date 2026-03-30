@@ -169,3 +169,81 @@ describe('DEFAULT_TRACE_OPTIONS', () => {
     });
   });
 });
+
+describe('traceImageData SVG output', () => {
+  // The browser wrapper needs `window` at module scope
+  let ImageTracer: typeof import('@image-tracer-ts/browser').ImageTracer;
+  let traceImageData: typeof import('../packages/pattern-gen-viewer/src/utils/image-trace.js').traceImageData;
+
+  beforeAll(async () => {
+    if (typeof globalThis.window === 'undefined') {
+      (globalThis as Record<string, unknown>).window = globalThis;
+    }
+    const coreMod = await import('@image-tracer-ts/browser');
+    ImageTracer = coreMod.ImageTracer;
+    const traceMod = await import(
+      '../packages/pattern-gen-viewer/src/utils/image-trace.js'
+    );
+    traceImageData = traceMod.traceImageData;
+  });
+
+  it('produces SVG with explicit width and height when viewBox is false', () => {
+    const width = 20, height = 10;
+    const imageData = createTestImageData(width, height, [255, 0, 0, 255]);
+    const tracer = new ImageTracer({
+      numberOfColors: 4,
+      minShapeOutline: 0,
+      viewBox: false,
+    });
+    const svg = tracer.traceImageToSvg(imageData);
+    expect(svg).toContain(`width="${width}"`);
+    expect(svg).toContain(`height="${height}"`);
+    expect(svg).not.toMatch(/<svg[^>]*viewBox/);
+  });
+
+  it('produces SVG with viewBox only when viewBox is true', () => {
+    const width = 20, height = 10;
+    const imageData = createTestImageData(width, height, [255, 0, 0, 255]);
+    const tracer = new ImageTracer({
+      numberOfColors: 4,
+      minShapeOutline: 0,
+      viewBox: true,
+    });
+    const svg = tracer.traceImageToSvg(imageData);
+    expect(svg).toContain(`viewBox="0 0 ${width} ${height}"`);
+    expect(svg).not.toContain('width="20"');
+    expect(svg).not.toContain('height="10"');
+  });
+
+  it('produces SVG with valid path elements', () => {
+    const imageData = createTestImageData(10, 10, [0, 128, 255, 255]);
+    const tracer = new ImageTracer({
+      numberOfColors: 4,
+      minShapeOutline: 0,
+      viewBox: false,
+    });
+    const svg = tracer.traceImageToSvg(imageData);
+    expect(svg).toContain('<path');
+    expect(svg).toContain('<svg');
+    expect(svg).toContain('</svg>');
+  });
+
+  it('traceImageData wrapper emits width/height (not viewBox)', async () => {
+    const imageData = createTestImageData(30, 20, [100, 50, 200, 255]);
+    const svg = await traceImageData(imageData);
+    expect(svg).toContain('width="30"');
+    expect(svg).toContain('height="20"');
+    expect(svg).not.toMatch(/<svg[^>]*viewBox/);
+    expect(svg).toContain('<path');
+  });
+
+  it('traceImageData handles semi-transparent input via flattenAlpha', async () => {
+    // Semi-transparent black → flattenAlpha composites onto white → gray
+    const imageData = createTestImageData(10, 10, [0, 0, 0, 128]);
+    const svg = await traceImageData(imageData);
+    expect(svg).toContain('width="10"');
+    expect(svg).toContain('<path');
+    // The path fill should be gray-ish (not black, not white) from compositing
+    expect(svg).toMatch(/rgb\(\d+,\d+,\d+\)/);
+  });
+});

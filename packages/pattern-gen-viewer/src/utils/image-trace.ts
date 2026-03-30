@@ -19,6 +19,10 @@ export async function traceImageData(
     strokeWidth: merged.strokeWidth,
     lineErrorMargin: merged.lineErrorMargin,
     curveErrorMargin: merged.curveErrorMargin,
+    // Emit explicit width/height attributes instead of viewBox-only.
+    // viewBox-only SVGs have no intrinsic dimensions, causing layout
+    // collapse when rendered inline inside flex containers.
+    viewBox: false,
   });
   return svgString;
 }
