@@ -498,8 +498,13 @@ function ImageProps({
 
       <label className="composer-prop-label" style={{ marginTop: 8 }}>BG Removal</label>
       {isProcessing ? (
-        <div style={{ fontSize: 11, color: 'var(--color-fg-muted)', padding: '4px 0' }}>
-          Processing...
+        <div
+          style={{ fontSize: 11, color: 'var(--color-fg-muted)', padding: '4px 0', display: 'flex', alignItems: 'center', gap: '6px' }}
+          role="status"
+          aria-busy="true"
+        >
+          <span className="processing-spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />
+          Removing background...
         </div>
       ) : (
         <>
