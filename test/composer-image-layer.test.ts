@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createCanvas, loadImage } from 'canvas';
-import { renderOgpEditorFromConfig } from '../src/renderer.js';
-import { parseOgpEditorConfig } from '@takazudo/pattern-gen-core';
+import { renderComposerFromConfig } from '../src/renderer.js';
+import { parseComposerConfig } from '@takazudo/pattern-gen-core';
 import type {
-  OgpEditorConfig,
+  ComposerConfig,
   ImageLayerData,
   OgpConfig,
 } from '@takazudo/pattern-gen-core';
@@ -29,8 +29,8 @@ function makeValidBackground(): OgpConfig {
 }
 
 function makeEditorConfig(
-  layers: OgpEditorConfig['layers'],
-): OgpEditorConfig {
+  layers: ComposerConfig['layers'],
+): ComposerConfig {
   return { version: 1, background: makeValidBackground(), layers };
 }
 
@@ -89,7 +89,7 @@ let bgOnlyCache: Buffer | null = null;
 
 async function renderBackgroundOnly(): Promise<Buffer> {
   if (!bgOnlyCache) {
-    bgOnlyCache = (await renderOgpEditorFromConfig(makeEditorConfig([]))).buffer;
+    bgOnlyCache = (await renderComposerFromConfig(makeEditorConfig([]))).buffer;
   }
   return bgOnlyCache;
 }
@@ -98,12 +98,12 @@ async function renderBackgroundOnly(): Promise<Buffer> {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('OGP editor — image layer CLI rendering', () => {
+describe('Composer — image layer CLI rendering', () => {
   it('renders a solid image layer with non-transparent pixels', async () => {
     const src = makeSolidPngDataUri('#ff0000');
     const config = makeEditorConfig([makeImageLayer({ src })]);
 
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     expect(result.buffer[0]).toBe(0x89); // PNG signature
 
     // Check pixel in the centre of where the image should be drawn (200, 200)
@@ -119,7 +119,7 @@ describe('OGP editor — image layer CLI rendering', () => {
     const config = makeEditorConfig([makeImageLayer({ src })]);
 
     const bgOnly = await renderBackgroundOnly();
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
 
     expect(bgOnly.equals(result.buffer)).toBe(false);
   });
@@ -128,18 +128,18 @@ describe('OGP editor — image layer CLI rendering', () => {
     const src = makeSolidPngDataUri('#ff0000');
     const config = makeEditorConfig([makeImageLayer({ src })]);
 
-    const r1 = await renderOgpEditorFromConfig(config);
-    const r2 = await renderOgpEditorFromConfig(config);
+    const r1 = await renderComposerFromConfig(config);
+    const r2 = await renderComposerFromConfig(config);
     expect(r1.buffer.equals(r2.buffer)).toBe(true);
   });
 
   it('applies partial opacity to image layer', async () => {
     const src = makeSolidPngDataUri('#ff0000');
 
-    const fullResult = await renderOgpEditorFromConfig(
+    const fullResult = await renderComposerFromConfig(
       makeEditorConfig([makeImageLayer({ src, opacity: 1 })]),
     );
-    const halfResult = await renderOgpEditorFromConfig(
+    const halfResult = await renderComposerFromConfig(
       makeEditorConfig([makeImageLayer({ src, opacity: 0.5 })]),
     );
 
@@ -156,7 +156,7 @@ describe('OGP editor — image layer CLI rendering', () => {
     const config = makeEditorConfig([makeImageLayer({ src, opacity: 0 })]);
 
     const bgOnly = await renderBackgroundOnly();
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     expect(bgOnly.equals(result.buffer)).toBe(true);
   });
 
@@ -169,7 +169,7 @@ describe('OGP editor — image layer CLI rendering', () => {
       makeImageLayer({ name: 'blue-top', src: blueSrc }),
     ]);
 
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     const pixel = await getPixel(result.buffer, 200, 200);
 
     // Blue should dominate since it's drawn on top
@@ -182,7 +182,7 @@ describe('OGP editor — image layer CLI rendering', () => {
     const config = makeEditorConfig([makeImageLayer({ src })]);
 
     const bgOnlyBuf = await renderBackgroundOnly();
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
 
     // Read all needed pixels in batch
     const [leftPixel, rightPixel] = await readPixels(result.buffer, [
@@ -203,7 +203,7 @@ describe('OGP editor — image layer CLI rendering', () => {
     ]);
 
     const bgOnly = await renderBackgroundOnly();
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     expect(result.buffer[0]).toBe(0x89);
     expect(result.width).toBe(1200);
     expect(result.height).toBe(630);
@@ -220,7 +220,7 @@ describe('OGP editor — image layer CLI rendering', () => {
       }),
     ]);
 
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     const bgOnlyBuf = await renderBackgroundOnly();
 
     const [insidePixel, outsidePixel] = await readPixels(result.buffer, [
@@ -236,7 +236,7 @@ describe('OGP editor — image layer CLI rendering', () => {
   });
 });
 
-describe('OGP editor config — image layer parsing', () => {
+describe('Composer config — image layer parsing', () => {
   const TINY_PNG =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
 
@@ -255,7 +255,7 @@ describe('OGP editor config — image layer parsing', () => {
       ],
     };
 
-    const parsed = parseOgpEditorConfig(JSON.stringify(config));
+    const parsed = parseComposerConfig(JSON.stringify(config));
     expect(parsed.layers).toHaveLength(1);
     expect(parsed.layers[0].type).toBe('image');
     expect((parsed.layers[0] as ImageLayerData).name).toBe('logo');
@@ -278,7 +278,7 @@ describe('OGP editor config — image layer parsing', () => {
       ],
     };
 
-    const parsed = parseOgpEditorConfig(JSON.stringify(config));
+    const parsed = parseComposerConfig(JSON.stringify(config));
     const layer = parsed.layers[0] as ImageLayerData;
     // bgRemoval is stripped by validateImageLayer — documenting current behavior
     expect(layer.bgRemoval).toBeUndefined();

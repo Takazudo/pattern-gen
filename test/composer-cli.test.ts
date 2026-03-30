@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { renderOgpEditorFromConfig } from '../src/renderer.js';
-import type { OgpEditorConfig, TextLayerData, OgpConfig } from '@takazudo/pattern-gen-core';
+import { renderComposerFromConfig } from '../src/renderer.js';
+import type { ComposerConfig, TextLayerData, OgpConfig } from '@takazudo/pattern-gen-core';
 
 function makeValidBackground(): OgpConfig {
   return {
@@ -44,14 +44,14 @@ function makeTextLayer(): TextLayerData {
   };
 }
 
-describe('renderOgpEditorFromConfig', () => {
+describe('renderComposerFromConfig', () => {
   it('produces a 1200x630 PNG with empty layers (background only)', async () => {
-    const config: OgpEditorConfig = {
+    const config: ComposerConfig = {
       version: 1,
       background: makeValidBackground(),
       layers: [],
     };
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     expect(result.width).toBe(1200);
     expect(result.height).toBe(630);
     expect(result.buffer).toBeInstanceOf(Buffer);
@@ -64,12 +64,12 @@ describe('renderOgpEditorFromConfig', () => {
   });
 
   it('produces valid PNG with text layer', async () => {
-    const config: OgpEditorConfig = {
+    const config: ComposerConfig = {
       version: 1,
       background: makeValidBackground(),
       layers: [makeTextLayer()],
     };
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     expect(result.width).toBe(1200);
     expect(result.height).toBe(630);
     expect(result.buffer[0]).toBe(0x89);
@@ -77,57 +77,57 @@ describe('renderOgpEditorFromConfig', () => {
   });
 
   it('produces identical output for same config (deterministic)', async () => {
-    const config: OgpEditorConfig = {
+    const config: ComposerConfig = {
       version: 1,
       background: makeValidBackground(),
       layers: [],
     };
-    const result1 = await renderOgpEditorFromConfig(config);
-    const result2 = await renderOgpEditorFromConfig(config);
+    const result1 = await renderComposerFromConfig(config);
+    const result2 = await renderComposerFromConfig(config);
     expect(result1.buffer.equals(result2.buffer)).toBe(true);
   });
 
   it('produces valid PNG with frame config', async () => {
-    const config: OgpEditorConfig = {
+    const config: ComposerConfig = {
       version: 1,
       background: makeValidBackground(),
       layers: [],
       frame: { type: 'simple-line', params: { borderWidth: 10, color: '#ff0000' } },
     };
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     expect(result.width).toBe(1200);
     expect(result.height).toBe(630);
     expect(result.buffer[0]).toBe(0x89); // PNG signature
     expect(result.buffer[1]).toBe(0x50);
     // Output should differ from frameless version
-    const noFrame: OgpEditorConfig = {
+    const noFrame: ComposerConfig = {
       version: 1,
       background: makeValidBackground(),
       layers: [],
     };
-    const noFrameResult = await renderOgpEditorFromConfig(noFrame);
+    const noFrameResult = await renderComposerFromConfig(noFrame);
     expect(result.buffer.equals(noFrameResult.buffer)).toBe(false);
   });
 
   it('ignores unknown frame type gracefully', async () => {
-    const config: OgpEditorConfig = {
+    const config: ComposerConfig = {
       version: 1,
       background: makeValidBackground(),
       layers: [],
       frame: { type: 'nonexistent-frame', params: {} },
     };
     // Should not throw — unknown frame is silently skipped
-    const result = await renderOgpEditorFromConfig(config);
+    const result = await renderComposerFromConfig(config);
     expect(result.buffer[0]).toBe(0x89);
   });
 
   it('throws for unknown pattern type in background', async () => {
-    const config: OgpEditorConfig = {
+    const config: ComposerConfig = {
       version: 1,
       background: { ...makeValidBackground(), type: 'nonexistent-pattern' },
       layers: [],
     };
-    await expect(renderOgpEditorFromConfig(config)).rejects.toThrow(
+    await expect(renderComposerFromConfig(config)).rejects.toThrow(
       'Unknown pattern type',
     );
   });
