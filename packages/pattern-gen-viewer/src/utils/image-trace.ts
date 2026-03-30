@@ -27,12 +27,34 @@ export const DEFAULT_TRACE_OPTIONS: ImageTraceOptions = {
   curveErrorMargin: 1,
 };
 
+/**
+ * Composite every pixel onto a white background so fully/partially
+ * transparent pixels become opaque. This prevents the tracer library
+ * from discarding low-alpha pixels (threshold < 13/255) which would
+ * otherwise contaminate the palette with invisible colors.
+ */
+export function flattenAlpha(imageData: ImageData): ImageData {
+  const { width, height, data } = imageData;
+  const out = new ImageData(width, height);
+  const dst = out.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3] / 255;
+    // Composite over white (255, 255, 255)
+    dst[i] = Math.round(data[i] * a + 255 * (1 - a)); // R
+    dst[i + 1] = Math.round(data[i + 1] * a + 255 * (1 - a)); // G
+    dst[i + 2] = Math.round(data[i + 2] * a + 255 * (1 - a)); // B
+    dst[i + 3] = 255; // fully opaque
+  }
+  return out;
+}
+
 export async function traceImageData(
   imageData: ImageData,
   options?: Partial<ImageTraceOptions>,
 ): Promise<string> {
   const merged = { ...DEFAULT_TRACE_OPTIONS, ...options };
-  const svgString = await ImageTracerBrowser.fromImageData(imageData, {
+  const opaqueData = flattenAlpha(imageData);
+  const svgString = await ImageTracerBrowser.fromImageData(opaqueData, {
     numberOfColors: merged.numberOfColors,
     minShapeOutline: merged.minPathSegments,
     blurRadius: merged.blurRadius,
