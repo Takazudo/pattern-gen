@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { parseOgpEditorConfig, hashString, createRandom } from '@takazudo/pattern-gen-core';
+import { parseComposerConfig, hashString, createRandom } from '@takazudo/pattern-gen-core';
 import type {
   OgpConfig,
-  OgpEditorConfig,
+  ComposerConfig,
   EditorLayer,
   FrameConfig,
   ImageLayerData,
@@ -12,10 +12,11 @@ import type {
 import { framesByName } from '@takazudo/pattern-gen-generators';
 import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
-import { OgpEditorLayerPanel } from './ogp-editor-layer-panel.js';
+import { ComposerLayerPanel } from './composer-layer-panel.js';
 import { ImageTracePreview } from './image-trace-preview.js';
-import { loadGoogleFont, isFontLoaded } from './ogp-editor-font-picker.js';
-import './ogp-editor.css';
+import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
+import { triggerDownload } from '../utils/trigger-download.js';
+import './composer.css';
 
 /* ── Alignment ── */
 
@@ -29,7 +30,7 @@ export type AlignmentType =
 
 /* ── Props ── */
 
-interface OgpEditorProps {
+interface ComposerProps {
   backgroundImage: ImageBitmap | null;
   backgroundConfig: OgpConfig | null;
   outputWidth: number;
@@ -49,14 +50,6 @@ export interface GridConfig {
 
 /* ── Helpers ── */
 
-function triggerDownload(dataUrl: string, filename: string) {
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
 
 function renderTextLayer(
   ctx: CanvasRenderingContext2D,
@@ -294,13 +287,13 @@ function snapTransform(
 
 /* ── Main Component ── */
 
-export function OgpEditor({
+export function Composer({
   backgroundImage,
   backgroundConfig,
   outputWidth,
   outputHeight,
   onExit,
-}: OgpEditorProps) {
+}: ComposerProps) {
   const [layers, setLayers] = useState<(EditorLayer & { id: string })[]>(
     [],
   );
@@ -494,7 +487,7 @@ export function OgpEditor({
   }, [layers, backgroundImage, drawLayers, frameConfig, outputWidth, outputHeight]);
 
   // Build editor config JSON
-  const buildEditorConfig = useCallback((): OgpEditorConfig | null => {
+  const buildEditorConfig = useCallback((): ComposerConfig | null => {
     if (!backgroundConfig) return null;
     return {
       version: 1,
@@ -1001,7 +994,7 @@ export function OgpEditor({
   const handleDownloadPng = useCallback(() => {
     const exportCanvas = renderExportCanvas();
     const url = exportCanvas.toDataURL('image/png');
-    triggerDownload(url, 'ogp-editor-output.png');
+    triggerDownload(url, 'composer-output.png');
   }, [renderExportCanvas]);
 
   const handleDownloadJson = useCallback(() => {
@@ -1010,7 +1003,7 @@ export function OgpEditor({
     const json = JSON.stringify(config, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    triggerDownload(url, 'ogp-editor-config.json');
+    triggerDownload(url, 'composer-config.json');
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, [buildEditorConfig]);
 
@@ -1044,7 +1037,7 @@ export function OgpEditor({
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const config = parseOgpEditorConfig(reader.result as string);
+          const config = parseComposerConfig(reader.result as string);
           const newLayers = config.layers.map((l) => ({
             ...l,
             id: crypto.randomUUID(),
@@ -1084,41 +1077,41 @@ export function OgpEditor({
   }, [trackFontLoad]);
 
   return (
-    <div className="ogp-editor">
-      <div className="ogp-editor-toolbar">
-        <span className="ogp-editor-title">OGP Editor</span>
-        <div className="ogp-editor-toolbar-actions">
+    <div className="composer">
+      <div className="composer-toolbar">
+        <span className="composer-title">Composer</span>
+        <div className="composer-toolbar-actions">
           <button
-            className="btn ogp-editor-btn"
+            className="btn composer-btn"
             onClick={handleDownloadPng}
           >
             Download PNG
           </button>
           <button
-            className="btn ogp-editor-btn"
+            className="btn composer-btn"
             onClick={handleDownloadJson}
           >
             Download JSON
           </button>
           <button
-            className="btn ogp-editor-btn"
+            className="btn composer-btn"
             onClick={handleCopyJson}
           >
             {copyFeedback ? 'Copied!' : 'Copy JSON'}
           </button>
           <button
-            className="btn ogp-editor-btn"
+            className="btn composer-btn"
             onClick={() => setShowImageTrace(true)}
           >
             Image Trace
           </button>
-          <button className="btn ogp-editor-btn-exit" onClick={onExit}>
+          <button className="btn composer-btn-exit" onClick={onExit}>
             Exit Editor
           </button>
         </div>
       </div>
-      <div className="ogp-editor-workspace">
-        <div className="ogp-editor-canvas-area">
+      <div className="composer-workspace">
+        <div className="composer-canvas-area">
           <canvas
             ref={canvasRef}
             width={outputWidth}
@@ -1126,7 +1119,7 @@ export function OgpEditor({
             onMouseDown={handleCanvasMouseDown}
           />
         </div>
-        <OgpEditorLayerPanel
+        <ComposerLayerPanel
           layers={layers}
           selectedIds={selectedIds}
           onSelect={setSelectedIds}

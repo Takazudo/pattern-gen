@@ -10,14 +10,15 @@ Generate deterministic visual patterns from text seeds. 30 algorithms spanning g
 ## Features
 
 - **30 pattern types** — from wood-block grids to reaction-diffusion simulations
-- **20 decorative frames** — borders, shadows, neon glow, filmstrip, polaroid, and more for OGP images
+- **Simple backgrounds** — solid color, gradient, glassmorphism, and texture patterns for quick starts
+- **20 decorative frames** — borders, shadows, neon glow, filmstrip, polaroid, and more
 - **Deterministic** — same seed always produces the same output
 - **36 color schemes** — terminal-inspired palettes (Dracula, Nord, Catppuccin, etc.)
-- **HSLA color picker** — full hue/saturation/lightness/alpha control in the OGP editor
+- **HSLA color picker** — full hue/saturation/lightness/alpha control in the Composer
 - **CLI tool** — generate PNGs from the command line
 - **Library** — use programmatically in Node.js or browser
-- **Interactive viewer** — browse and customize patterns in real-time
-- **OGP image generator** — select and export 1200×630 OGP images from the viewer, with JSON config for CLI reproduction
+- **Interactive viewer** — browse and customize patterns with a step-based workflow
+- **Composer** — layer-based composition with text, images, and frames for OGP and custom-sized exports
 
 ## Quick Start
 
@@ -85,43 +86,48 @@ renderPatternToCanvas(ctx, 'hello-world', 'voronoi', {
 | `--out` | `-o` | Output file path | `{slug}.png` |
 | `--out-dir` | | Output directory | cwd |
 | `--ogp-config` | | OGP config JSON file path | |
-| `--ogp-editor-config` | | OGP editor config JSON file path (supports layers + frames) | |
+| `--composer-config` | | Composer config JSON file path (supports layers + frames) | |
 | `--hue` | | Hue shift (-180 to 180) | `0` |
 | `--saturation` | | Saturation shift (-100 to 100) | `0` |
 | `--lightness` | | Lightness shift (-100 to 100) | `0` |
 
-## OGP Image Generator
+## Viewer Workflow
 
-The interactive viewer includes an OGP mode for generating Open Graph images (1200×630).
+The interactive viewer uses a step-based workflow:
 
-### Viewer Workflow
+### Step 1: Background
 
-1. Open the viewer and configure your pattern (type, seed, colors, zoom)
-2. Click **OGP Mode** to enter selection mode
-3. Drag and resize the selection rectangle (aspect ratio is locked to 1200:630)
-4. Use the action bar:
-   - **Generate OGP Image** — download the selected area as a high-res 1200×630 PNG
+1. Open the viewer and choose a background — simple (Solid, Gradient, Glass, Texture) or algorithmic patterns
+2. Configure seed, colors, zoom, and pattern parameters
+3. Click **Compose** to proceed to the composition step
+
+### Step 2: Compose
+
+1. Drag and resize the selection rectangle to crop the pattern
+2. Choose an aspect ratio (OGP 1200×630, Square, Free, Fixed)
+3. Use the action bar:
+   - **Generate** — download the selected area as a high-res PNG
    - **Download JSON** — save the full pattern config + crop region as a JSON file
    - **Copy JSON** — copy the config to clipboard
-5. Press **Escape** or click **Exit** to return to normal mode
+   - **Edit** — open the full Composer for layer-based composition
 
 ### CLI Reproduction
 
-Use the exported JSON config to reproduce the exact same OGP image from the command line:
+Use the exported JSON config to reproduce the exact same image from the command line:
 
 ```bash
-pattern-gen --ogp-config ogp-config.json --out ogp-image.png
+pattern-gen --ogp-config config.json --out image.png
 ```
 
-The CLI re-renders the pattern at high resolution and crops to the same region, producing an identical 1200×630 PNG.
+The CLI re-renders the pattern at high resolution and crops to the same region, producing an identical output.
 
-## OGP Editor
+## Composer
 
-The OGP Editor extends OGP mode with a full layer-based composition system.
+The Composer provides a full layer-based composition system.
 
 ### Layers
 
-Click **Edit** in OGP mode to open the editor. Add image and text layers with configurable properties:
+Click **Edit** in the Compose step to open the Composer. Add image and text layers with configurable properties:
 
 - **Text layers** — font family (140+ Google Fonts), size, weight, style, color (HSLA), alignment, letter spacing, line height, shadow, stroke
 - **Image layers** — drag to position/resize, opacity control
@@ -129,7 +135,7 @@ Click **Edit** in OGP mode to open the editor. Add image and text layers with co
 
 ### Frames
 
-The editor includes 20 decorative frame patterns that render on top of the OGP image. Select a frame from the dropdown and configure its parameters:
+The Composer includes 20 decorative frame patterns that render on top of the image. Select a frame from the dropdown and configure its parameters:
 
 | Category | Frames |
 |----------|--------|
@@ -143,9 +149,9 @@ The editor includes 20 decorative frame patterns that render on top of the OGP i
 Each frame has configurable parameters (width, color with HSLA alpha support, style options). Frame configuration is included in the exported JSON and supported by the CLI:
 
 ```bash
-pattern-gen --ogp-editor-config editor-config.json --out ogp-with-frame.png
+pattern-gen --composer-config composer-config.json --out output-with-frame.png
 ```
 
 ### HSLA Color Picker
 
-All color inputs in the OGP editor use an HSLA color picker with four sliders (Hue, Saturation, Lightness, Alpha). The picker supports both `#RRGGBB` and `#RRGGBBAA` hex formats, enabling semi-transparent colors for text, frames, and grid overlays.
+All color inputs in the Composer use an HSLA color picker with four sliders (Hue, Saturation, Lightness, Alpha). The picker supports both `#RRGGBB` and `#RRGGBBAA` hex formats, enabling semi-transparent colors for text, frames, and grid overlays.

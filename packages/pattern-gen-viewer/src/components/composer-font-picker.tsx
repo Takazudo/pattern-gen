@@ -191,7 +191,7 @@ interface FontPickerProps {
   onChange: (family: string) => void;
 }
 
-export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
+export function ComposerFontPicker({ value, onChange }: FontPickerProps) {
   const [showMore, setShowMore] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -205,7 +205,7 @@ export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
     : allFonts;
 
   return (
-    <div className="ogp-font-picker">
+    <div className="composer-font-picker">
       {!showMore ? (
         <>
           <select
@@ -224,7 +224,7 @@ export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
             )}
           </select>
           <button
-            className="btn ogp-font-more-btn"
+            className="btn composer-font-more-btn"
             onClick={() => setShowMore(true)}
           >
             More...
@@ -237,13 +237,13 @@ export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search fonts..."
-            className="ogp-font-search"
+            className="composer-font-search"
           />
-          <div className="ogp-font-list">
+          <div className="composer-font-list">
             {filtered.slice(0, 50).map((f) => (
               <button
                 key={f}
-                className={`ogp-font-item ${f === value ? 'active' : ''}`}
+                className={`composer-font-item ${f === value ? 'active' : ''}`}
                 onClick={() => {
                   onChange(f);
                   setShowMore(false);

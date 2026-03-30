@@ -5,5 +5,5 @@ export * from '@takazudo/pattern-gen-core';
 export * from '@takazudo/pattern-gen-generators';
 
 // Renderer (stays in root)
-export { renderPattern, renderPatternToCanvas, renderOgpFromConfig, renderOgpEditorFromConfig } from './renderer.js';
+export { renderPattern, renderPatternToCanvas, renderOgpFromConfig, renderComposerFromConfig } from './renderer.js';
 export type { RenderResult } from './renderer.js';

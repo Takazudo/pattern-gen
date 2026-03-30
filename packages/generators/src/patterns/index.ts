@@ -1,4 +1,8 @@
 import type { PatternGenerator } from '@takazudo/pattern-gen-core';
+import { solidColor } from './solid-color.js';
+import { gradient } from './gradient.js';
+import { glass } from './glass.js';
+import { texture } from './texture.js';
 import { kumiko } from './kumiko.js';
 import { woodBlock } from './wood-block.js';
 import { truchet } from './truchet.js';
@@ -36,6 +40,11 @@ import { guilloche } from './guilloche.js';
  * Each pattern is registered with a unique slug name used for CLI --type flag.
  */
 export const patternRegistry: PatternGenerator[] = [
+  // Simple
+  solidColor,
+  gradient,
+  glass,
+  texture,
   // Kumiko (Japanese woodwork)
   kumiko,
   // Grid & Tile

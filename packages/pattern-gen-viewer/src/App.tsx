@@ -15,26 +15,20 @@ import { patternRegistry, patternsByName } from '@takazudo/pattern-gen-generator
 import { ParamControls } from './components/param-controls.js';
 import { HslTweakPanel } from './components/hsl-tweak-panel.js';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
-import { OgpSelectionOverlay, getOutputDimensions } from './components/ogp-selection-overlay.js';
-import type { AspectConfig } from './components/ogp-selection-overlay.js';
-import { OgpEditor } from './components/ogp-editor.js';
+import { SelectionOverlay, getOutputDimensions } from './components/selection-overlay.js';
+import type { AspectConfig } from './components/selection-overlay.js';
+import { Composer } from './components/composer.js';
 import { ImageOverlayPanel } from './components/image-overlay-panel.js';
 import { ImageOverlayTransform } from './components/image-overlay-transform.js';
 import type { ImageTransform } from './components/image-overlay-transform.js';
+import { StepIndicator } from './components/step-indicator.js';
+import type { AppStep } from './components/step-indicator.js';
 import { removeBackground, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
+import { triggerDownload } from './utils/trigger-download.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
-
-function triggerDownload(dataUrl: string, filename: string) {
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
 
 /** Get the scale/offset info for mapping viewport → canvas buffer (object-fit: cover). */
 function getCanvasScaleInfo(canvas: HTMLCanvasElement) {
@@ -88,7 +82,7 @@ function viewportToBufferCoords(
   };
 }
 
-function buildOgpConfig(
+function buildBackgroundConfig(
   viewportRect: { x: number; y: number; width: number; height: number },
   canvas: HTMLCanvasElement,
   state: {
@@ -208,11 +202,11 @@ export function App() {
   const [translateY, setTranslateY] = useState(0);
   const [useTranslate, setUseTranslate] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [ogpMode, setOgpMode] = useState(false);
-  const [ogpEditMode, setOgpEditMode] = useState(false);
-  const [editorBgImage, setEditorBgImage] = useState<ImageBitmap | null>(null);
-  const [editorBgConfig, setEditorBgConfig] = useState<OgpConfig | null>(null);
-  const [editorOutputSize, setEditorOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
+  const [currentStep, setCurrentStep] = useState<AppStep>('background');
+  const [composerActive, setComposerActive] = useState(false);
+  const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
+  const [composerBgConfig, setComposerBgConfig] = useState<OgpConfig | null>(null);
+  const [composerOutputSize, setComposerOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
   // Only tracks params the user explicitly changed via UI controls
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   // Params locked to their current value across seed changes
@@ -477,7 +471,7 @@ export function App() {
     triggerDownload(url, `pattern-${patternType}-${slug}.png`);
   }, [patternType, slug]);
 
-  // Composite the imported image overlay onto a canvas (used by OGP export paths)
+  // Composite the imported image overlay onto a canvas (used by export paths)
   const compositeOverlay = useCallback((ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) => {
     const thresholded = thresholdedRef.current;
     if (!importedImage || !thresholded) return;
@@ -516,7 +510,7 @@ export function App() {
     ctx.restore();
   }, [importedImage, overlayOpacity, imageTransform]);
 
-  const handleOgpGenerate = useCallback(
+  const handleSelectionGenerate = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -553,32 +547,30 @@ export function App() {
       // Composite image overlay if present
       compositeOverlay(hiResCtx, renderSize, renderSize);
 
-      // Crop and scale to OGP dimensions
+      // Crop and scale to output dimensions
       const cx = Math.round(cropX * renderSize);
       const cy = Math.round(cropY * renderSize);
       const cw = Math.min(Math.round(cropW * renderSize), renderSize - cx);
       const ch = Math.min(Math.round(cropH * renderSize), renderSize - cy);
 
-      const ogpCanvas = document.createElement('canvas');
-      ogpCanvas.width = OGP_WIDTH;
-      ogpCanvas.height = OGP_HEIGHT;
-      const ogpCtx = ogpCanvas.getContext('2d');
-      if (!ogpCtx) return;
-      ogpCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = OGP_WIDTH;
+      outCanvas.height = OGP_HEIGHT;
+      const outCtx = outCanvas.getContext('2d');
+      if (!outCtx) return;
+      outCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
 
-      const url = ogpCanvas.toDataURL('image/png');
-      triggerDownload(url, `ogp-${patternType}-${slug}.png`);
+      const url = outCanvas.toDataURL('image/png');
+      triggerDownload(url, `crop-${patternType}-${slug}.png`);
     },
     [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, compositeOverlay],
   );
 
-  const exitOgpMode = useCallback(() => setOgpMode(false), []);
-
-  const getOgpJson = useCallback(
+  const getConfigJson = useCallback(
     (rect: { x: number; y: number; width: number; height: number }): string | null => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
-      const config = buildOgpConfig(rect, canvas, {
+      const config = buildBackgroundConfig(rect, canvas, {
         slug,
         patternType,
         colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
@@ -594,35 +586,35 @@ export function App() {
     [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
   );
 
-  const handleOgpDownloadJson = useCallback(
+  const handleDownloadJson = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
-      const json = getOgpJson(rect);
+      const json = getConfigJson(rect);
       if (!json) return;
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      triggerDownload(url, `ogp-config-${patternType}-${slug}.json`);
+      triggerDownload(url, `config-${patternType}-${slug}.json`);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
-    [getOgpJson, patternType, slug],
+    [getConfigJson, patternType, slug],
   );
 
-  const handleOgpCopyJson = useCallback(
+  const handleCopyJson = useCallback(
     async (rect: { x: number; y: number; width: number; height: number }) => {
-      const json = getOgpJson(rect);
+      const json = getConfigJson(rect);
       if (!json) return;
       await navigator.clipboard.writeText(json);
     },
-    [getOgpJson],
+    [getConfigJson],
   );
 
-  const handleEnterOgpEdit = useCallback(
+  const handleEnterComposer = useCallback(
     async (rect: { x: number; y: number; width: number; height: number }, aspectConfig: AspectConfig) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
       const outSize = getOutputDimensions(aspectConfig);
 
-      const config = buildOgpConfig(rect, canvas, {
+      const config = buildBackgroundConfig(rect, canvas, {
         slug,
         patternType,
         colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
@@ -674,15 +666,25 @@ export function App() {
       bgCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, outSize.width, outSize.height);
 
       const bitmap = await createImageBitmap(bgCanvas);
-      setEditorBgImage(bitmap);
-      setEditorBgConfig(config);
-      setEditorOutputSize(outSize);
-      setOgpEditMode(true);
+      setComposerBgImage(bitmap);
+      setComposerBgConfig(config);
+      setComposerOutputSize(outSize);
+      setComposerActive(true);
     },
     [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams, compositeOverlay],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
+
+  const handleStepChange = useCallback((step: AppStep) => {
+    setCurrentStep(step);
+    setComposerActive(false);
+  }, []);
+
+  const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
+  const handleExitComposer = useCallback(() => setComposerActive(false), []);
+
+  const showStepIndicator = !composerActive;
 
   return (
     <div className="app">
@@ -690,7 +692,11 @@ export function App() {
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
       </div>
 
-      {!ogpMode && (
+      {showStepIndicator && (
+        <StepIndicator currentStep={currentStep} onStepChange={handleStepChange} />
+      )}
+
+      {currentStep === 'background' && (
         <>
           {/* Site logo link (top-right) */}
           <a
@@ -719,7 +725,7 @@ export function App() {
         </>
       )}
 
-      {!ogpMode && importedImage && imageTransform && (
+      {currentStep === 'background' && importedImage && imageTransform && (
         <ImageOverlayTransform
           transform={imageTransform}
           onChange={setImageTransform}
@@ -729,27 +735,27 @@ export function App() {
         />
       )}
 
-      {ogpMode && !ogpEditMode && (
-        <OgpSelectionOverlay
-          onGenerate={handleOgpGenerate}
-          onExit={exitOgpMode}
-          onDownloadJson={handleOgpDownloadJson}
-          onCopyJson={handleOgpCopyJson}
-          onEdit={handleEnterOgpEdit}
+      {currentStep === 'compose' && !composerActive && (
+        <SelectionOverlay
+          onGenerate={handleSelectionGenerate}
+          onExit={handleExitToBackground}
+          onDownloadJson={handleDownloadJson}
+          onCopyJson={handleCopyJson}
+          onEdit={handleEnterComposer}
         />
       )}
 
-      {ogpEditMode && (
-        <OgpEditor
-          backgroundImage={editorBgImage}
-          backgroundConfig={editorBgConfig}
-          outputWidth={editorOutputSize.width}
-          outputHeight={editorOutputSize.height}
-          onExit={() => setOgpEditMode(false)}
+      {composerActive && (
+        <Composer
+          backgroundImage={composerBgImage}
+          backgroundConfig={composerBgConfig}
+          outputWidth={composerOutputSize.width}
+          outputHeight={composerOutputSize.height}
+          onExit={handleExitComposer}
         />
       )}
 
-      {!ogpMode && (
+      {currentStep === 'background' && (
         <div className="controls">
         <h1>zudo-pattern-gen</h1>
 
@@ -783,8 +789,8 @@ export function App() {
           </div>
         </div>
 
-        <button className="btn btn-ogp-mode" onClick={() => setOgpMode(true)}>
-          OGP Mode
+        <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
+          Compose &rarr;
         </button>
 
         <ImageOverlayPanel

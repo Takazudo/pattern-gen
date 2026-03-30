@@ -1,6 +1,6 @@
 /* ── HSLA Color Picker ── */
 
-.ogp-hsla-picker {
+.composer-hsla-picker {
   position: fixed;
   z-index: 300;
   width: 320px;
@@ -13,14 +13,14 @@
 
 /* ── Top row: swatch + hex input ── */
 
-.ogp-hsla-top-row {
+.composer-hsla-top-row {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
 }
 
-.ogp-hsla-preview {
+.composer-hsla-preview {
   position: relative;
   width: 48px;
   height: 48px;
@@ -30,19 +30,19 @@
   flex-shrink: 0;
 }
 
-.ogp-hsla-preview-checkerboard {
+.composer-hsla-preview-checkerboard {
   position: absolute;
   inset: 0;
   background-image: repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%);
   background-size: 12px 12px;
 }
 
-.ogp-hsla-preview-color {
+.composer-hsla-preview-color {
   position: absolute;
   inset: 0;
 }
 
-.ogp-hsla-hex-input {
+.composer-hsla-hex-input {
   font-family: monospace;
   font-size: 1rem;
   width: 8rem;
@@ -54,20 +54,20 @@
   outline: none;
 }
 
-.ogp-hsla-hex-input:focus {
+.composer-hsla-hex-input:focus {
   border-color: #888;
 }
 
 /* ── Slider rows ── */
 
-.ogp-hsla-slider-row {
+.composer-hsla-slider-row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.ogp-hsla-slider-label {
+.composer-hsla-slider-label {
   font-size: 0.875rem;
   color: #999;
   width: 1rem;
@@ -75,13 +75,13 @@
   text-align: center;
 }
 
-.ogp-hsla-slider-row input[type='range'] {
+.composer-hsla-slider-row input[type='range'] {
   flex: 1;
   height: 1.5rem;
   accent-color: #7c5cbf;
 }
 
-.ogp-hsla-slider-value {
+.composer-hsla-slider-value {
   font-size: 0.875rem;
   color: #eee;
   width: 2.5rem;
@@ -91,7 +91,7 @@
 
 /* ── Swatch button (inline trigger) ── */
 
-.ogp-hsla-swatch-btn {
+.composer-hsla-swatch-btn {
   position: relative;
   display: block;
   border: 1px solid #555;
@@ -102,18 +102,18 @@
   background: none;
 }
 
-.ogp-hsla-swatch-btn:hover {
+.composer-hsla-swatch-btn:hover {
   border-color: #888;
 }
 
-.ogp-hsla-swatch-checkerboard {
+.composer-hsla-swatch-checkerboard {
   position: absolute;
   inset: 0;
   background-image: repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%);
   background-size: 10px 10px;
 }
 
-.ogp-hsla-swatch-color {
+.composer-hsla-swatch-color {
   position: absolute;
   inset: 0;
 }

@@ -52,14 +52,14 @@ export interface FrameConfig {
   params: Record<string, number | string>;
 }
 
-export interface OgpEditorConfig {
+export interface ComposerConfig {
   version: 1;
   background: OgpConfig;
   layers: EditorLayer[];
   frame?: FrameConfig;
 }
 
-export function serializeOgpEditorConfig(config: OgpEditorConfig): string {
+export function serializeComposerConfig(config: ComposerConfig): string {
   return JSON.stringify(config, null, 2);
 }
 
@@ -262,18 +262,18 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
   };
 }
 
-export function parseOgpEditorConfig(json: string): OgpEditorConfig {
+export function parseComposerConfig(json: string): ComposerConfig {
   const raw = JSON.parse(json);
 
   if (raw.version !== 1) {
-    throw new Error(`Unsupported OGP editor config version: ${raw.version}`);
+    throw new Error(`Unsupported Composer config version: ${raw.version}`);
   }
 
   // Validate background via parseOgpConfig
   const background = parseOgpConfig(JSON.stringify(raw.background));
 
   if (!Array.isArray(raw.layers)) {
-    throw new Error('OGP editor config: layers must be an array');
+    throw new Error('Composer config: layers must be an array');
   }
 
   const layers: EditorLayer[] = raw.layers.map(
@@ -285,7 +285,7 @@ export function parseOgpEditorConfig(json: string): OgpEditorConfig {
         return validateTextLayer(layer);
       }
       throw new Error(
-        `OGP editor config: unknown layer type "${layer.type}"`,
+        `Composer config: unknown layer type "${layer.type}"`,
       );
     },
   );
@@ -294,14 +294,14 @@ export function parseOgpEditorConfig(json: string): OgpEditorConfig {
   let frame: FrameConfig | undefined;
   if (raw.frame != null) {
     if (typeof raw.frame !== 'object' || Array.isArray(raw.frame)) {
-      throw new Error('OGP editor config: frame must be an object');
+      throw new Error('Composer config: frame must be an object');
     }
     const f = raw.frame as Record<string, unknown>;
     if (typeof f.type !== 'string' || f.type.length === 0) {
-      throw new Error('OGP editor config: frame.type must be a non-empty string');
+      throw new Error('Composer config: frame.type must be a non-empty string');
     }
     if (f.params != null && (typeof f.params !== 'object' || Array.isArray(f.params))) {
-      throw new Error('OGP editor config: frame.params must be an object');
+      throw new Error('Composer config: frame.params must be an object');
     }
     frame = {
       type: f.type,
