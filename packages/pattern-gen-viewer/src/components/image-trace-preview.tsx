@@ -4,6 +4,7 @@ import {
   DEFAULT_TRACE_OPTIONS,
   type ImageTraceOptions,
 } from '../utils/image-trace.js';
+import { triggerDownload } from '../utils/trigger-download.js';
 import './image-trace-preview.css';
 
 interface ImageTracePreviewProps {
@@ -104,13 +105,8 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
     if (!svgString) return;
     const blob = new Blob([svgString], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'traced.svg';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    triggerDownload(url, 'traced.svg');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, [svgString]);
 
   return (

@@ -21,11 +21,11 @@ interface SelectionOverlayProps {
   onGenerate: (rect: SelectionRect) => void;
   /** Callback when user presses Escape or clicks Exit */
   onExit: () => void;
-  /** Callback to download OGP config as JSON file */
+  /** Callback to download config as JSON file */
   onDownloadJson: (rect: SelectionRect) => void;
-  /** Callback to copy OGP config JSON to clipboard; resolves on success */
+  /** Callback to copy config JSON to clipboard; resolves on success */
   onCopyJson: (rect: SelectionRect) => Promise<void>;
-  /** Callback to enter the OGP editor with current selection */
+  /** Callback to enter the Composer with current selection */
   onEdit: (rect: SelectionRect, aspectConfig: AspectConfig) => void;
 }
 

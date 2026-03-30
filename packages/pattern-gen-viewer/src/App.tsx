@@ -471,7 +471,7 @@ export function App() {
     triggerDownload(url, `pattern-${patternType}-${slug}.png`);
   }, [patternType, slug]);
 
-  // Composite the imported image overlay onto a canvas (used by OGP export paths)
+  // Composite the imported image overlay onto a canvas (used by export paths)
   const compositeOverlay = useCallback((ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) => {
     const thresholded = thresholdedRef.current;
     if (!importedImage || !thresholded) return;
@@ -547,20 +547,20 @@ export function App() {
       // Composite image overlay if present
       compositeOverlay(hiResCtx, renderSize, renderSize);
 
-      // Crop and scale to OGP dimensions
+      // Crop and scale to output dimensions
       const cx = Math.round(cropX * renderSize);
       const cy = Math.round(cropY * renderSize);
       const cw = Math.min(Math.round(cropW * renderSize), renderSize - cx);
       const ch = Math.min(Math.round(cropH * renderSize), renderSize - cy);
 
-      const ogpCanvas = document.createElement('canvas');
-      ogpCanvas.width = OGP_WIDTH;
-      ogpCanvas.height = OGP_HEIGHT;
-      const ogpCtx = ogpCanvas.getContext('2d');
-      if (!ogpCtx) return;
-      ogpCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = OGP_WIDTH;
+      outCanvas.height = OGP_HEIGHT;
+      const outCtx = outCanvas.getContext('2d');
+      if (!outCtx) return;
+      outCtx.drawImage(hiResCanvas, cx, cy, cw, ch, 0, 0, OGP_WIDTH, OGP_HEIGHT);
 
-      const url = ogpCanvas.toDataURL('image/png');
+      const url = outCanvas.toDataURL('image/png');
       triggerDownload(url, `crop-${patternType}-${slug}.png`);
     },
     [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, compositeOverlay],

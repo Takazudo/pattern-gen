@@ -47,7 +47,7 @@ export const glass: PatternGenerator = {
     const baseSize = (minDim * 0.3) / zoom;
 
     for (let i = 0; i < shapeCount; i++) {
-      const color = fgColors[i % fgColors.length];
+      const color = fgColors.length > 0 ? fgColors[i % fgColors.length] : bg;
       const [r, g, b] = hexToRgb(color);
 
       const rectW = baseSize * (0.5 + rand() * 1.5);
