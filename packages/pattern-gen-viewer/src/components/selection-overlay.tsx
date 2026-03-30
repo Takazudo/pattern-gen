@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT, getAspect, getOutputDimensions } from '@takazudo/pattern-gen-core';
 import type { AspectMode, AspectConfig } from '@takazudo/pattern-gen-core';
-import './ogp-selection-overlay.css';
+import './selection-overlay.css';
 
 export type { AspectMode, AspectConfig };
 export { getOutputDimensions };
@@ -9,24 +9,24 @@ export { getOutputDimensions };
 const OGP_ASPECT = OGP_WIDTH / OGP_HEIGHT;
 const MIN_WIDTH = 100;
 
-export interface OgpRect {
+export interface SelectionRect {
   x: number;
   y: number;
   width: number;
   height: number;
 }
 
-interface OgpSelectionOverlayProps {
+interface SelectionOverlayProps {
   /** Callback when user clicks Generate or presses Enter */
-  onGenerate: (rect: OgpRect) => void;
+  onGenerate: (rect: SelectionRect) => void;
   /** Callback when user presses Escape or clicks Exit */
   onExit: () => void;
   /** Callback to download OGP config as JSON file */
-  onDownloadJson: (rect: OgpRect) => void;
+  onDownloadJson: (rect: SelectionRect) => void;
   /** Callback to copy OGP config JSON to clipboard; resolves on success */
-  onCopyJson: (rect: OgpRect) => Promise<void>;
+  onCopyJson: (rect: SelectionRect) => Promise<void>;
   /** Callback to enter the OGP editor with current selection */
-  onEdit: (rect: OgpRect, aspectConfig: AspectConfig) => void;
+  onEdit: (rect: SelectionRect, aspectConfig: AspectConfig) => void;
 }
 
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -40,8 +40,8 @@ const DEFAULT_ASPECT_CONFIG: AspectConfig = {
 };
 
 type DragState =
-  | { type: 'move'; startMouseX: number; startMouseY: number; startRect: OgpRect }
-  | { type: 'resize'; handle: HandleId; startMouseX: number; startMouseY: number; startRect: OgpRect };
+  | { type: 'move'; startMouseX: number; startMouseY: number; startRect: SelectionRect }
+  | { type: 'resize'; handle: HandleId; startMouseX: number; startMouseY: number; startRect: SelectionRect };
 
 interface ToolbarDragState {
   startMouseX: number;
@@ -52,7 +52,7 @@ interface ToolbarDragState {
 interface HandleDef {
   id: HandleId;
   cursor: string;
-  getPos: (r: OgpRect) => { left: number; top: number };
+  getPos: (r: SelectionRect) => { left: number; top: number };
 }
 
 const HANDLES: HandleDef[] = [
@@ -105,7 +105,7 @@ const ASPECT_MODE_LABELS: { mode: AspectMode; label: string }[] = [
   { mode: 'fixed', label: 'Fixed' },
 ];
 
-function clampRect(rect: OgpRect, aspect: number): OgpRect {
+function clampRect(rect: SelectionRect, aspect: number): SelectionRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   let { x, y, width, height } = rect;
@@ -130,7 +130,7 @@ function clampRect(rect: OgpRect, aspect: number): OgpRect {
   return { x, y, width, height };
 }
 
-function getInitialRect(aspect: number): OgpRect {
+function getInitialRect(aspect: number): SelectionRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const width = vw * 0.6;
@@ -142,11 +142,11 @@ function getInitialRect(aspect: number): OgpRect {
 
 function resizeFromHandle(
   handle: HandleId,
-  sr: OgpRect,
+  sr: SelectionRect,
   dx: number,
   dy: number,
   aspect: number,
-): OgpRect {
+): SelectionRect {
   switch (handle) {
     case 'se': {
       let w = sr.width + dx;
@@ -233,7 +233,7 @@ function resizeFromHandle(
   }
 }
 
-function applyCenterAnchor(sr: OgpRect, resized: OgpRect, aspect: number): OgpRect {
+function applyCenterAnchor(sr: SelectionRect, resized: SelectionRect, aspect: number): SelectionRect {
   const centerX = sr.x + sr.width / 2;
   const centerY = sr.y + sr.height / 2;
   const dw = resized.width - sr.width;
@@ -248,7 +248,7 @@ function applyCenterAnchor(sr: OgpRect, resized: OgpRect, aspect: number): OgpRe
   };
 }
 
-function reclampToAspect(rect: OgpRect, aspect: number): OgpRect {
+function reclampToAspect(rect: SelectionRect, aspect: number): SelectionRect {
   const centerX = rect.x + rect.width / 2;
   const centerY = rect.y + rect.height / 2;
   let width = rect.width;
@@ -276,13 +276,13 @@ function clampToolbarPos(
   };
 }
 
-export function OgpSelectionOverlay({
+export function SelectionOverlay({
   onGenerate,
   onExit,
   onDownloadJson,
   onCopyJson,
   onEdit,
-}: OgpSelectionOverlayProps) {
+}: SelectionOverlayProps) {
   const [aspectConfig, setAspectConfig] = useState<AspectConfig>(DEFAULT_ASPECT_CONFIG);
   const aspect = getAspect(aspectConfig);
   const aspectRef = useRef(aspect);
@@ -290,7 +290,7 @@ export function OgpSelectionOverlay({
   const aspectConfigRef = useRef(aspectConfig);
   aspectConfigRef.current = aspectConfig;
 
-  const [rect, setRect] = useState<OgpRect>(() => getInitialRect(OGP_ASPECT));
+  const [rect, setRect] = useState<SelectionRect>(() => getInitialRect(OGP_ASPECT));
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [isAltResize, setIsAltResize] = useState(false);
   const rectRef = useRef(rect);
@@ -402,7 +402,7 @@ export function OgpSelectionOverlay({
   useEffect(() => () => clearTimeout(copyTimerRef.current), []);
 
   const handleCopy = useCallback(
-    (r: OgpRect) => {
+    (r: SelectionRect) => {
       onCopyJson(r)
         .then(() => {
           setCopyFeedback(true);

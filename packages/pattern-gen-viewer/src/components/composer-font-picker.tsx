@@ -191,7 +191,7 @@ interface FontPickerProps {
   onChange: (family: string) => void;
 }
 
-export function OgpEditorFontPicker({ value, onChange }: FontPickerProps) {
+export function ComposerFontPicker({ value, onChange }: FontPickerProps) {
   const [showMore, setShowMore] = useState(false);
   const [search, setSearch] = useState('');
 

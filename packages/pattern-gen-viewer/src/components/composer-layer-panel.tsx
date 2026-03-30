@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { FRAME_GENERATORS, framesByName } from '@takazudo/pattern-gen-generators';
-import type { AlignmentType, GridConfig } from './ogp-editor.js';
-import { OgpEditorFontPicker } from './ogp-editor-font-picker.js';
+import type { AlignmentType, GridConfig } from './composer.js';
+import { ComposerFontPicker } from './composer-font-picker.js';
 import { HslaColorSwatch } from './hsla-color-picker.js';
 
 /* ── Props ── */
@@ -29,7 +29,7 @@ interface LayerPanelProps {
 
 /* ── Component ── */
 
-export function OgpEditorLayerPanel({
+export function ComposerLayerPanel({
   layers,
   selectedIds,
   onSelect,
@@ -558,7 +558,7 @@ function TextProps({
 
       {/* Font family */}
       <label className="ogp-prop-label">Font</label>
-      <OgpEditorFontPicker
+      <ComposerFontPicker
         value={layer.fontFamily}
         onChange={(family) => onUpdate({ fontFamily: family })}
       />

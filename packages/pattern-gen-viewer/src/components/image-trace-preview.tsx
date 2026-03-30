@@ -119,13 +119,13 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
         <span className="image-trace-title">Image Trace Preview</span>
         <div className="image-trace-toolbar-actions">
           <button
-            className="btn ogp-editor-btn"
+            className="btn composer-btn"
             onClick={handleDownloadSvg}
             disabled={!svgString || isTracing}
           >
             Download SVG
           </button>
-          <button className="btn ogp-editor-btn-exit" onClick={onClose}>
+          <button className="btn composer-btn-exit" onClick={onClose}>
             Back
           </button>
         </div>
