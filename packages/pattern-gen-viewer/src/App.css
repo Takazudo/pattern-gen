@@ -75,6 +75,9 @@
   --font-size-sm: 12px;
   --font-size-base: 13px;
   --font-size-lg: 18px;
+
+  /* ── Layout ── */
+  --step-indicator-height: 44px;
 }
 
 /* ========================================
@@ -137,7 +140,7 @@ body {
 }
 
 .site-link {
-  top: 16px;
+  top: calc(var(--step-indicator-height) + 12px);
   right: 16px;
 }
 
@@ -161,7 +164,7 @@ body {
 
 .controls {
   position: fixed;
-  top: var(--spacing-sp-lg);
+  top: calc(var(--step-indicator-height) + var(--spacing-sp-lg));
   left: var(--spacing-sp-lg);
   width: 280px; /* ARBITRARY: panel-specific width */
   background: var(--color-surface-glass);
@@ -169,7 +172,7 @@ body {
   border-radius: var(--radius-lg);
   padding: var(--spacing-sp-xl);
   z-index: 10;
-  max-height: calc(100vh - 32px); /* ARBITRARY: 2 * sp-lg */
+  max-height: calc(100vh - var(--step-indicator-height) - var(--spacing-sp-lg) - var(--spacing-sp-lg));
   overflow-y: auto;
 }
 
@@ -530,11 +533,25 @@ select:focus {
   flex: 1;
 }
 
-/* ── Compose Mode ── */
+/* ── Next Step Button ── */
 
-.btn-compose-mode {
+.btn-next-step {
   width: 100%;
   margin-bottom: var(--spacing-sp-sm);
+  padding: var(--spacing-sp-sm) var(--spacing-sp-md);
+  border: 1px solid oklch(100% 0 0 / 20%);
+  border-radius: var(--radius-md);
+  background: oklch(100% 0 0 / 12%);
+  color: var(--color-fg);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-next-step:hover {
+  background: oklch(100% 0 0 / 20%);
+  border-color: oklch(100% 0 0 / 30%);
 }
 
 .selection-btn-edit {

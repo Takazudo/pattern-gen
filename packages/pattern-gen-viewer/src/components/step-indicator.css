@@ -1,0 +1,73 @@
+/* ── Step Indicator Bar ── */
+
+.step-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--step-indicator-height);
+  background: oklch(0% 0 0 / 70%);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid oklch(100% 0 0 / 8%);
+  user-select: none;
+}
+
+.step-indicator-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.step-indicator-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: oklch(50% 0 0);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: color 0.15s;
+}
+
+.step-indicator-item:hover {
+  color: oklch(75% 0 0);
+}
+
+.step-indicator-item.active {
+  color: oklch(95% 0 0);
+}
+
+.step-indicator-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid oklch(100% 0 0 / 15%);
+  background: oklch(100% 0 0 / 6%);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.step-indicator-item.active .step-indicator-number {
+  background: oklch(100% 0 0 / 20%);
+  border-color: oklch(100% 0 0 / 35%);
+}
+
+.step-indicator-connector {
+  width: 32px;
+  height: 1px;
+  background: oklch(100% 0 0 / 15%);
+  flex-shrink: 0;
+}
