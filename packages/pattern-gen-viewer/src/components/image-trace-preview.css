@@ -63,6 +63,7 @@
   max-height: 100%;
   box-shadow: 0 4px 24px oklch(0% 0 0 / 40%);
   line-height: 0;
+  transition: opacity 0.2s;
 }
 
 .image-trace-svg-container svg {
@@ -73,7 +74,6 @@
 
 .image-trace-svg-container.is-retracing {
   opacity: 0.5;
-  transition: opacity 0.2s;
 }
 
 /* ── Loading / error state ── */

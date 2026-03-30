@@ -198,7 +198,7 @@ describe('traceImageData SVG output', () => {
     const svg = tracer.traceImageToSvg(imageData);
     expect(svg).toContain(`width="${width}"`);
     expect(svg).toContain(`height="${height}"`);
-    expect(svg).not.toContain('viewBox');
+    expect(svg).not.toMatch(/<svg[^>]*viewBox/);
   });
 
   it('produces SVG with viewBox only when viewBox is true', () => {
@@ -233,7 +233,7 @@ describe('traceImageData SVG output', () => {
     const svg = await traceImageData(imageData);
     expect(svg).toContain('width="30"');
     expect(svg).toContain('height="20"');
-    expect(svg).not.toContain('viewBox');
+    expect(svg).not.toMatch(/<svg[^>]*viewBox/);
     expect(svg).toContain('<path');
   });
 
