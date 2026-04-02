@@ -313,14 +313,31 @@ export function Composer({
   const [frameConfig, setFrameConfig] = useState<FrameConfig | null>(null);
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
 
-  const [dragState, setDragState] = useState<{
-    type: 'move' | 'resize';
-    id: string;
-    startX: number;
-    startY: number;
-    startTransform: LayerTransform;
-    handle?: ResizeHandle;
-  } | null>(null);
+  const [dragState, setDragState] = useState<
+    | {
+        type: 'move';
+        id: string;
+        startX: number;
+        startY: number;
+        startTransform: LayerTransform;
+      }
+    | {
+        type: 'resize';
+        id: string;
+        startX: number;
+        startY: number;
+        startTransform: LayerTransform;
+        handle: ResizeHandle;
+      }
+    | {
+        type: 'group-move';
+        ids: string[];
+        startX: number;
+        startY: number;
+        startTransforms: Record<string, LayerTransform>;
+      }
+    | null
+  >(null);
   const [isAltResize, setIsAltResize] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -536,6 +553,21 @@ export function Composer({
                 ? prev.filter((id) => id !== layer.id)
                 : [...prev, layer.id],
             );
+          } else if (selectedIds.length > 1 && selectedIds.includes(layer.id)) {
+            // Start group drag for all selected layers
+            const selectedSet = new Set(selectedIds);
+            const startTransforms = Object.fromEntries(
+              layers
+                .filter((l) => selectedSet.has(l.id))
+                .map((l) => [l.id, { ...l.transform }]),
+            );
+            setDragState({
+              type: 'group-move',
+              ids: [...selectedIds],
+              startX: x,
+              startY: y,
+              startTransforms,
+            });
           } else {
             setSelectedIds([layer.id]);
             setDragState({
@@ -572,9 +604,9 @@ export function Composer({
       const { x, y } = getCanvasCoords(e.clientX, e.clientY);
       const dx = x - drag.startX;
       const dy = y - drag.startY;
-      const st = drag.startTransform;
 
       if (drag.type === 'move') {
+        const st = drag.startTransform;
         const grid = gridConfigRef.current;
         let newX = st.x + dx;
         let newY = st.y + dy;
@@ -603,7 +635,36 @@ export function Composer({
               : l,
           ),
         );
+      } else if (drag.type === 'group-move') {
+        const grid = gridConfigRef.current;
+        let finalDx = dx;
+        let finalDy = dy;
+
+        if (grid.snap && drag.ids.length > 0) {
+          const anchorSt = drag.startTransforms[drag.ids[0]];
+          if (anchorSt) {
+            const snapped = snapTransform(
+              { x: anchorSt.x + dx, y: anchorSt.y + dy, width: anchorSt.width, height: anchorSt.height },
+              xGridRef.current,
+              yGridRef.current,
+            );
+            finalDx = snapped.x - anchorSt.x;
+            finalDy = snapped.y - anchorSt.y;
+          }
+        }
+
+        setLayers((prev) =>
+          prev.map((l) => {
+            const st = drag.startTransforms[l.id];
+            if (!st) return l;
+            return {
+              ...l,
+              transform: { ...l.transform, x: st.x + finalDx, y: st.y + finalDy },
+            };
+          }),
+        );
       } else if (drag.type === 'resize' && drag.handle) {
+        const st = drag.startTransform;
         const grid = gridConfigRef.current;
         const altKey = e.altKey;
         setIsAltResize(altKey);
