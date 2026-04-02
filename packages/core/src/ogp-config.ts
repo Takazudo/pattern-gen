@@ -17,6 +17,9 @@ export interface OgpConfig {
   translateX: number;        // fraction -1 to 1
   translateY: number;
   useTranslate: boolean;
+  rotate?: number;
+  skewX?: number;
+  skewY?: number;
   params: Record<string, number>;
   hsl: { h: number; s: number; l: number };
   contrastBrightness?: { contrast: number; brightness: number };
@@ -128,6 +131,29 @@ export function parseOgpConfig(json: string): OgpConfig {
     throw new Error('OGP config: crop.y + crop.height must be <= 1');
   }
 
+  // Optional rotate/skew fields (with range validation)
+  let rotate: number | undefined;
+  if (raw.rotate != null) {
+    if (typeof raw.rotate !== 'number' || !Number.isFinite(raw.rotate) || raw.rotate < -180 || raw.rotate > 180) {
+      throw new Error('OGP config: rotate must be a finite number in [-180, 180]');
+    }
+    rotate = raw.rotate;
+  }
+  let skewX: number | undefined;
+  if (raw.skewX != null) {
+    if (typeof raw.skewX !== 'number' || !Number.isFinite(raw.skewX) || raw.skewX < -45 || raw.skewX > 45) {
+      throw new Error('OGP config: skewX must be a finite number in [-45, 45]');
+    }
+    skewX = raw.skewX;
+  }
+  let skewY: number | undefined;
+  if (raw.skewY != null) {
+    if (typeof raw.skewY !== 'number' || !Number.isFinite(raw.skewY) || raw.skewY < -45 || raw.skewY > 45) {
+      throw new Error('OGP config: skewY must be a finite number in [-45, 45]');
+    }
+    skewY = raw.skewY;
+  }
+
   return {
     version: 1 as const,
     slug: raw.slug,
@@ -137,6 +163,9 @@ export function parseOgpConfig(json: string): OgpConfig {
     translateX: raw.translateX,
     translateY: raw.translateY,
     useTranslate: raw.useTranslate,
+    ...(rotate !== undefined ? { rotate } : {}),
+    ...(skewX !== undefined ? { skewX } : {}),
+    ...(skewY !== undefined ? { skewY } : {}),
     params: raw.params,
     hsl: { h: raw.hsl.h, s: raw.hsl.s, l: raw.hsl.l },
     ...(contrastBrightness ? { contrastBrightness } : {}),

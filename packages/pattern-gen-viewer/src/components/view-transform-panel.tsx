@@ -5,8 +5,13 @@ interface ViewTransformPanelProps {
   translateX: number; // -100 to 100
   translateY: number; // -100 to 100
   useTranslate: boolean;
+  rotate: number; // -180 to 180 degrees
+  skewX: number; // -45 to 45 degrees
+  skewY: number; // -45 to 45 degrees
   onChange: (zoomSlider: number, translateX: number, translateY: number) => void;
   onUseTranslateChange: (enabled: boolean) => void;
+  onRotateChange: (degrees: number) => void;
+  onSkewChange: (skewX: number, skewY: number) => void;
 }
 
 /** Snap to center if within ±2 of 50 */
@@ -19,12 +24,19 @@ export function ViewTransformPanel({
   translateX,
   translateY,
   useTranslate,
+  rotate,
+  skewX,
+  skewY,
   onChange,
   onUseTranslateChange,
+  onRotateChange,
+  onSkewChange,
 }: ViewTransformPanelProps) {
   const handleReset = () => {
     onChange(50, 0, 0);
     onUseTranslateChange(false);
+    onRotateChange(0);
+    onSkewChange(0, 0);
   };
 
   const handleZoomChange = (raw: number) => {
@@ -60,7 +72,7 @@ export function ViewTransformPanel({
           checked={useTranslate}
           onChange={(e) => onUseTranslateChange(e.target.checked)}
         />
-        <span>Use Translate</span>
+        <span>Paint Patterns Too</span>
       </label>
 
       <div className="view-transform-slider-row">
@@ -91,6 +103,51 @@ export function ViewTransformPanel({
           aria-label="Translate Y"
         />
         <span className="view-transform-value">{translateY}</span>
+      </div>
+
+      <div className="view-transform-slider-row">
+        <span className="view-transform-label">R</span>
+        <input
+          type="range"
+          min={-180}
+          max={180}
+          step={1}
+          value={rotate}
+          disabled={!useTranslate}
+          onChange={(e) => onRotateChange(parseInt(e.target.value))}
+          aria-label="Rotate"
+        />
+        <span className="view-transform-value">{rotate}°</span>
+      </div>
+
+      <div className="view-transform-slider-row">
+        <span className="view-transform-label">Sk X</span>
+        <input
+          type="range"
+          min={-45}
+          max={45}
+          step={1}
+          value={skewX}
+          disabled={!useTranslate}
+          onChange={(e) => onSkewChange(parseInt(e.target.value), skewY)}
+          aria-label="Skew X"
+        />
+        <span className="view-transform-value">{skewX}°</span>
+      </div>
+
+      <div className="view-transform-slider-row">
+        <span className="view-transform-label">Sk Y</span>
+        <input
+          type="range"
+          min={-45}
+          max={45}
+          step={1}
+          value={skewY}
+          disabled={!useTranslate}
+          onChange={(e) => onSkewChange(skewX, parseInt(e.target.value))}
+          aria-label="Skew Y"
+        />
+        <span className="view-transform-value">{skewY}°</span>
       </div>
 
       <button className="btn btn-view-transform-reset" onClick={handleReset}>
