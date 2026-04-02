@@ -1,4 +1,5 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -80,13 +81,13 @@ export const tornEdge: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height, rand } = options;
-    const roughness = (params.roughness as number) ?? 8;
-    const frequency = (params.frequency as number) ?? 30;
-    const borderWidth = (params.borderWidth as number) ?? 30;
-    const paperColor = (params.paperColor as string) ?? '#f5f0e8';
+    const roughness = getFrameParam(params, 'roughness', 8);
+    const frequency = getFrameParam(params, 'frequency', 30);
+    const borderWidth = getFrameParam(params, 'borderWidth', 30);
+    const paperColor = getFrameParam(params, 'paperColor', '#f5f0e8');
 
     // Consume some rand values based on seed param to vary output
-    const seed = (params.seed as number) ?? 42;
+    const seed = getFrameParam(params, 'seed', 42);
     for (let i = 0; i < seed; i++) rand();
 
     const numPointsH = Math.max(10, Math.round((width / 1200) * frequency * 4));

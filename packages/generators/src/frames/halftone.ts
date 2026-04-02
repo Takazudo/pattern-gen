@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -99,13 +100,13 @@ export const halftone: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height } = options;
-    const gridSpacing = (params.gridSpacing as number) ?? 10;
-    const maxDotRadius = (params.maxDotRadius as number) ?? 5;
-    const minDotRadius = (params.minDotRadius as number) ?? 1;
-    const color = (params.color as string) ?? '#333333';
-    const borderWidth = (params.borderWidth as number) ?? 35;
-    const gradientDirection = (params.gradientDirection as number) ?? 0;
-    const dotShape = (params.dotShape as number) ?? 0;
+    const gridSpacing = getFrameParam(params, 'gridSpacing', 10);
+    const maxDotRadius = getFrameParam(params, 'maxDotRadius', 5);
+    const minDotRadius = getFrameParam(params, 'minDotRadius', 1);
+    const color = getFrameParam(params, 'color', '#333333');
+    const borderWidth = getFrameParam(params, 'borderWidth', 35);
+    const gradientDirection = getFrameParam(params, 'gradientDirection', 0);
+    const dotShape = getFrameParam(params, 'dotShape', 0);
 
     const rgba = hexToRgba(color);
 

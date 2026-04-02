@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba, resetShadow } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -59,12 +60,12 @@ export const polaroid: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height } = options;
-    const topSideWidth = (params.topSideWidth as number) ?? 20;
-    const bottomWidth = (params.bottomWidth as number) ?? 80;
-    const borderColor = (params.borderColor as string) ?? '#f5f5f0';
-    const shadowEnabled = (params.shadowEnabled as number) ?? 1;
-    const shadowBlur = (params.shadowBlur as number) ?? 15;
-    const rotation = (params.rotation as number) ?? 0;
+    const topSideWidth = getFrameParam(params, 'topSideWidth', 20);
+    const bottomWidth = getFrameParam(params, 'bottomWidth', 80);
+    const borderColor = getFrameParam(params, 'borderColor', '#f5f5f0');
+    const shadowEnabled = getFrameParam(params, 'shadowEnabled', 1);
+    const shadowBlur = getFrameParam(params, 'shadowBlur', 15);
+    const rotation = getFrameParam(params, 'rotation', 0);
 
     ctx.save();
 

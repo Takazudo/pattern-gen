@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -56,11 +57,11 @@ export const simpleLine: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const borderWidth = (params.borderWidth as number) ?? 8;
-    const color = (params.color as string) ?? '#000000';
-    const lineStyle = (params.lineStyle as number) ?? 0;
-    const inset = (params.inset as number) ?? 0;
-    const cornerRadius = (params.cornerRadius as number) ?? 0;
+    const borderWidth = getFrameParam(params, 'borderWidth', 8);
+    const color = getFrameParam(params, 'color', '#000000');
+    const lineStyle = getFrameParam(params, 'lineStyle', 0);
+    const inset = getFrameParam(params, 'inset', 0);
+    const cornerRadius = getFrameParam(params, 'cornerRadius', 0);
 
     ctx.save();
 
