@@ -881,7 +881,7 @@ export function Composer({
         );
       } catch (err) {
         console.error('Background removal failed:', err);
-        console.error(`Background removal failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        alert(`Background removal failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       } finally {
         setProcessingLayers((prev) => {
           const next = new Set(prev);
