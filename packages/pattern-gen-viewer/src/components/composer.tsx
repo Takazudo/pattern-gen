@@ -793,11 +793,11 @@ export function Composer({
 
   const handleDuplicateLayer = useCallback(
     (id: string) => {
+      const newId = crypto.randomUUID();
       setLayers((prev) => {
         const idx = prev.findIndex((l) => l.id === id);
         if (idx === -1) return prev;
         const source = prev[idx];
-        const newId = crypto.randomUUID();
         const clone: EditorLayer & { id: string } = {
           ...source,
           id: newId,
@@ -817,9 +817,9 @@ export function Composer({
         }
         const next = [...prev];
         next.splice(idx + 1, 0, clone);
-        setSelectedIds([newId]);
         return next;
       });
+      setSelectedIds([newId]);
     },
     [],
   );

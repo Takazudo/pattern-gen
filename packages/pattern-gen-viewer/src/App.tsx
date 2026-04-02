@@ -504,11 +504,11 @@ export function App() {
   }, []);
 
   const handleDuplicateImageLayer = useCallback((id: string) => {
+    const newId = crypto.randomUUID();
     setImageLayers((prev) => {
       const idx = prev.findIndex((l) => l.id === id);
       if (idx === -1) return prev;
       const source = prev[idx];
-      const newId = crypto.randomUUID();
       const clone: ViewerImageLayer = {
         ...source,
         id: newId,
@@ -520,9 +520,9 @@ export function App() {
       };
       const next = [...prev];
       next.splice(idx + 1, 0, clone);
-      setSelectedLayerId(newId);
       return next;
     });
+    setSelectedLayerId(newId);
   }, []);
 
   const handleLayerReorder = useCallback((fromIndex: number, toIndex: number) => {
