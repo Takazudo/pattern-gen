@@ -21,6 +21,7 @@ import { Composer } from './components/composer.js';
 import { ImageOverlayPanel } from './components/image-overlay-panel.js';
 import { ImageOverlayTransform } from './components/image-overlay-transform.js';
 import type { ImageTransform } from './components/image-overlay-transform.js';
+import { CollapsibleSection } from './components/collapsible-section.js';
 import { StepIndicator } from './components/step-indicator.js';
 import type { AppStep } from './components/step-indicator.js';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
@@ -201,7 +202,6 @@ export function App() {
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
   const [useTranslate, setUseTranslate] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [currentStep, setCurrentStep] = useState<AppStep>('background');
   const [composerActive, setComposerActive] = useState(false);
   const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
@@ -762,84 +762,40 @@ export function App() {
 
       {currentStep === 'background' && (
         <div className="controls">
-        <h1>zudo-pattern-gen</h1>
+          <h1>zudo-pattern-gen</h1>
 
-        <div className="control-group">
-          <label htmlFor="type-select">Pattern Type</label>
-          <select
-            id="type-select"
-            value={patternType}
-            onChange={(e) => setPatternType(e.target.value)}
-          >
-            {patternRegistry.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
+          <CollapsibleSection title="Pattern Generation" defaultOpen={true}>
+            <div className="control-group">
+              <label htmlFor="type-select">Pattern Type</label>
+              <select
+                id="type-select"
+                value={patternType}
+                onChange={(e) => setPatternType(e.target.value)}
+              >
+                {patternRegistry.map((p) => (
+                  <option key={p.name} value={p.name}>
+                    {p.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="control-group">
+              <label htmlFor="slug-input">Slug / Seed</label>
+              <div className="slug-row">
+                <input
+                  id="slug-input"
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                />
+                <button className="btn btn-random" onClick={randomize}>
+                  Random
+                </button>
+              </div>
+            </div>
+          </CollapsibleSection>
 
-        <div className="control-group">
-          <label htmlFor="slug-input">Slug / Seed</label>
-          <div className="slug-row">
-            <input
-              id="slug-input"
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-            />
-            <button className="btn btn-random" onClick={randomize}>
-              Random
-            </button>
-          </div>
-        </div>
-
-        <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
-          Compose &rarr;
-        </button>
-
-        <ImageOverlayPanel
-          hasImage={!!importedImage}
-          isProcessing={isProcessing}
-          processingProgress={processingProgress}
-          bgThreshold={bgThreshold}
-          overlayOpacity={overlayOpacity}
-          keepAspectRatio={keepAspectRatio}
-          error={importError}
-          onImport={handleImageImport}
-          onClear={handleImageClear}
-          onThresholdChange={setBgThreshold}
-          onOpacityChange={setOverlayOpacity}
-          onKeepAspectRatioChange={handleKeepAspectRatioChange}
-        />
-
-        <button
-          className="btn-toggle-details"
-          onClick={() => setShowDetails((prev) => !prev)}
-          aria-expanded={showDetails}
-        >
-          Details {showDetails ? '\u25B2' : '\u25BC'}
-        </button>
-
-        {showDetails && (
-          <div className="details-section">
-            <ViewTransformPanel
-              zoomSlider={zoomSlider}
-              translateX={translateX}
-              translateY={translateY}
-              useTranslate={useTranslate}
-              onChange={handleTransformChange}
-              onUseTranslateChange={handleUseTranslateChange}
-            />
-
-            <ParamControls
-              paramDefs={currentParamDefs}
-              values={displayParams}
-              fixedParams={fixedParams}
-              onChange={handleParamChange}
-              onFixToggle={handleFixToggle}
-            />
-
+          <CollapsibleSection title="Pattern Tweak">
             <div className="control-group">
               <label htmlFor="scheme-select">Color Scheme</label>
               <select
@@ -864,21 +820,59 @@ export function App() {
                 ))}
               </div>
             </div>
+            <ParamControls
+              paramDefs={currentParamDefs}
+              values={displayParams}
+              fixedParams={fixedParams}
+              onChange={handleParamChange}
+              onFixToggle={handleFixToggle}
+            />
+            <ViewTransformPanel
+              zoomSlider={zoomSlider}
+              translateX={translateX}
+              translateY={translateY}
+              useTranslate={useTranslate}
+              onChange={handleTransformChange}
+              onUseTranslateChange={handleUseTranslateChange}
+            />
+          </CollapsibleSection>
 
+          <CollapsibleSection title="Image Addition">
+            <ImageOverlayPanel
+              hasImage={!!importedImage}
+              isProcessing={isProcessing}
+              processingProgress={processingProgress}
+              bgThreshold={bgThreshold}
+              overlayOpacity={overlayOpacity}
+              keepAspectRatio={keepAspectRatio}
+              error={importError}
+              onImport={handleImageImport}
+              onClear={handleImageClear}
+              onThresholdChange={setBgThreshold}
+              onOpacityChange={setOverlayOpacity}
+              onKeepAspectRatioChange={handleKeepAspectRatioChange}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Color Tweak">
             <HslTweakPanel
               hue={hslAdjust.h}
               saturation={hslAdjust.s}
               lightness={hslAdjust.l}
               onChange={handleHslChange}
             />
+          </CollapsibleSection>
 
+          <CollapsibleSection title="Final Action">
             <div className="button-row">
               <button className="btn btn-download" onClick={download}>
                 Download PNG
               </button>
             </div>
-          </div>
-        )}
+            <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
+              Compose &rarr;
+            </button>
+          </CollapsibleSection>
         </div>
       )}
     </div>

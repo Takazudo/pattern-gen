@@ -245,25 +245,49 @@ select:focus {
   background: var(--color-control-bg-hover);
 }
 
-.btn-toggle-details {
+/* ── Collapsible sections ── */
+
+.collapsible-section {
+  border-top: 1px solid var(--color-border-faint);
+  margin-top: var(--spacing-sp-sm);
+}
+
+.collapsible-section:first-of-type {
+  border-top: none;
+  margin-top: 0;
+}
+
+.collapsible-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
-  padding: var(--spacing-sp-xs);
+  padding: var(--spacing-sp-sm) 0;
   background: none;
   border: none;
-  color: var(--color-fg-faint);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  text-align: center;
-  margin-bottom: var(--spacing-sp-sm);
-}
-
-.btn-toggle-details:hover {
   color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: color 0.15s;
 }
 
-.details-section {
-  border-top: 1px solid var(--color-border-subtle);
-  padding-top: var(--spacing-sp-md);
+.collapsible-section-header:hover {
+  color: var(--color-fg);
+}
+
+.collapsible-section-title {
+  font-weight: 500;
+}
+
+.collapsible-section-chevron {
+  font-size: var(--font-size-2xs);
+  opacity: 0.6;
+}
+
+.collapsible-section-content {
+  padding-bottom: var(--spacing-sp-sm);
 }
 
 /* ── Range sliders ── */
