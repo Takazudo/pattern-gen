@@ -284,8 +284,10 @@ export function App() {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('slug')) return; // No URL params, use defaults
 
-    // Prevent the reset effect from clearing URL-restored state
+    // Prevent the reset effect from clearing URL-restored state.
+    // Clear after effects have run to avoid leaking if URL values match initial state.
     skipResetRef.current = true;
+    requestAnimationFrame(() => { skipResetRef.current = false; });
 
     const urlSlug = params.get('slug');
     const urlType = params.get('type');
