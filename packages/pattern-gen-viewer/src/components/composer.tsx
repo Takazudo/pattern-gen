@@ -853,8 +853,9 @@ export function Composer({
         return next;
       });
       setSelectedIds([newId]);
+      history.commit();
     },
-    [],
+    [history.commit],
   );
 
   const handleReorder = useCallback(

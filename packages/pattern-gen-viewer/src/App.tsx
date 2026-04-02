@@ -261,7 +261,7 @@ export function App() {
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState('');
   const [urlCopied, setUrlCopied] = useState(false);
-  const skipResetRef = useRef(false);
+  const skipResetRef = useRef(0);
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
   const imageLayersRef = useRef(imageLayers);
@@ -311,14 +311,16 @@ export function App() {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('slug')) return; // No URL params, use defaults
 
-    // Prevent the reset effect from clearing URL-restored state.
-    // Clear after effects have run to avoid leaking if URL values match initial state.
-    skipResetRef.current = true;
-    requestAnimationFrame(() => { skipResetRef.current = false; });
-
     const urlSlug = params.get('slug');
     const urlType = params.get('type');
     const urlColor = params.get('color');
+
+    // Count how many dep changes will trigger the reset effect.
+    // Each of slug/patternType that differs from initial state will fire the effect.
+    let skipCount = 0;
+    if (urlSlug) skipCount++;
+    if (urlType) skipCount++;
+    if (skipCount > 0) skipResetRef.current = skipCount;
 
     if (urlSlug) setSlug(urlSlug);
     if (urlType) setPatternType(urlType);
@@ -330,6 +332,9 @@ export function App() {
       if (params.has('tx')) setTranslateX(Number(params.get('tx')));
       if (params.has('ty')) setTranslateY(Number(params.get('ty')));
     }
+    if (params.has('rotate')) setRotate(Number(params.get('rotate')));
+    if (params.has('skewX')) setSkewX(Number(params.get('skewX')));
+    if (params.has('skewY')) setSkewY(Number(params.get('skewY')));
 
     // Restore user overrides (p_* params)
     const overrides: Record<string, number> = {};
@@ -361,8 +366,8 @@ export function App() {
   // Reset non-fixed user overrides and transform when pattern type or slug changes
   useEffect(() => {
     // Skip reset when restoring state from URL params
-    if (skipResetRef.current) {
-      skipResetRef.current = false;
+    if (skipResetRef.current > 0) {
+      skipResetRef.current--;
       return;
     }
     setUserOverrides((prev) => {
@@ -541,6 +546,9 @@ export function App() {
       if (translateX !== 0) params.set('tx', String(translateX));
       if (translateY !== 0) params.set('ty', String(translateY));
     }
+    if (rotate !== 0) params.set('rotate', String(rotate));
+    if (skewX !== 0) params.set('skewX', String(skewX));
+    if (skewY !== 0) params.set('skewY', String(skewY));
 
     // Include user-overridden params
     for (const [key, val] of Object.entries(userOverrides)) {
@@ -559,7 +567,7 @@ export function App() {
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
     setGeneratedUrl(url);
     setShowUrlModal(true);
-  }, [slug, patternType, colorSchemeIndex, zoomSlider, useTranslate, translateX, translateY, userOverrides, hslAdjust, contrastBrightness]);
+  }, [slug, patternType, colorSchemeIndex, zoomSlider, useTranslate, translateX, translateY, rotate, skewX, skewY, userOverrides, hslAdjust, contrastBrightness]);
 
   // Layer counter for unique naming
   const layerCounterRef = useRef(0);
