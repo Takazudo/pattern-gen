@@ -765,20 +765,27 @@ function TextProps({
             </div>
             <div className="composer-prop-field">
               <label className="composer-prop-label" htmlFor="composer-shadow-color">Color</label>
-              <input
-                id="composer-shadow-color"
-                type="text"
-                className="composer-prop-input"
-                value={layer.shadow.color}
-                onChange={(e) =>
-                  onUpdate({
-                    shadow: {
-                      ...layer.shadow,
-                      color: e.target.value,
-                    },
-                  })
-                }
-              />
+              <div className="composer-prop-color-row">
+                <input
+                  id="composer-shadow-color"
+                  type="text"
+                  className="composer-prop-input composer-prop-color-text"
+                  value={layer.shadow.color}
+                  onChange={(e) =>
+                    onUpdate({
+                      shadow: {
+                        ...layer.shadow,
+                        color: e.target.value,
+                      },
+                    })
+                  }
+                />
+                <HslaColorSwatch
+                  color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(layer.shadow.color) ? layer.shadow.color : '#000000'}
+                  onChange={(hex) => onUpdate({ shadow: { ...layer.shadow, color: hex } })}
+                  label="Shadow color"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -802,37 +809,65 @@ function TextProps({
           <div className="composer-prop-grid">
             <div className="composer-prop-field">
               <label className="composer-prop-label" htmlFor="composer-stroke-color">Color</label>
-              <input
-                id="composer-stroke-color"
-                type="text"
-                className="composer-prop-input"
-                value={layer.stroke.color}
-                onChange={(e) =>
-                  onUpdate({
-                    stroke: {
-                      ...layer.stroke,
-                      color: e.target.value,
-                    },
-                  })
-                }
-              />
+              <div className="composer-prop-color-row">
+                <input
+                  id="composer-stroke-color"
+                  type="text"
+                  className="composer-prop-input composer-prop-color-text"
+                  value={layer.stroke.color}
+                  onChange={(e) =>
+                    onUpdate({
+                      stroke: {
+                        ...layer.stroke,
+                        color: e.target.value,
+                      },
+                    })
+                  }
+                />
+                <HslaColorSwatch
+                  color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(layer.stroke.color) ? layer.stroke.color : '#000000'}
+                  onChange={(hex) => onUpdate({ stroke: { ...layer.stroke, color: hex } })}
+                  label="Stroke color"
+                />
+              </div>
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label" htmlFor="composer-stroke-width">Width</label>
-              <input
-                id="composer-stroke-width"
-                type="number"
-                className="composer-prop-input composer-prop-num"
-                value={layer.stroke.width}
-                onChange={(e) =>
-                  onUpdate({
-                    stroke: {
-                      ...layer.stroke,
-                      width: Number(e.target.value),
-                    },
-                  })
-                }
-              />
+              <label className="composer-prop-label" htmlFor="composer-stroke-width">Width: {layer.stroke.width}</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  id="composer-stroke-width"
+                  type="range"
+                  min={0}
+                  max={20}
+                  step={0.5}
+                  value={layer.stroke.width}
+                  onChange={(e) =>
+                    onUpdate({
+                      stroke: {
+                        ...layer.stroke,
+                        width: Number(e.target.value),
+                      },
+                    })
+                  }
+                />
+                <input
+                  type="number"
+                  className="composer-prop-input composer-prop-num"
+                  min={0}
+                  max={20}
+                  step={0.5}
+                  value={layer.stroke.width}
+                  onChange={(e) =>
+                    onUpdate({
+                      stroke: {
+                        ...layer.stroke,
+                        width: Number(e.target.value),
+                      },
+                    })
+                  }
+                  style={{ width: 56 }}
+                />
+              </div>
             </div>
           </div>
         )}
