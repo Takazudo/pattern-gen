@@ -96,6 +96,9 @@ function buildBackgroundConfig(
     txVal: number;
     tyVal: number;
     useTranslate: boolean;
+    rotate: number;
+    skewX: number;
+    skewY: number;
     displayParams: Record<string, number>;
     hslAdjust: { h: number; s: number; l: number };
     contrastBrightness: { contrast: number; brightness: number };
@@ -117,6 +120,9 @@ function buildBackgroundConfig(
     translateX: state.txVal,
     translateY: state.tyVal,
     useTranslate: state.useTranslate,
+    ...(state.rotate !== 0 ? { rotate: state.rotate } : {}),
+    ...(state.skewX !== 0 ? { skewX: state.skewX } : {}),
+    ...(state.skewY !== 0 ? { skewY: state.skewY } : {}),
     params: { ...state.displayParams },
     hsl: { ...state.hslAdjust },
     ...(hasContrastBrightness ? { contrastBrightness: { ...cb } } : {}),
@@ -148,6 +154,9 @@ function generateOnCanvas(
   translateY: number,
   userOverrides: Record<string, number>,
   useTranslate: boolean,
+  rotate: number,
+  skewX: number,
+  skewY: number,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -192,6 +201,21 @@ function generateOnCanvas(
     const ty = translateY * canvas.height;
     const baseOffset = -canvas.width * (scale - 1) / 2; // center: -(scale-1)/2 * size
     ctx.save();
+
+    // Apply transforms from center of canvas
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate((rotate * Math.PI) / 180);
+
+    // Apply skew via transform matrix
+    if (skewX !== 0 || skewY !== 0) {
+      const tanX = Math.tan((skewX * Math.PI) / 180);
+      const tanY = Math.tan((skewY * Math.PI) / 180);
+      ctx.transform(1, tanY, tanX, 1, 0, 0);
+    }
+
+    ctx.translate(-cx, -cy);
     ctx.translate(baseOffset + tx, baseOffset + ty);
     ctx.drawImage(offscreen, 0, 0);
     ctx.restore();
@@ -217,6 +241,9 @@ export function App() {
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
   const [useTranslate, setUseTranslate] = useState(false);
+  const [rotate, setRotate] = useState(0);
+  const [skewX, setSkewX] = useState(0);
+  const [skewY, setSkewY] = useState(0);
   const [currentStep, setCurrentStep] = useState<AppStep>('background');
   const [composerActive, setComposerActive] = useState(false);
   const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
@@ -288,18 +315,21 @@ export function App() {
     setTranslateX(0);
     setTranslateY(0);
     setUseTranslate(false);
+    setRotate(0);
+    setSkewX(0);
+    setSkewY(0);
   }, [patternType, slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generate pattern (without HSL) and cache the result
   const generateAndCache = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY);
     const ctx = canvas.getContext('2d');
     if (ctx) {
       cachedImageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
-  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate]);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY]);
 
   // Apply HSL adjustment from cached ImageData and cache the result
   const applyHslAndCache = useCallback(() => {
@@ -422,7 +452,19 @@ export function App() {
     if (!enabled) {
       setTranslateX(0);
       setTranslateY(0);
+      setRotate(0);
+      setSkewX(0);
+      setSkewY(0);
     }
+  }, []);
+
+  const handleRotateChange = useCallback((degrees: number) => {
+    setRotate(degrees);
+  }, []);
+
+  const handleSkewChange = useCallback((sx: number, sy: number) => {
+    setSkewX(sx);
+    setSkewY(sy);
   }, []);
 
   // Layer counter for unique naming
@@ -701,7 +743,7 @@ export function App() {
       const hiResCanvas = document.createElement('canvas');
       hiResCanvas.width = renderSize;
       hiResCanvas.height = renderSize;
-      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY);
 
       // Apply HSL adjustments
       const hiResCtx = hiResCanvas.getContext('2d');
@@ -732,7 +774,7 @@ export function App() {
       const url = outCanvas.toDataURL('image/png');
       triggerDownload(url, `crop-${patternType}-${slug}.png`);
     },
-    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, contrastBrightness, compositeOverlay],
+    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, compositeOverlay],
   );
 
   const getConfigJson = useCallback(
@@ -747,13 +789,16 @@ export function App() {
         txVal,
         tyVal,
         useTranslate,
+        rotate,
+        skewX,
+        skewY,
         displayParams,
         hslAdjust,
         contrastBrightness,
       });
       return serializeOgpConfig(config);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust, contrastBrightness],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, rotate, skewX, skewY, displayParams, hslAdjust, contrastBrightness],
   );
 
   const handleDownloadJson = useCallback(
@@ -790,6 +835,9 @@ export function App() {
         txVal,
         tyVal,
         useTranslate,
+        rotate,
+        skewX,
+        skewY,
         displayParams,
         hslAdjust,
         contrastBrightness,
@@ -811,7 +859,7 @@ export function App() {
       const hiResCanvas = document.createElement('canvas');
       hiResCanvas.width = renderSize;
       hiResCanvas.height = renderSize;
-      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY);
 
       const hiResCtx = hiResCanvas.getContext('2d');
       if (!hiResCtx) return;
@@ -843,7 +891,7 @@ export function App() {
       setComposerOutputSize(outSize);
       setComposerActive(true);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, contrastBrightness, displayParams, compositeOverlay],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, displayParams, compositeOverlay],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
@@ -1014,8 +1062,13 @@ export function App() {
               translateX={translateX}
               translateY={translateY}
               useTranslate={useTranslate}
+              rotate={rotate}
+              skewX={skewX}
+              skewY={skewY}
               onChange={handleTransformChange}
               onUseTranslateChange={handleUseTranslateChange}
+              onRotateChange={handleRotateChange}
+              onSkewChange={handleSkewChange}
             />
           </CollapsibleSection>
 
