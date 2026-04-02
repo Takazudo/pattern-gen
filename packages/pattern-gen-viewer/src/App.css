@@ -311,6 +311,33 @@ select:focus {
   color: var(--color-fg-muted);
 }
 
+.range-value-editable {
+  min-width: 40px;
+  max-width: 60px;
+  text-align: right;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: inherit;
+  font: inherit;
+  padding: 1px 4px;
+  outline: none;
+}
+
+.range-value-editable:focus {
+  background: oklch(100% 0 0 / 8%);
+  border-color: oklch(100% 0 0 / 20%);
+}
+
+.composer-label-value-editable {
+  display: inline;
+  width: 4ch;
+  min-width: unset;
+  max-width: unset;
+  font-size: inherit;
+  padding: 0 2px;
+}
+
 /* ── Color scheme preview ── */
 
 .scheme-preview {

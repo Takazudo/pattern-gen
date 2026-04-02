@@ -5,6 +5,59 @@ import type { AlignmentType, GridConfig } from './composer.js';
 import { ComposerFontPicker } from './composer-font-picker.js';
 import { HslaColorSwatch } from './hsla-color-picker.js';
 
+/* ── Editable slider value (inline in label) ── */
+
+function EditableLabelValue({
+  formatted,
+  onChange,
+}: {
+  formatted: string;
+  onChange: (v: number) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const escapedRef = useRef(false);
+
+  const handleFocus = () => {
+    escapedRef.current = false;
+    setDraft(formatted);
+    setIsEditing(true);
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (escapedRef.current) {
+      escapedRef.current = false;
+      return;
+    }
+    const parsed = parseFloat(draft);
+    if (!isNaN(parsed)) {
+      onChange(parsed);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    } else if (e.key === 'Escape') {
+      escapedRef.current = true;
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      className="range-value-editable composer-label-value-editable"
+      value={isEditing ? draft : formatted}
+      onFocus={handleFocus}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+    />
+  );
+}
+
 /* ── Props ── */
 
 interface LayerPanelProps {
@@ -591,7 +644,7 @@ function TextProps({
 
       {/* Font size */}
       <label className="composer-prop-label" htmlFor="composer-text-size">
-        Size: {layer.fontSize}px
+        Size: <EditableLabelValue formatted={`${layer.fontSize}`} onChange={(v) => onUpdate({ fontSize: v })} />px
       </label>
       <input
         id="composer-text-size"
@@ -679,7 +732,7 @@ function TextProps({
 
       {/* Letter spacing */}
       <label className="composer-prop-label" htmlFor="composer-text-letter-spacing">
-        Letter Spacing: {layer.letterSpacing}
+        Letter Spacing: <EditableLabelValue formatted={`${layer.letterSpacing}`} onChange={(v) => onUpdate({ letterSpacing: v })} />
       </label>
       <input
         id="composer-text-letter-spacing"
@@ -695,7 +748,7 @@ function TextProps({
 
       {/* Line height */}
       <label className="composer-prop-label" htmlFor="composer-text-line-height">
-        Line Height: {layer.lineHeight.toFixed(1)}
+        Line Height: <EditableLabelValue formatted={layer.lineHeight.toFixed(1)} onChange={(v) => onUpdate({ lineHeight: v })} />
       </label>
       <input
         id="composer-text-line-height"
