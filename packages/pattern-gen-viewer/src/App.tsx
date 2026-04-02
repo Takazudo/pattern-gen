@@ -258,6 +258,10 @@ export function App() {
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
   const [fixedColorScheme, setFixedColorScheme] = useState(false);
   const [contrastBrightness, setContrastBrightness] = useState({ contrast: 0, brightness: 0 });
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [generatedUrl, setGeneratedUrl] = useState('');
+  const [urlCopied, setUrlCopied] = useState(false);
+  const skipResetRef = useRef(false);
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
   const imageLayersRef = useRef(imageLayers);
@@ -302,8 +306,65 @@ export function App() {
   const txVal = translateX / 100;
   const tyVal = translateY / 100;
 
+  // Read URL params on mount — reproduce pattern from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('slug')) return; // No URL params, use defaults
+
+    // Prevent the reset effect from clearing URL-restored state.
+    // Clear after effects have run to avoid leaking if URL values match initial state.
+    skipResetRef.current = true;
+    requestAnimationFrame(() => { skipResetRef.current = false; });
+
+    const urlSlug = params.get('slug');
+    const urlType = params.get('type');
+    const urlColor = params.get('color');
+
+    if (urlSlug) setSlug(urlSlug);
+    if (urlType) setPatternType(urlType);
+    if (urlColor) setColorSchemeIndex(Number(urlColor));
+
+    if (params.has('zoom')) setZoomSlider(Number(params.get('zoom')));
+    if (params.get('translate') === '1') {
+      setUseTranslate(true);
+      if (params.has('tx')) setTranslateX(Number(params.get('tx')));
+      if (params.has('ty')) setTranslateY(Number(params.get('ty')));
+    }
+
+    // Restore user overrides (p_* params)
+    const overrides: Record<string, number> = {};
+    for (const [key, val] of params.entries()) {
+      if (key.startsWith('p_')) {
+        overrides[key.slice(2)] = Number(val);
+      }
+    }
+    if (Object.keys(overrides).length > 0) setUserOverrides(overrides);
+
+    // HSL
+    if (params.has('hsl_h') || params.has('hsl_s') || params.has('hsl_l')) {
+      setHslAdjust({
+        h: Number(params.get('hsl_h') || 0),
+        s: Number(params.get('hsl_s') || 0),
+        l: Number(params.get('hsl_l') || 0),
+      });
+    }
+
+    // Contrast/brightness
+    if (params.has('contrast') || params.has('brightness')) {
+      setContrastBrightness({
+        contrast: Number(params.get('contrast') || 0),
+        brightness: Number(params.get('brightness') || 0),
+      });
+    }
+  }, []); // Run once on mount
+
   // Reset non-fixed user overrides and transform when pattern type or slug changes
   useEffect(() => {
+    // Skip reset when restoring state from URL params
+    if (skipResetRef.current) {
+      skipResetRef.current = false;
+      return;
+    }
     setUserOverrides((prev) => {
       const kept: Record<string, number> = {};
       for (const key of fixedParamsRef.current) {
@@ -466,6 +527,39 @@ export function App() {
     setSkewX(sx);
     setSkewY(sy);
   }, []);
+
+  const handleGenerateUrl = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('slug', slug);
+    params.set('type', patternType);
+    params.set('color', String(colorSchemeIndex));
+
+    // Only include non-default values
+    if (zoomSlider !== 50) params.set('zoom', String(zoomSlider));
+    if (useTranslate) {
+      params.set('translate', '1');
+      if (translateX !== 0) params.set('tx', String(translateX));
+      if (translateY !== 0) params.set('ty', String(translateY));
+    }
+
+    // Include user-overridden params
+    for (const [key, val] of Object.entries(userOverrides)) {
+      params.set(`p_${key}`, String(val));
+    }
+
+    // HSL adjustments
+    if (hslAdjust.h !== 0) params.set('hsl_h', String(hslAdjust.h));
+    if (hslAdjust.s !== 0) params.set('hsl_s', String(hslAdjust.s));
+    if (hslAdjust.l !== 0) params.set('hsl_l', String(hslAdjust.l));
+
+    // Contrast/brightness
+    if (contrastBrightness.contrast !== 0) params.set('contrast', String(contrastBrightness.contrast));
+    if (contrastBrightness.brightness !== 0) params.set('brightness', String(contrastBrightness.brightness));
+
+    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    setGeneratedUrl(url);
+    setShowUrlModal(true);
+  }, [slug, patternType, colorSchemeIndex, zoomSlider, useTranslate, translateX, translateY, userOverrides, hslAdjust, contrastBrightness]);
 
   // Layer counter for unique naming
   const layerCounterRef = useRef(0);
@@ -1122,16 +1216,59 @@ export function App() {
             />
           </CollapsibleSection>
 
-          <CollapsibleSection title="Final Action">
-            <div className="final-action-buttons">
+          <CollapsibleSection title="Action">
+            <div className="action-buttons">
               <button className="btn btn-download" onClick={download}>
                 Download PNG
+              </button>
+              <button className="btn btn-generate-url" onClick={handleGenerateUrl}>
+                Generate URL
               </button>
               <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
                 Compose &rarr;
               </button>
             </div>
           </CollapsibleSection>
+        </div>
+      )}
+      {showUrlModal && (
+        <div className="url-modal-overlay" onClick={() => setShowUrlModal(false)}>
+          <div className="url-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="url-modal-title">Pattern URL</div>
+            <p className="url-modal-description">
+              This URL will reproduce the current pattern with all settings.
+            </p>
+            <textarea
+              className="url-modal-textarea"
+              readOnly
+              value={generatedUrl}
+              rows={3}
+              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            />
+            <div className="url-modal-actions">
+              <button
+                className="btn url-modal-copy-btn"
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedUrl).then(() => {
+                    setUrlCopied(true);
+                    setTimeout(() => setUrlCopied(false), 1500);
+                  }).catch(() => {
+                    // Fallback: select textarea text for manual copy
+                    const textarea = document.querySelector('.url-modal-textarea') as HTMLTextAreaElement | null;
+                    textarea?.select();
+                  });
+                }}
+              >
+                {urlCopied ? 'Copied!' : 'Copy URL'}
+              </button>
+              <button
+                className="btn url-modal-close-btn"
+                onClick={() => setShowUrlModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
