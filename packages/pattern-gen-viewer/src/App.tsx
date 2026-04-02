@@ -13,7 +13,8 @@ import {
 import type { PatternOptions, ParamDef, OgpConfig } from '@takazudo/pattern-gen-core';
 import { patternRegistry, patternsByName } from '@takazudo/pattern-gen-generators';
 import { ParamControls } from './components/param-controls.js';
-import { HslTweakPanel } from './components/hsl-tweak-panel.js';
+import { ColorTweakPanel } from './components/color-tweak-panel.js';
+import { applyContrastBrightness } from './utils/apply-contrast-brightness.js';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { SelectionOverlay, getOutputDimensions } from './components/selection-overlay.js';
 import type { AspectConfig } from './components/selection-overlay.js';
@@ -212,6 +213,7 @@ export function App() {
   // Params locked to their current value across seed changes
   const [fixedParams, setFixedParams] = useState<Set<string>>(new Set());
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
+  const [contrastBrightness, setContrastBrightness] = useState({ contrast: 0, brightness: 0 });
   // Image overlay state
   const [importedImage, setImportedImage] = useState<ProcessedImage | null>(null);
   const [bgThreshold, setBgThreshold] = useState(0);
@@ -223,6 +225,7 @@ export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
   const hslAdjustedRef = useRef<ImageData | null>(null);
+  const colorAdjustedRef = useRef<ImageData | null>(null);
   const thresholdedRef = useRef<ImageData | null>(null);
 
   // Get current pattern's paramDefs
@@ -292,10 +295,22 @@ export function App() {
     hslAdjustedRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
   }, [hslAdjust]);
 
-  // Restore HSL-adjusted canvas from cache (fast putImageData, no per-pixel HSL)
-  const restoreHslAdjusted = useCallback(() => {
+  // Apply contrast/brightness from HSL-adjusted cache and cache the result
+  const applyContrastBrightnessAndCache = useCallback(() => {
     const canvas = canvasRef.current;
-    const data = hslAdjustedRef.current;
+    const hslData = hslAdjustedRef.current;
+    if (!canvas || !hslData) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.putImageData(hslData, 0, 0);
+    applyContrastBrightness(ctx, canvas.width, canvas.height, contrastBrightness);
+    colorAdjustedRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  }, [contrastBrightness]);
+
+  // Restore color-adjusted canvas from cache (fast putImageData)
+  const restoreColorAdjusted = useCallback(() => {
+    const canvas = canvasRef.current;
+    const data = colorAdjustedRef.current;
     if (!canvas || !data) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -347,11 +362,16 @@ export function App() {
     applyHslAndCache();
   }, [applyHslAndCache, generateAndCache]);
 
-  // Composite rendering: restore HSL-adjusted pattern + optional image overlay.
-  // This runs on overlay-only changes (transform, opacity, threshold) without
-  // re-running the expensive HSL per-pixel loop.
+  // Cache contrast/brightness-adjusted pattern
   useEffect(() => {
-    restoreHslAdjusted();
+    applyContrastBrightnessAndCache();
+  }, [applyContrastBrightnessAndCache, applyHslAndCache, generateAndCache]);
+
+  // Composite rendering: restore color-adjusted pattern + optional image overlay.
+  // This runs on overlay-only changes (transform, opacity, threshold) without
+  // re-running the expensive per-pixel loops.
+  useEffect(() => {
+    restoreColorAdjusted();
 
     // Composite image overlay on top if present
     const thresholded = thresholdedRef.current;
@@ -373,7 +393,7 @@ export function App() {
     ctx.globalAlpha = overlayOpacity / 100;
     ctx.drawImage(tempCanvas, buf.x, buf.y, buf.width, buf.height);
     ctx.restore();
-  }, [restoreHslAdjusted, applyHslAndCache, generateAndCache, importedImage, bgThreshold, overlayOpacity, imageTransform]);
+  }, [restoreColorAdjusted, applyContrastBrightnessAndCache, applyHslAndCache, generateAndCache, importedImage, bgThreshold, overlayOpacity, imageTransform]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
@@ -395,6 +415,10 @@ export function App() {
 
   const handleHslChange = useCallback((h: number, s: number, l: number) => {
     setHslAdjust({ h, s, l });
+  }, []);
+
+  const handleContrastBrightnessChange = useCallback((contrast: number, brightness: number) => {
+    setContrastBrightness({ contrast, brightness });
   }, []);
 
   const handleTransformChange = useCallback((zs: number, tx: number, ty: number) => {
@@ -456,9 +480,10 @@ export function App() {
     }
   }, [importedImage]);
 
-  // Randomize only changes slug (seed) — keeps current pattern type
+  // Randomize changes slug (seed) and color scheme
   const randomize = useCallback(() => {
     setSlug(randomSlug());
+    setColorSchemeIndex(Math.floor(Math.random() * COLOR_SCHEMES.length));
   }, []);
 
   // Downloads at the full buffer resolution (CANVAS_SIZE * dpr).
@@ -544,6 +569,9 @@ export function App() {
         applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
       }
 
+      // Apply contrast/brightness adjustments
+      applyContrastBrightness(hiResCtx, renderSize, renderSize, contrastBrightness);
+
       // Composite image overlay if present
       compositeOverlay(hiResCtx, renderSize, renderSize);
 
@@ -563,7 +591,7 @@ export function App() {
       const url = outCanvas.toDataURL('image/png');
       triggerDownload(url, `crop-${patternType}-${slug}.png`);
     },
-    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, compositeOverlay],
+    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, contrastBrightness, compositeOverlay],
   );
 
   const getConfigJson = useCallback(
@@ -650,6 +678,9 @@ export function App() {
         applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
       }
 
+      // Apply contrast/brightness adjustments
+      applyContrastBrightness(hiResCtx, renderSize, renderSize, contrastBrightness);
+
       // Composite image overlay if present
       compositeOverlay(hiResCtx, renderSize, renderSize);
 
@@ -671,7 +702,7 @@ export function App() {
       setComposerOutputSize(outSize);
       setComposerActive(true);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams, compositeOverlay],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, contrastBrightness, displayParams, compositeOverlay],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
@@ -865,11 +896,14 @@ export function App() {
               </div>
             </div>
 
-            <HslTweakPanel
+            <ColorTweakPanel
               hue={hslAdjust.h}
               saturation={hslAdjust.s}
               lightness={hslAdjust.l}
-              onChange={handleHslChange}
+              contrast={contrastBrightness.contrast}
+              brightness={contrastBrightness.brightness}
+              onHslChange={handleHslChange}
+              onContrastBrightnessChange={handleContrastBrightnessChange}
             />
 
             <div className="button-row">
