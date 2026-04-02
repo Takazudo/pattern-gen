@@ -16,6 +16,7 @@ import { ComposerLayerPanel } from './composer-layer-panel.js';
 import { ImageTracePreview } from './image-trace-preview.js';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
 import { downloadBlob, triggerDownload } from '../utils/trigger-download.js';
+import './overlay-shared.css';
 import './composer.css';
 
 /* ── Alignment ── */
@@ -1078,8 +1079,8 @@ export function Composer({
   }, [trackFontLoad]);
 
   return (
-    <div className="composer">
-      <div className="composer-toolbar">
+    <div className="overlay-root composer">
+      <div className="overlay-toolbar composer-toolbar">
         <span className="composer-title">Composer</span>
         <div className="composer-toolbar-actions">
           <button
@@ -1111,7 +1112,7 @@ export function Composer({
           </button>
         </div>
       </div>
-      <div className="composer-workspace">
+      <div className="overlay-workspace composer-workspace">
         <div className="composer-canvas-area">
           <canvas
             ref={canvasRef}

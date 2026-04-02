@@ -126,7 +126,7 @@ export function ComposerLayerPanel({
     : null;
 
   return (
-    <div className="composer-panel">
+    <div className="overlay-panel composer-panel">
       {/* Layers section (actions + list) */}
       <div className="composer-panel-section">
         <div className="composer-props-title">Layers</div>

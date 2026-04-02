@@ -5,6 +5,7 @@ import {
   type ImageTraceOptions,
 } from '../utils/image-trace.js';
 import { downloadBlob } from '../utils/trigger-download.js';
+import './overlay-shared.css';
 import './image-trace-preview.css';
 
 interface ImageTracePreviewProps {
@@ -120,8 +121,8 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
   }, [svgString]);
 
   return (
-    <div className="image-trace-preview">
-      <div className="image-trace-toolbar">
+    <div className="overlay-root image-trace-preview">
+      <div className="overlay-toolbar image-trace-toolbar">
         <span className="image-trace-title">Image Trace Preview</span>
         <div className="image-trace-toolbar-actions">
           <button
@@ -136,7 +137,7 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
           </button>
         </div>
       </div>
-      <div className="image-trace-workspace">
+      <div className="overlay-workspace image-trace-workspace">
         <div className="image-trace-preview-area">
           {traceError ? (
             <div className="image-trace-error" role="alert">Trace failed: {traceError}</div>
@@ -150,7 +151,7 @@ export function ImageTracePreview({ getSourceCanvas, onClose }: ImageTracePrevie
             />
           )}
         </div>
-        <div className="image-trace-panel">
+        <div className="overlay-panel image-trace-panel">
           <div className="composer-panel-section">
             <span className="composer-props-title">Trace Parameters</span>
             {PARAM_DEFS.map((param) => (
