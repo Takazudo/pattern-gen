@@ -16,14 +16,20 @@ function EditableLabelValue({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const escapedRef = useRef(false);
 
   const handleFocus = () => {
+    escapedRef.current = false;
     setDraft(formatted);
     setIsEditing(true);
   };
 
   const handleBlur = () => {
     setIsEditing(false);
+    if (escapedRef.current) {
+      escapedRef.current = false;
+      return;
+    }
     const parsed = parseFloat(draft);
     if (!isNaN(parsed)) {
       onChange(parsed);
@@ -34,8 +40,8 @@ function EditableLabelValue({
     if (e.key === 'Enter') {
       (e.target as HTMLInputElement).blur();
     } else if (e.key === 'Escape') {
-      setDraft(formatted);
-      setIsEditing(false);
+      escapedRef.current = true;
+      (e.target as HTMLInputElement).blur();
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { ParamDef } from '@takazudo/pattern-gen-core';
 
 function EditableRangeValue({
@@ -12,16 +12,22 @@ function EditableRangeValue({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const escapedRef = useRef(false);
 
   const formatted = step >= 1 ? value.toFixed(0) : value.toFixed(step < 0.01 ? 3 : 2);
 
   const handleFocus = () => {
+    escapedRef.current = false;
     setDraft(formatted);
     setIsEditing(true);
   };
 
   const handleBlur = () => {
     setIsEditing(false);
+    if (escapedRef.current) {
+      escapedRef.current = false;
+      return;
+    }
     const parsed = parseFloat(draft);
     if (!isNaN(parsed)) {
       onChange(parsed);
@@ -32,8 +38,8 @@ function EditableRangeValue({
     if (e.key === 'Enter') {
       (e.target as HTMLInputElement).blur();
     } else if (e.key === 'Escape') {
-      setDraft(formatted);
-      setIsEditing(false);
+      escapedRef.current = true;
+      (e.target as HTMLInputElement).blur();
     }
   };
 
