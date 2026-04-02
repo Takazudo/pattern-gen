@@ -1,4 +1,54 @@
+import { useState } from 'react';
 import type { ParamDef } from '@takazudo/pattern-gen-core';
+
+function EditableRangeValue({
+  value,
+  step,
+  onChange,
+}: {
+  value: number;
+  step: number;
+  onChange: (v: number) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  const formatted = step >= 1 ? value.toFixed(0) : value.toFixed(step < 0.01 ? 3 : 2);
+
+  const handleFocus = () => {
+    setDraft(formatted);
+    setIsEditing(true);
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    const parsed = parseFloat(draft);
+    if (!isNaN(parsed)) {
+      onChange(parsed);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    } else if (e.key === 'Escape') {
+      setDraft(formatted);
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      className="range-value range-value-editable"
+      value={isEditing ? draft : formatted}
+      onFocus={handleFocus}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+    />
+  );
+}
 
 interface ParamControlsProps {
   paramDefs: ParamDef[];
@@ -44,9 +94,7 @@ export function ParamControls({ paramDefs, values, fixedParams, onChange, onFixT
                     disabled={isFixed}
                     onChange={(e) => onChange(def.key, parseFloat(e.target.value))}
                   />
-                  <span className="range-value">
-                    {def.step >= 1 ? value.toFixed(0) : value.toFixed(def.step < 0.01 ? 3 : 2)}
-                  </span>
+                  <EditableRangeValue value={value} step={def.step} onChange={(v) => onChange(def.key, v)} />
                 </div>
               </div>
             );
