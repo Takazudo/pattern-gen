@@ -429,17 +429,17 @@ export function App() {
   const layerCounterRef = useRef(0);
 
   const handleImageImport = useCallback(async (file: File) => {
-    layerCounterRef.current += 1;
-    const newId = crypto.randomUUID();
-    const name = `Image ${layerCounterRef.current}`;
-
     let img: ImageBitmap;
     try {
       img = await createImageBitmap(file);
     } catch {
-      console.error(`Failed to decode image file: ${file.name}`);
+      alert(`Failed to decode image file: ${file.name}`);
       return;
     }
+
+    layerCounterRef.current += 1;
+    const newId = crypto.randomUUID();
+    const name = `Image ${layerCounterRef.current}`;
     const rawCanvas = new OffscreenCanvas(img.width, img.height);
     const rawCtx = rawCanvas.getContext('2d');
     if (!rawCtx) return;

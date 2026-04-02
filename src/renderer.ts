@@ -371,21 +371,22 @@ function drawTextWithLetterSpacing(
   const savedAlign = ctx.textAlign;
   ctx.textAlign = 'left';
 
-  // Compute total width to adjust for original alignment
+  // Measure all characters once, then reuse for alignment + drawing
+  const chars = [...text];
+  const charWidths = chars.map((char) => ctx.measureText(char).width);
   let totalWidth = 0;
-  for (const char of text) {
-    totalWidth += ctx.measureText(char).width + spacing;
+  for (let i = 0; i < charWidths.length; i++) {
+    totalWidth += charWidths[i] + (i < charWidths.length - 1 ? spacing : 0);
   }
-  if (text.length > 0) totalWidth -= spacing; // No spacing after last character
 
   let currentX = x;
   if (savedAlign === 'center') currentX = x - totalWidth / 2;
   else if (savedAlign === 'right') currentX = x - totalWidth;
 
-  for (const char of text) {
-    if (mode === 'fill') ctx.fillText(char, currentX, y);
-    else ctx.strokeText(char, currentX, y);
-    currentX += ctx.measureText(char).width + spacing;
+  for (let i = 0; i < chars.length; i++) {
+    if (mode === 'fill') ctx.fillText(chars[i], currentX, y);
+    else ctx.strokeText(chars[i], currentX, y);
+    currentX += charWidths[i] + spacing;
   }
   ctx.textAlign = savedAlign;
 }
