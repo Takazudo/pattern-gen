@@ -97,11 +97,15 @@ function buildBackgroundConfig(
     useTranslate: boolean;
     displayParams: Record<string, number>;
     hslAdjust: { h: number; s: number; l: number };
+    contrastBrightness: { contrast: number; brightness: number };
   },
 ): OgpConfig {
   const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(viewportRect, canvas);
   const bufW = canvas.width;
   const bufH = canvas.height;
+
+  const cb = state.contrastBrightness;
+  const hasContrastBrightness = cb.contrast !== 0 || cb.brightness !== 0;
 
   return {
     version: 1,
@@ -114,6 +118,7 @@ function buildBackgroundConfig(
     useTranslate: state.useTranslate,
     params: { ...state.displayParams },
     hsl: { ...state.hslAdjust },
+    ...(hasContrastBrightness ? { contrastBrightness: { ...cb } } : {}),
     crop: {
       x: srcX / bufW,
       y: srcY / bufH,
@@ -689,6 +694,7 @@ export function App() {
         useTranslate,
         displayParams,
         hslAdjust,
+        contrastBrightness,
       });
       return serializeOgpConfig(config);
     },
@@ -733,6 +739,7 @@ export function App() {
         useTranslate,
         displayParams,
         hslAdjust,
+        contrastBrightness,
       });
       const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(rect, canvas);
       const bufW = canvas.width;
