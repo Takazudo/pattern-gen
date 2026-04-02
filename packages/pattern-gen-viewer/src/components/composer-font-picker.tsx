@@ -187,11 +187,12 @@ export function loadGoogleFont(family: string): Promise<void> {
 }
 
 interface FontPickerProps {
+  id?: string;
   value: string;
   onChange: (family: string) => void;
 }
 
-export function ComposerFontPicker({ value, onChange }: FontPickerProps) {
+export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
   const [showMore, setShowMore] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -209,6 +210,7 @@ export function ComposerFontPicker({ value, onChange }: FontPickerProps) {
       {!showMore ? (
         <>
           <select
+            id={id}
             value={value}
             onChange={(e) => {
               onChange(e.target.value);
@@ -233,6 +235,7 @@ export function ComposerFontPicker({ value, onChange }: FontPickerProps) {
       ) : (
         <>
           <input
+            id={id}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
