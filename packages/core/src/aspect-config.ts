@@ -20,8 +20,10 @@ export function getAspect(config: AspectConfig): number {
     case 'square':
       return 1;
     case 'free':
+      if (config.freeH <= 0) throw new Error('freeH must be positive');
       return config.freeW / config.freeH;
     case 'fixed':
+      if (config.fixedH <= 0) throw new Error('fixedH must be positive');
       return config.fixedW / config.fixedH;
   }
 }

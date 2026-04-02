@@ -201,6 +201,14 @@ function generateOnCanvas(
   }
 }
 
+/** Compute thresholded image data for a layer (pure function, no closure deps). */
+function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
+  if (!layer.processed) return null;
+  return layer.bgRemovalEnabled
+    ? applyThreshold(layer.processed, { threshold: layer.bgThreshold })
+    : layer.processed.original;
+}
+
 export function App() {
   const [slug, setSlug] = useState(randomSlug);
   const [patternType, setPatternType] = useState(patternRegistry[0].name);
@@ -218,11 +226,15 @@ export function App() {
   const [userOverrides, setUserOverrides] = useState<Record<string, number>>({});
   // Params locked to their current value across seed changes
   const [fixedParams, setFixedParams] = useState<Set<string>>(new Set());
+  const fixedParamsRef = useRef(fixedParams);
+  fixedParamsRef.current = fixedParams;
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
   const [fixedColorScheme, setFixedColorScheme] = useState(false);
   const [contrastBrightness, setContrastBrightness] = useState({ contrast: 0, brightness: 0 });
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
+  const imageLayersRef = useRef(imageLayers);
+  imageLayersRef.current = imageLayers;
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
@@ -267,7 +279,7 @@ export function App() {
   useEffect(() => {
     setUserOverrides((prev) => {
       const kept: Record<string, number> = {};
-      for (const key of fixedParams) {
+      for (const key of fixedParamsRef.current) {
         if (key in prev) kept[key] = prev[key];
       }
       return kept;
@@ -331,14 +343,6 @@ export function App() {
   useEffect(() => {
     generateAndCache();
   }, [generateAndCache]);
-
-  // Helper: compute thresholded cache for a layer
-  function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
-    if (!layer.processed) return null;
-    return layer.bgRemovalEnabled
-      ? applyThreshold(layer.processed, { threshold: layer.bgThreshold })
-      : layer.processed.original;
-  }
 
   // Cache HSL-adjusted pattern when pattern or HSL params change
   useEffect(() => {
@@ -429,8 +433,13 @@ export function App() {
     const newId = crypto.randomUUID();
     const name = `Image ${layerCounterRef.current}`;
 
-    // Load raw image (no bg removal)
-    const img = await createImageBitmap(file);
+    let img: ImageBitmap;
+    try {
+      img = await createImageBitmap(file);
+    } catch {
+      console.error(`Failed to decode image file: ${file.name}`);
+      return;
+    }
     const rawCanvas = new OffscreenCanvas(img.width, img.height);
     const rawCtx = rawCanvas.getContext('2d');
     if (!rawCtx) return;
@@ -535,7 +544,7 @@ export function App() {
     }
 
     // Enabling bg removal — check if ML data already exists
-    const layer = imageLayers.find((l) => l.id === id);
+    const layer = imageLayersRef.current.find((l) => l.id === id);
     if (!layer) return;
 
     if (layer.hasBgRemovalData) {
@@ -584,7 +593,7 @@ export function App() {
         ),
       );
     }
-  }, [imageLayers]);
+  }, []);
 
   const handleLayerKeepAspectRatioChange = useCallback((id: string, keep: boolean) => {
     setImageLayers((prev) =>
@@ -744,7 +753,7 @@ export function App() {
       });
       return serializeOgpConfig(config);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust, contrastBrightness],
   );
 
   const handleDownloadJson = useCallback(

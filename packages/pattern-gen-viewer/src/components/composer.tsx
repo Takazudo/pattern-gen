@@ -297,6 +297,8 @@ export function Composer({
   const [layers, setLayers] = useState<(EditorLayer & { id: string })[]>(
     [],
   );
+  const layersRef = useRef(layers);
+  layersRef.current = layers;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [showImageTrace, setShowImageTrace] = useState(false);
@@ -847,7 +849,7 @@ export function Composer({
       }
 
       // Enable bg removal
-      const layer = layers.find((l) => l.id === id);
+      const layer = layersRef.current.find((l) => l.id === id);
       if (!layer || layer.type !== 'image') return;
 
       // If already processed, just enable
@@ -879,7 +881,7 @@ export function Composer({
         );
       } catch (err) {
         console.error('Background removal failed:', err);
-        alert(`Background removal failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        console.error(`Background removal failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       } finally {
         setProcessingLayers((prev) => {
           const next = new Set(prev);
@@ -888,7 +890,7 @@ export function Composer({
         });
       }
     },
-    [layers],
+    [],
   );
 
   const handleBgThresholdChange = useCallback(
