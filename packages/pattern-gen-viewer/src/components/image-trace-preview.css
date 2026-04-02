@@ -130,3 +130,8 @@
   background: oklch(100% 0 0 / 14%);
   color: oklch(95% 0 0);
 }
+
+.image-trace-reset-btn:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
+}
