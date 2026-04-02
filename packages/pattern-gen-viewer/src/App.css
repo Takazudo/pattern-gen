@@ -245,25 +245,49 @@ select:focus {
   background: var(--color-control-bg-hover);
 }
 
-.btn-toggle-details {
+/* ── Collapsible sections ── */
+
+.collapsible-section {
+  border-top: 1px solid var(--color-border-faint);
+  margin-top: var(--spacing-sp-sm);
+}
+
+.collapsible-section:first-of-type {
+  border-top: none;
+  margin-top: 0;
+}
+
+.collapsible-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
-  padding: var(--spacing-sp-xs);
+  padding: var(--spacing-sp-sm) 0;
   background: none;
   border: none;
-  color: var(--color-fg-faint);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  text-align: center;
-  margin-bottom: var(--spacing-sp-sm);
-}
-
-.btn-toggle-details:hover {
   color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: color 0.15s;
 }
 
-.details-section {
-  border-top: 1px solid var(--color-border-subtle);
-  padding-top: var(--spacing-sp-md);
+.collapsible-section-header:hover {
+  color: var(--color-fg);
+}
+
+.collapsible-section-title {
+  font-weight: 500;
+}
+
+.collapsible-section-chevron {
+  font-size: var(--font-size-2xs);
+  opacity: 0.6;
+}
+
+.collapsible-section-content {
+  padding-bottom: var(--spacing-sp-sm);
 }
 
 /* ── Range sliders ── */
@@ -304,10 +328,13 @@ select:focus {
 
 /* ── Sections (params + HSL) ── */
 
-.param-section,
-.hsl-section {
+.param-section {
   border-top: 1px solid var(--color-border-subtle);
   padding-top: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-md);
+}
+
+.hsl-section {
   margin-bottom: var(--spacing-sp-md);
 }
 
@@ -336,21 +363,23 @@ select:focus {
   font-size: var(--font-size-2xs);
 }
 
-.fix-toggle {
-  display: flex;
+label.fix-toggle {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   font-size: var(--font-size-2xs);
+  line-height: 1;
   opacity: 0.6;
   cursor: pointer;
 }
 
-.fix-toggle:has(input:checked) {
+label.fix-toggle:has(input:checked) {
   opacity: 1;
 }
 
-.fix-toggle input[type="checkbox"] {
+label.fix-toggle input[type="checkbox"] {
   margin: 0;
+  vertical-align: middle;
   accent-color: var(--color-accent);
 }
 
@@ -526,6 +555,12 @@ select:focus {
 .button-row {
   margin-top: var(--spacing-sp-md);
   display: flex;
+  gap: var(--spacing-sp-sm);
+}
+
+.final-action-buttons {
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-sp-sm);
 }
 
@@ -729,4 +764,147 @@ select:focus {
   padding: var(--spacing-sp-xs) var(--spacing-sp-sm);
   font-size: var(--font-size-2xs);
   color: oklch(65% 0.2 25);
+}
+
+/* ── Image Layer Panel ── */
+
+.image-layer-panel {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-md);
+}
+
+.image-layer-panel .section-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-fg-faint);
+  margin-bottom: var(--spacing-sp-sm);
+}
+
+.image-layer-add {
+  margin-bottom: var(--spacing-sp-sm);
+  padding: var(--spacing-sp-sm) var(--spacing-sp-md);
+}
+
+.image-layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: var(--spacing-sp-sm);
+}
+
+.image-layer-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-xs);
+  padding: var(--spacing-sp-2xs) var(--spacing-sp-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-control-bg);
+  cursor: pointer;
+  font-size: var(--font-size-2xs);
+  transition: background 0.1s, border-color 0.1s;
+  user-select: none;
+}
+
+.image-layer-item:hover {
+  background: var(--color-control-bg-hover);
+}
+
+.image-layer-item.selected {
+  border-color: var(--color-border-focus);
+  background: var(--color-control-bg-hover);
+}
+
+.image-layer-item.dragging {
+  opacity: 0.4;
+}
+
+.image-layer-drag-handle {
+  cursor: grab;
+  color: var(--color-fg-faint);
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.image-layer-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  background: oklch(0% 0 0 / 20%);
+  flex-shrink: 0;
+}
+
+.image-layer-thumbnail-empty {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: oklch(0% 0 0 / 20%);
+  flex-shrink: 0;
+}
+
+.image-layer-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-fg);
+}
+
+.image-layer-spinner {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+  flex-shrink: 0;
+}
+
+.image-layer-bg-toggle {
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-control-bg);
+  color: var(--color-fg-faint);
+  font-size: 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.image-layer-bg-toggle.active {
+  background: var(--color-control-bg-hover);
+  color: var(--color-fg);
+  border-color: var(--color-border-focus);
+}
+
+.image-layer-bg-toggle:hover {
+  background: var(--color-control-bg-hover);
+}
+
+.image-layer-delete {
+  background: none;
+  border: none;
+  color: var(--color-fg-faint);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.image-layer-delete:hover {
+  color: oklch(65% 0.2 25);
+}
+
+.image-layer-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sp-sm);
 }

@@ -13,14 +13,17 @@ import {
 import type { PatternOptions, ParamDef, OgpConfig } from '@takazudo/pattern-gen-core';
 import { patternRegistry, patternsByName } from '@takazudo/pattern-gen-generators';
 import { ParamControls } from './components/param-controls.js';
-import { HslTweakPanel } from './components/hsl-tweak-panel.js';
+import { ColorTweakPanel } from './components/color-tweak-panel.js';
+import { applyContrastBrightness } from './utils/apply-contrast-brightness.js';
 import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { SelectionOverlay, getOutputDimensions } from './components/selection-overlay.js';
 import type { AspectConfig } from './components/selection-overlay.js';
 import { Composer } from './components/composer.js';
-import { ImageOverlayPanel } from './components/image-overlay-panel.js';
+import { ImageLayerPanel } from './components/image-layer-panel.js';
 import { ImageOverlayTransform } from './components/image-overlay-transform.js';
 import type { ImageTransform } from './components/image-overlay-transform.js';
+import type { ViewerImageLayer } from './types/viewer-image-layer.js';
+import { CollapsibleSection } from './components/collapsible-section.js';
 import { StepIndicator } from './components/step-indicator.js';
 import type { AppStep } from './components/step-indicator.js';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
@@ -95,11 +98,15 @@ function buildBackgroundConfig(
     useTranslate: boolean;
     displayParams: Record<string, number>;
     hslAdjust: { h: number; s: number; l: number };
+    contrastBrightness: { contrast: number; brightness: number };
   },
 ): OgpConfig {
   const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(viewportRect, canvas);
   const bufW = canvas.width;
   const bufH = canvas.height;
+
+  const cb = state.contrastBrightness;
+  const hasContrastBrightness = cb.contrast !== 0 || cb.brightness !== 0;
 
   return {
     version: 1,
@@ -112,6 +119,7 @@ function buildBackgroundConfig(
     useTranslate: state.useTranslate,
     params: { ...state.displayParams },
     hsl: { ...state.hslAdjust },
+    ...(hasContrastBrightness ? { contrastBrightness: { ...cb } } : {}),
     crop: {
       x: srcX / bufW,
       y: srcY / bufH,
@@ -201,7 +209,6 @@ export function App() {
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
   const [useTranslate, setUseTranslate] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [currentStep, setCurrentStep] = useState<AppStep>('background');
   const [composerActive, setComposerActive] = useState(false);
   const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
@@ -212,18 +219,24 @@ export function App() {
   // Params locked to their current value across seed changes
   const [fixedParams, setFixedParams] = useState<Set<string>>(new Set());
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
-  // Image overlay state
-  const [importedImage, setImportedImage] = useState<ProcessedImage | null>(null);
-  const [bgThreshold, setBgThreshold] = useState(0);
-  const [overlayOpacity, setOverlayOpacity] = useState(100);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const [imageTransform, setImageTransform] = useState<ImageTransform | null>(null);
-  const [keepAspectRatio, setKeepAspectRatio] = useState(true);
+  const [fixedColorScheme, setFixedColorScheme] = useState(false);
+  const [contrastBrightness, setContrastBrightness] = useState({ contrast: 0, brightness: 0 });
+  // Image layers state (multi-image)
+  const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
   const hslAdjustedRef = useRef<ImageData | null>(null);
-  const thresholdedRef = useRef<ImageData | null>(null);
+  const colorAdjustedRef = useRef<ImageData | null>(null);
+
+  // Derived: selected layer
+  const selectedLayer = useMemo(
+    () => imageLayers.find((l) => l.id === selectedLayerId) ?? null,
+    [imageLayers, selectedLayerId],
+  );
+
+  // Any layer currently processing?
+  const anyProcessing = imageLayers.some((l) => l.isProcessing);
 
   // Get current pattern's paramDefs
   const currentParamDefs = useMemo(() => {
@@ -292,10 +305,22 @@ export function App() {
     hslAdjustedRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
   }, [hslAdjust]);
 
-  // Restore HSL-adjusted canvas from cache (fast putImageData, no per-pixel HSL)
-  const restoreHslAdjusted = useCallback(() => {
+  // Apply contrast/brightness from HSL-adjusted cache and cache the result
+  const applyContrastBrightnessAndCache = useCallback(() => {
     const canvas = canvasRef.current;
-    const data = hslAdjustedRef.current;
+    const hslData = hslAdjustedRef.current;
+    if (!canvas || !hslData) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.putImageData(hslData, 0, 0);
+    applyContrastBrightness(ctx, canvas.width, canvas.height, contrastBrightness);
+    colorAdjustedRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  }, [contrastBrightness]);
+
+  // Restore color-adjusted canvas from cache (fast putImageData)
+  const restoreColorAdjusted = useCallback(() => {
+    const canvas = canvasRef.current;
+    const data = colorAdjustedRef.current;
     if (!canvas || !data) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -307,73 +332,54 @@ export function App() {
     generateAndCache();
   }, [generateAndCache]);
 
-  // Cache thresholded image data — only recompute when threshold or image changes,
-  // not on every opacity slider move
-  useEffect(() => {
-    if (!importedImage) {
-      thresholdedRef.current = null;
-      return;
-    }
-    thresholdedRef.current = applyThreshold(importedImage, { threshold: bgThreshold });
-  }, [importedImage, bgThreshold]);
-
-  // Auto-fit image transform on import
-  useEffect(() => {
-    if (!importedImage) return;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const imgAspect = importedImage.width / importedImage.height;
-    const maxW = vw * 0.8;
-    const maxH = vh * 0.8;
-    let w: number;
-    let h: number;
-    if (maxW / maxH > imgAspect) {
-      h = maxH;
-      w = h * imgAspect;
-    } else {
-      w = maxW;
-      h = w / imgAspect;
-    }
-    setImageTransform({
-      x: (vw - w) / 2,
-      y: (vh - h) / 2,
-      width: w,
-      height: h,
-    });
-  }, [importedImage]);
+  // Helper: compute thresholded cache for a layer
+  function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
+    if (!layer.processed) return null;
+    return layer.bgRemovalEnabled
+      ? applyThreshold(layer.processed, { threshold: layer.bgThreshold })
+      : layer.processed.original;
+  }
 
   // Cache HSL-adjusted pattern when pattern or HSL params change
   useEffect(() => {
     applyHslAndCache();
   }, [applyHslAndCache, generateAndCache]);
 
-  // Composite rendering: restore HSL-adjusted pattern + optional image overlay.
-  // This runs on overlay-only changes (transform, opacity, threshold) without
-  // re-running the expensive HSL per-pixel loop.
+  // Cache contrast/brightness-adjusted pattern
   useEffect(() => {
-    restoreHslAdjusted();
+    applyContrastBrightnessAndCache();
+  }, [applyContrastBrightnessAndCache, applyHslAndCache, generateAndCache]);
 
-    // Composite image overlay on top if present
-    const thresholded = thresholdedRef.current;
-    if (!importedImage || !thresholded || !imageTransform) return;
+  // Composite rendering: restore color-adjusted pattern + optional image overlay.
+  // This runs on overlay-only changes (transform, opacity, threshold) without
+  // re-running the expensive per-pixel loops.
+  useEffect(() => {
+    restoreColorAdjusted();
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
-    tempCtx.putImageData(thresholded, 0, 0);
+    // Draw layers bottom-to-top (last in array = back, first = front)
+    for (const layer of [...imageLayers].reverse()) {
+      if (!layer.processed || !layer.transform) continue;
+      const thresholded = layer.thresholdedCache;
+      if (!thresholded) continue;
 
-    // Convert viewport transform to canvas buffer coordinates
-    const buf = viewportToBufferCoords(imageTransform, canvas);
+      const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) continue;
+      tempCtx.putImageData(thresholded, 0, 0);
 
-    ctx.save();
-    ctx.globalAlpha = overlayOpacity / 100;
-    ctx.drawImage(tempCanvas, buf.x, buf.y, buf.width, buf.height);
-    ctx.restore();
-  }, [restoreHslAdjusted, applyHslAndCache, generateAndCache, importedImage, bgThreshold, overlayOpacity, imageTransform]);
+      const buf = viewportToBufferCoords(layer.transform, canvas);
+
+      ctx.save();
+      ctx.globalAlpha = layer.opacity / 100;
+      ctx.drawImage(tempCanvas, buf.x, buf.y, buf.width, buf.height);
+      ctx.restore();
+    }
+  }, [restoreColorAdjusted, applyContrastBrightnessAndCache, applyHslAndCache, generateAndCache, imageLayers]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
@@ -397,6 +403,10 @@ export function App() {
     setHslAdjust({ h, s, l });
   }, []);
 
+  const handleContrastBrightnessChange = useCallback((contrast: number, brightness: number) => {
+    setContrastBrightness({ contrast, brightness });
+  }, []);
+
   const handleTransformChange = useCallback((zs: number, tx: number, ty: number) => {
     setZoomSlider(zs);
     setTranslateX(tx);
@@ -411,55 +421,201 @@ export function App() {
     }
   }, []);
 
-  const [importError, setImportError] = useState<string | null>(null);
+  // Layer counter for unique naming
+  const layerCounterRef = useRef(0);
 
   const handleImageImport = useCallback(async (file: File) => {
-    setIsProcessing(true);
-    setProcessingProgress(0);
-    setImportError(null);
-    setImageTransform(null);
-    setKeepAspectRatio(true);
+    layerCounterRef.current += 1;
+    const newId = crypto.randomUUID();
+    const name = `Image ${layerCounterRef.current}`;
+
+    // Load raw image (no bg removal)
+    const img = await createImageBitmap(file);
+    const rawCanvas = new OffscreenCanvas(img.width, img.height);
+    const rawCtx = rawCanvas.getContext('2d');
+    if (!rawCtx) return;
+    rawCtx.drawImage(img, 0, 0);
+    const imageData = rawCtx.getImageData(0, 0, img.width, img.height);
+
+    // Create ProcessedImage with fully opaque alpha mask (no bg removal yet)
+    const processed: ProcessedImage = {
+      original: imageData,
+      alphaMask: new Uint8ClampedArray(img.width * img.height).fill(255),
+      width: img.width,
+      height: img.height,
+    };
+
+    // Auto-fit transform
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const imgAspect = img.width / img.height;
+    const maxW = vw * 0.8;
+    const maxH = vh * 0.8;
+    let w: number;
+    let h: number;
+    if (maxW / maxH > imgAspect) {
+      h = maxH;
+      w = h * imgAspect;
+    } else {
+      w = maxW;
+      h = w / imgAspect;
+    }
+    const transform: ImageTransform = {
+      x: (vw - w) / 2,
+      y: (vh - h) / 2,
+      width: w,
+      height: h,
+    };
+
+    const newLayer: ViewerImageLayer = {
+      id: newId,
+      name,
+      processed,
+      originalFile: file,
+      opacity: 100,
+      bgThreshold: 0,
+      bgRemovalEnabled: false,
+      hasBgRemovalData: false,
+      transform,
+      keepAspectRatio: true,
+      isProcessing: false,
+      processingProgress: 0,
+      error: null,
+      thresholdedCache: null,
+    };
+    newLayer.thresholdedCache = computeThresholdedCache(newLayer);
+
+    setImageLayers((prev) => [newLayer, ...prev]);
+    setSelectedLayerId(newId);
+  }, []);
+
+  const handleDeleteLayer = useCallback((id: string) => {
+    setImageLayers((prev) => prev.filter((l) => l.id !== id));
+    setSelectedLayerId((prev) => (prev === id ? null : prev));
+  }, []);
+
+  const handleLayerReorder = useCallback((fromIndex: number, toIndex: number) => {
+    setImageLayers((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const handleLayerOpacityChange = useCallback((id: string, value: number) => {
+    setImageLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, opacity: value } : l)),
+    );
+  }, []);
+
+  const handleLayerThresholdChange = useCallback((id: string, value: number) => {
+    setImageLayers((prev) =>
+      prev.map((l) => {
+        if (l.id !== id) return l;
+        const updated = { ...l, bgThreshold: value };
+        updated.thresholdedCache = computeThresholdedCache(updated);
+        return updated;
+      }),
+    );
+  }, []);
+
+  const handleLayerBgRemovalToggle = useCallback(async (id: string, enabled: boolean) => {
+    if (!enabled) {
+      // Turning off bg removal — just toggle the flag
+      setImageLayers((prev) =>
+        prev.map((l) => {
+          if (l.id !== id) return l;
+          const updated = { ...l, bgRemovalEnabled: false };
+          updated.thresholdedCache = computeThresholdedCache(updated);
+          return updated;
+        }),
+      );
+      return;
+    }
+
+    // Enabling bg removal — check if ML data already exists
+    const layer = imageLayers.find((l) => l.id === id);
+    if (!layer) return;
+
+    if (layer.hasBgRemovalData) {
+      // Already has ML data, just enable
+      setImageLayers((prev) =>
+        prev.map((l) => {
+          if (l.id !== id) return l;
+          const updated = { ...l, bgRemovalEnabled: true };
+          updated.thresholdedCache = computeThresholdedCache(updated);
+          return updated;
+        }),
+      );
+      return;
+    }
+
+    // Run ML bg removal for the first time
+    if (!layer.originalFile) return;
+    setImageLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, isProcessing: true, processingProgress: 0, error: null } : l)),
+    );
+
     try {
-      const processed = await removeBackgroundViaWorker(file, {
-        onProgress: (p: number) => setProcessingProgress(Math.round(p * 100)),
+      const processed = await removeBackgroundViaWorker(layer.originalFile, {
+        onProgress: (p: number) => {
+          setImageLayers((prev) =>
+            prev.map((l) =>
+              l.id === id ? { ...l, processingProgress: Math.round(p * 100) } : l,
+            ),
+          );
+        },
       });
-      setImportedImage(processed);
-      setBgThreshold(0);
+
+      setImageLayers((prev) =>
+        prev.map((l) => {
+          if (l.id !== id) return l;
+          const updated = { ...l, processed, hasBgRemovalData: true, bgRemovalEnabled: true, isProcessing: false, processingProgress: 100 };
+          updated.thresholdedCache = computeThresholdedCache(updated);
+          return updated;
+        }),
+      );
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Background removal failed');
-    } finally {
-      setIsProcessing(false);
+      const errMsg = err instanceof Error ? err.message : 'Background removal failed';
+      setImageLayers((prev) =>
+        prev.map((l) =>
+          l.id === id ? { ...l, error: errMsg, isProcessing: false } : l,
+        ),
+      );
     }
+  }, [imageLayers]);
+
+  const handleLayerKeepAspectRatioChange = useCallback((id: string, keep: boolean) => {
+    setImageLayers((prev) =>
+      prev.map((l) => {
+        if (l.id !== id) return l;
+        if (keep && l.processed && l.transform) {
+          const aspect = l.processed.width / l.processed.height;
+          const cx = l.transform.x + l.transform.width / 2;
+          const cy = l.transform.y + l.transform.height / 2;
+          const w = l.transform.width;
+          const h = w / aspect;
+          return { ...l, keepAspectRatio: true, transform: { x: cx - w / 2, y: cy - h / 2, width: w, height: h } };
+        }
+        return { ...l, keepAspectRatio: keep };
+      }),
+    );
   }, []);
 
-  const handleImageClear = useCallback(() => {
-    setImportedImage(null);
-    setImageTransform(null);
-    setKeepAspectRatio(true);
-    setBgThreshold(0);
-    setOverlayOpacity(100);
-    setImportError(null);
+  const handleLayerTransformChange = useCallback((id: string, transform: ImageTransform) => {
+    setImageLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, transform } : l)),
+    );
   }, []);
 
-  const handleKeepAspectRatioChange = useCallback((keep: boolean) => {
-    setKeepAspectRatio(keep);
-    if (keep && importedImage) {
-      const aspect = importedImage.width / importedImage.height;
-      setImageTransform((prev) => {
-        if (!prev) return prev;
-        const cx = prev.x + prev.width / 2;
-        const cy = prev.y + prev.height / 2;
-        const w = prev.width;
-        const h = w / aspect;
-        return { x: cx - w / 2, y: cy - h / 2, width: w, height: h };
-      });
-    }
-  }, [importedImage]);
-
-  // Randomize only changes slug (seed) — keeps current pattern type
+  // Randomize changes slug (seed) and color scheme
   const randomize = useCallback(() => {
     setSlug(randomSlug());
-  }, []);
+    if (!fixedColorScheme) {
+      setColorSchemeIndex(Math.floor(Math.random() * COLOR_SCHEMES.length));
+    }
+  }, [fixedColorScheme]);
 
   // Downloads at the full buffer resolution (CANVAS_SIZE * dpr).
   // To get a fixed 1200×1200 PNG regardless of dpr, draw onto a temporary
@@ -471,44 +627,45 @@ export function App() {
     triggerDownload(url, `pattern-${patternType}-${slug}.png`);
   }, [patternType, slug]);
 
-  // Composite the imported image overlay onto a canvas (used by export paths)
+  // Composite all image overlay layers onto a canvas (used by export paths)
   const compositeOverlay = useCallback((ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) => {
-    const thresholded = thresholdedRef.current;
-    if (!importedImage || !thresholded) return;
+    // Draw layers bottom-to-top (last in array = back, first = front)
+    for (const layer of [...imageLayers].reverse()) {
+      if (!layer.processed || !layer.thresholdedCache) continue;
 
-    const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
-    tempCtx.putImageData(thresholded, 0, 0);
+      const thresholded = layer.thresholdedCache;
+      const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) continue;
+      tempCtx.putImageData(thresholded, 0, 0);
 
-    let drawX: number;
-    let drawY: number;
-    let drawW: number;
-    let drawH: number;
+      let drawX: number;
+      let drawY: number;
+      let drawW: number;
+      let drawH: number;
 
-    if (imageTransform && canvasRef.current) {
-      // Map viewport transform → main buffer → target canvas
-      const mainCanvas = canvasRef.current;
-      const buf = viewportToBufferCoords(imageTransform, mainCanvas);
-      const scaleFactor = canvasW / mainCanvas.width;
-      drawX = buf.x * scaleFactor;
-      drawY = buf.y * scaleFactor;
-      drawW = buf.width * scaleFactor;
-      drawH = buf.height * scaleFactor;
-    } else {
-      // Fallback: contain-fit
-      const scale = Math.min(canvasW / thresholded.width, canvasH / thresholded.height);
-      drawW = thresholded.width * scale;
-      drawH = thresholded.height * scale;
-      drawX = (canvasW - drawW) / 2;
-      drawY = (canvasH - drawH) / 2;
+      if (layer.transform && canvasRef.current) {
+        const mainCanvas = canvasRef.current;
+        const buf = viewportToBufferCoords(layer.transform, mainCanvas);
+        const scaleFactor = canvasW / mainCanvas.width;
+        drawX = buf.x * scaleFactor;
+        drawY = buf.y * scaleFactor;
+        drawW = buf.width * scaleFactor;
+        drawH = buf.height * scaleFactor;
+      } else {
+        const scale = Math.min(canvasW / thresholded.width, canvasH / thresholded.height);
+        drawW = thresholded.width * scale;
+        drawH = thresholded.height * scale;
+        drawX = (canvasW - drawW) / 2;
+        drawY = (canvasH - drawH) / 2;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = layer.opacity / 100;
+      ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
+      ctx.restore();
     }
-
-    ctx.save();
-    ctx.globalAlpha = overlayOpacity / 100;
-    ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
-    ctx.restore();
-  }, [importedImage, overlayOpacity, imageTransform]);
+  }, [imageLayers]);
 
   const handleSelectionGenerate = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
@@ -544,6 +701,9 @@ export function App() {
         applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
       }
 
+      // Apply contrast/brightness adjustments
+      applyContrastBrightness(hiResCtx, renderSize, renderSize, contrastBrightness);
+
       // Composite image overlay if present
       compositeOverlay(hiResCtx, renderSize, renderSize);
 
@@ -563,7 +723,7 @@ export function App() {
       const url = outCanvas.toDataURL('image/png');
       triggerDownload(url, `crop-${patternType}-${slug}.png`);
     },
-    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, compositeOverlay],
+    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, contrastBrightness, compositeOverlay],
   );
 
   const getConfigJson = useCallback(
@@ -580,6 +740,7 @@ export function App() {
         useTranslate,
         displayParams,
         hslAdjust,
+        contrastBrightness,
       });
       return serializeOgpConfig(config);
     },
@@ -624,6 +785,7 @@ export function App() {
         useTranslate,
         displayParams,
         hslAdjust,
+        contrastBrightness,
       });
       const { srcX, srcY, srcW, srcH } = viewportRectToBufferRect(rect, canvas);
       const bufW = canvas.width;
@@ -650,6 +812,9 @@ export function App() {
         applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
       }
 
+      // Apply contrast/brightness adjustments
+      applyContrastBrightness(hiResCtx, renderSize, renderSize, contrastBrightness);
+
       // Composite image overlay if present
       compositeOverlay(hiResCtx, renderSize, renderSize);
 
@@ -671,7 +836,7 @@ export function App() {
       setComposerOutputSize(outSize);
       setComposerActive(true);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, displayParams, compositeOverlay],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, contrastBrightness, displayParams, compositeOverlay],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
@@ -690,7 +855,7 @@ export function App() {
     <div className="app">
       <div className="canvas-layer">
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
-        {isProcessing && (
+        {anyProcessing && (
           <div className="canvas-processing-overlay" aria-hidden="true">
             <div className="processing-spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
           </div>
@@ -730,13 +895,13 @@ export function App() {
         </>
       )}
 
-      {currentStep === 'background' && importedImage && imageTransform && (
+      {currentStep === 'background' && selectedLayer?.processed && selectedLayer?.transform && (
         <ImageOverlayTransform
-          transform={imageTransform}
-          onChange={setImageTransform}
-          keepAspectRatio={keepAspectRatio}
-          onKeepAspectRatioChange={handleKeepAspectRatioChange}
-          imageAspect={importedImage.width / importedImage.height}
+          transform={selectedLayer.transform}
+          onChange={(t) => handleLayerTransformChange(selectedLayer.id, t)}
+          keepAspectRatio={selectedLayer.keepAspectRatio}
+          onKeepAspectRatioChange={(keep) => handleLayerKeepAspectRatioChange(selectedLayer.id, keep)}
+          imageAspect={selectedLayer.processed.width / selectedLayer.processed.height}
         />
       )}
 
@@ -762,86 +927,52 @@ export function App() {
 
       {currentStep === 'background' && (
         <div className="controls">
-        <h1>zudo-pattern-gen</h1>
+          <h1>zudo-pattern-gen</h1>
 
-        <div className="control-group">
-          <label htmlFor="type-select">Pattern Type</label>
-          <select
-            id="type-select"
-            value={patternType}
-            onChange={(e) => setPatternType(e.target.value)}
-          >
-            {patternRegistry.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="control-group">
-          <label htmlFor="slug-input">Slug / Seed</label>
-          <div className="slug-row">
-            <input
-              id="slug-input"
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-            />
-            <button className="btn btn-random" onClick={randomize}>
-              Random
-            </button>
-          </div>
-        </div>
-
-        <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
-          Compose &rarr;
-        </button>
-
-        <ImageOverlayPanel
-          hasImage={!!importedImage}
-          isProcessing={isProcessing}
-          processingProgress={processingProgress}
-          bgThreshold={bgThreshold}
-          overlayOpacity={overlayOpacity}
-          keepAspectRatio={keepAspectRatio}
-          error={importError}
-          onImport={handleImageImport}
-          onClear={handleImageClear}
-          onThresholdChange={setBgThreshold}
-          onOpacityChange={setOverlayOpacity}
-          onKeepAspectRatioChange={handleKeepAspectRatioChange}
-        />
-
-        <button
-          className="btn-toggle-details"
-          onClick={() => setShowDetails((prev) => !prev)}
-          aria-expanded={showDetails}
-        >
-          Details {showDetails ? '\u25B2' : '\u25BC'}
-        </button>
-
-        {showDetails && (
-          <div className="details-section">
-            <ViewTransformPanel
-              zoomSlider={zoomSlider}
-              translateX={translateX}
-              translateY={translateY}
-              useTranslate={useTranslate}
-              onChange={handleTransformChange}
-              onUseTranslateChange={handleUseTranslateChange}
-            />
-
-            <ParamControls
-              paramDefs={currentParamDefs}
-              values={displayParams}
-              fixedParams={fixedParams}
-              onChange={handleParamChange}
-              onFixToggle={handleFixToggle}
-            />
-
+          <CollapsibleSection title="Pattern Generation" defaultOpen={true}>
             <div className="control-group">
-              <label htmlFor="scheme-select">Color Scheme</label>
+              <label htmlFor="type-select">Pattern Type</label>
+              <select
+                id="type-select"
+                value={patternType}
+                onChange={(e) => setPatternType(e.target.value)}
+              >
+                {patternRegistry.map((p) => (
+                  <option key={p.name} value={p.name}>
+                    {p.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="control-group">
+              <label htmlFor="slug-input">Slug / Seed</label>
+              <div className="slug-row">
+                <input
+                  id="slug-input"
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                />
+                <button className="btn btn-random" onClick={randomize}>
+                  Random
+                </button>
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Pattern Tweak">
+            <div className="control-group">
+              <div className="param-label-row">
+                <label htmlFor="scheme-select">Color Scheme</label>
+                <label className="fix-toggle">
+                  <input
+                    type="checkbox"
+                    checked={fixedColorScheme}
+                    onChange={(e) => setFixedColorScheme(e.target.checked)}
+                  />
+                  Fix
+                </label>
+              </div>
               <select
                 id="scheme-select"
                 className="scheme-select"
@@ -864,21 +995,60 @@ export function App() {
                 ))}
               </div>
             </div>
+            <ParamControls
+              paramDefs={currentParamDefs}
+              values={displayParams}
+              fixedParams={fixedParams}
+              onChange={handleParamChange}
+              onFixToggle={handleFixToggle}
+            />
+            <ViewTransformPanel
+              zoomSlider={zoomSlider}
+              translateX={translateX}
+              translateY={translateY}
+              useTranslate={useTranslate}
+              onChange={handleTransformChange}
+              onUseTranslateChange={handleUseTranslateChange}
+            />
+          </CollapsibleSection>
 
-            <HslTweakPanel
+          <CollapsibleSection title="Image Addition">
+            <ImageLayerPanel
+              layers={imageLayers}
+              selectedLayerId={selectedLayerId}
+              onSelectLayer={setSelectedLayerId}
+              onImport={handleImageImport}
+              onDeleteLayer={handleDeleteLayer}
+              onReorder={handleLayerReorder}
+              onOpacityChange={handleLayerOpacityChange}
+              onThresholdChange={handleLayerThresholdChange}
+              onBgRemovalToggle={handleLayerBgRemovalToggle}
+              onKeepAspectRatioChange={handleLayerKeepAspectRatioChange}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Color Tweak">
+            <ColorTweakPanel
               hue={hslAdjust.h}
               saturation={hslAdjust.s}
               lightness={hslAdjust.l}
-              onChange={handleHslChange}
+              contrast={contrastBrightness.contrast}
+              brightness={contrastBrightness.brightness}
+              onHslChange={handleHslChange}
+              onContrastBrightnessChange={handleContrastBrightnessChange}
             />
+          </CollapsibleSection>
 
-            <div className="button-row">
+          <CollapsibleSection title="Final Action">
+            <div className="final-action-buttons">
               <button className="btn btn-download" onClick={download}>
                 Download PNG
               </button>
+              <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
+                Compose &rarr;
+              </button>
             </div>
-          </div>
-        )}
+          </CollapsibleSection>
         </div>
       )}
     </div>

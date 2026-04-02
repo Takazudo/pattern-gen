@@ -19,6 +19,7 @@ export interface OgpConfig {
   useTranslate: boolean;
   params: Record<string, number>;
   hsl: { h: number; s: number; l: number };
+  contrastBrightness?: { contrast: number; brightness: number };
   crop: OgpCropRegion;
 }
 
@@ -90,6 +91,22 @@ export function parseOgpConfig(json: string): OgpConfig {
     throw new Error('OGP config: hsl.l must be a finite number in [-100, 100]');
   }
 
+  // contrastBrightness validation (optional, default {0,0})
+  let contrastBrightness: { contrast: number; brightness: number } | undefined;
+  if (raw.contrastBrightness != null) {
+    if (typeof raw.contrastBrightness !== 'object') {
+      throw new Error('OGP config: contrastBrightness must be an object with contrast, brightness');
+    }
+    const cb = raw.contrastBrightness;
+    if (typeof cb.contrast !== 'number' || !Number.isFinite(cb.contrast) || cb.contrast < -100 || cb.contrast > 100) {
+      throw new Error('OGP config: contrastBrightness.contrast must be a finite number in [-100, 100]');
+    }
+    if (typeof cb.brightness !== 'number' || !Number.isFinite(cb.brightness) || cb.brightness < -100 || cb.brightness > 100) {
+      throw new Error('OGP config: contrastBrightness.brightness must be a finite number in [-100, 100]');
+    }
+    contrastBrightness = { contrast: cb.contrast, brightness: cb.brightness };
+  }
+
   // crop validation
   if (!raw.crop || typeof raw.crop !== 'object') {
     throw new Error('OGP config: crop must be an object with x, y, width, height');
@@ -122,6 +139,7 @@ export function parseOgpConfig(json: string): OgpConfig {
     useTranslate: raw.useTranslate,
     params: raw.params,
     hsl: { h: raw.hsl.h, s: raw.hsl.s, l: raw.hsl.l },
+    ...(contrastBrightness ? { contrastBrightness } : {}),
     crop: { x: raw.crop.x, y: raw.crop.y, width: raw.crop.width, height: raw.crop.height },
   };
 }
