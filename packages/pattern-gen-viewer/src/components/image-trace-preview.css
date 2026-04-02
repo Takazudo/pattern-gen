@@ -1,25 +1,7 @@
-/* ── Image Trace Preview — full-screen overlay ── */
+/* ── Image Trace Preview — component-specific overrides ── */
 
 .image-trace-preview {
-  position: fixed;
-  inset: 0;
   z-index: 210;
-  display: flex;
-  flex-direction: column;
-  background: oklch(10% 0 0);
-  user-select: none;
-}
-
-/* ── Toolbar ── */
-
-.image-trace-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: oklch(0% 0 0 / 80%);
-  border-bottom: 1px solid oklch(100% 0 0 / 10%);
-  flex-shrink: 0;
 }
 
 .image-trace-title {
@@ -31,14 +13,6 @@
 .image-trace-toolbar-actions {
   display: flex;
   gap: 8px;
-}
-
-/* ── Workspace ── */
-
-.image-trace-workspace {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
 }
 
 /* ── SVG Preview area ── */
@@ -103,21 +77,6 @@
   50% {
     opacity: 1;
   }
-}
-
-/* ── Panel (right side) ── */
-
-.image-trace-panel {
-  width: 320px;
-  background: oklch(0% 0 0 / 75%);
-  backdrop-filter: blur(12px);
-  border-left: 1px solid oklch(100% 0 0 / 10%);
-  overflow-y: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex-shrink: 0;
 }
 
 /* ── Parameter row ── */
