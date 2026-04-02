@@ -244,8 +244,9 @@ export function ComposerLayerPanel({
           <div className="composer-props-title">Properties</div>
 
           {/* Common: name */}
-          <label className="composer-prop-label">Name</label>
+          <label className="composer-prop-label" htmlFor="composer-prop-name">Name</label>
           <input
+            id="composer-prop-name"
             type="text"
             className="composer-prop-input"
             value={selected.name}
@@ -257,8 +258,9 @@ export function ComposerLayerPanel({
           {/* Common: transform */}
           <div className="composer-prop-grid">
             <div className="composer-prop-field">
-              <label className="composer-prop-label">X</label>
+              <label className="composer-prop-label" htmlFor="composer-prop-x">X</label>
               <input
+                id="composer-prop-x"
                 type="number"
                 className="composer-prop-input composer-prop-num"
                 value={Math.round(selected.transform.x)}
@@ -273,8 +275,9 @@ export function ComposerLayerPanel({
               />
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label">Y</label>
+              <label className="composer-prop-label" htmlFor="composer-prop-y">Y</label>
               <input
+                id="composer-prop-y"
                 type="number"
                 className="composer-prop-input composer-prop-num"
                 value={Math.round(selected.transform.y)}
@@ -289,8 +292,9 @@ export function ComposerLayerPanel({
               />
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label">W</label>
+              <label className="composer-prop-label" htmlFor="composer-prop-w">W</label>
               <input
+                id="composer-prop-w"
                 type="number"
                 className="composer-prop-input composer-prop-num"
                 value={Math.round(selected.transform.width)}
@@ -305,8 +309,9 @@ export function ComposerLayerPanel({
               />
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label">H</label>
+              <label className="composer-prop-label" htmlFor="composer-prop-h">H</label>
               <input
+                id="composer-prop-h"
                 type="number"
                 className="composer-prop-input composer-prop-num"
                 value={Math.round(selected.transform.height)}
@@ -323,10 +328,11 @@ export function ComposerLayerPanel({
           </div>
 
           {/* Common: opacity */}
-          <label className="composer-prop-label">
+          <label className="composer-prop-label" htmlFor="composer-prop-opacity">
             Opacity: {Math.round(selected.opacity * 100)}%
           </label>
           <input
+            id="composer-prop-opacity"
             type="range"
             min={0}
             max={100}
@@ -553,8 +559,9 @@ function TextProps({
   return (
     <div className="composer-props-section">
       {/* Content */}
-      <label className="composer-prop-label">Content</label>
+      <label className="composer-prop-label" htmlFor="composer-text-content">Content</label>
       <textarea
+        id="composer-text-content"
         className="composer-prop-textarea"
         value={layer.content}
         rows={3}
@@ -562,17 +569,19 @@ function TextProps({
       />
 
       {/* Font family */}
-      <label className="composer-prop-label">Font</label>
+      <label className="composer-prop-label" htmlFor="composer-text-font">Font</label>
       <ComposerFontPicker
+        id="composer-text-font"
         value={layer.fontFamily}
         onChange={(family) => onUpdate({ fontFamily: family })}
       />
 
       {/* Font size */}
-      <label className="composer-prop-label">
+      <label className="composer-prop-label" htmlFor="composer-text-size">
         Size: {layer.fontSize}px
       </label>
       <input
+        id="composer-text-size"
         type="range"
         min={8}
         max={200}
@@ -609,9 +618,10 @@ function TextProps({
       </div>
 
       {/* Color */}
-      <label className="composer-prop-label">Color</label>
+      <label className="composer-prop-label" htmlFor="composer-text-color">Color</label>
       <div className="composer-prop-color-row">
         <input
+          id="composer-text-color"
           type="text"
           className="composer-prop-input composer-prop-color-text"
           value={layer.color}
@@ -655,10 +665,11 @@ function TextProps({
       </div>
 
       {/* Letter spacing */}
-      <label className="composer-prop-label">
+      <label className="composer-prop-label" htmlFor="composer-text-letter-spacing">
         Letter Spacing: {layer.letterSpacing}
       </label>
       <input
+        id="composer-text-letter-spacing"
         type="range"
         min={-10}
         max={20}
@@ -670,10 +681,11 @@ function TextProps({
       />
 
       {/* Line height */}
-      <label className="composer-prop-label">
+      <label className="composer-prop-label" htmlFor="composer-text-line-height">
         Line Height: {layer.lineHeight.toFixed(1)}
       </label>
       <input
+        id="composer-text-line-height"
         type="range"
         min={0.8}
         max={3.0}
@@ -701,8 +713,9 @@ function TextProps({
         {layer.shadow.enabled && (
           <div className="composer-prop-grid">
             <div className="composer-prop-field">
-              <label className="composer-prop-label">OX</label>
+              <label className="composer-prop-label" htmlFor="composer-shadow-ox">OX</label>
               <input
+                id="composer-shadow-ox"
                 type="number"
                 className="composer-prop-input composer-prop-num"
                 value={layer.shadow.offsetX}
@@ -717,8 +730,9 @@ function TextProps({
               />
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label">OY</label>
+              <label className="composer-prop-label" htmlFor="composer-shadow-oy">OY</label>
               <input
+                id="composer-shadow-oy"
                 type="number"
                 className="composer-prop-input composer-prop-num"
                 value={layer.shadow.offsetY}
@@ -733,8 +747,9 @@ function TextProps({
               />
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label">Blur</label>
+              <label className="composer-prop-label" htmlFor="composer-shadow-blur">Blur</label>
               <input
+                id="composer-shadow-blur"
                 type="number"
                 className="composer-prop-input composer-prop-num"
                 value={layer.shadow.blur}
@@ -749,8 +764,9 @@ function TextProps({
               />
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label">Color</label>
+              <label className="composer-prop-label" htmlFor="composer-shadow-color">Color</label>
               <input
+                id="composer-shadow-color"
                 type="text"
                 className="composer-prop-input"
                 value={layer.shadow.color}
@@ -785,8 +801,9 @@ function TextProps({
         {layer.stroke.enabled && (
           <div className="composer-prop-grid">
             <div className="composer-prop-field">
-              <label className="composer-prop-label">Color</label>
+              <label className="composer-prop-label" htmlFor="composer-stroke-color">Color</label>
               <input
+                id="composer-stroke-color"
                 type="text"
                 className="composer-prop-input"
                 value={layer.stroke.color}
@@ -801,8 +818,9 @@ function TextProps({
               />
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label">Width</label>
+              <label className="composer-prop-label" htmlFor="composer-stroke-width">Width</label>
               <input
+                id="composer-stroke-width"
                 type="number"
                 className="composer-prop-input composer-prop-num"
                 value={layer.stroke.width}
@@ -863,10 +881,11 @@ function FrameParamControl({
     case 'slider':
       return (
         <div className="composer-frame-param-row">
-          <label className="composer-prop-label">
+          <label className="composer-prop-label" htmlFor={`composer-frame-param-${def.key}`}>
             {def.label}: {Number(value).toFixed(def.step < 1 ? 1 : 0)}
           </label>
           <input
+            id={`composer-frame-param-${def.key}`}
             type="range"
             min={def.min}
             max={def.max}
@@ -879,9 +898,10 @@ function FrameParamControl({
     case 'color':
       return (
         <div className="composer-frame-param-row">
-          <label className="composer-prop-label">{def.label}</label>
+          <label className="composer-prop-label" htmlFor={`composer-frame-param-${def.key}`}>{def.label}</label>
           <div className="composer-prop-color-row">
             <input
+              id={`composer-frame-param-${def.key}`}
               type="text"
               className="composer-prop-input composer-prop-color-text"
               value={String(value)}
@@ -898,8 +918,9 @@ function FrameParamControl({
     case 'select':
       return (
         <div className="composer-frame-param-row">
-          <label className="composer-prop-label">{def.label}</label>
+          <label className="composer-prop-label" htmlFor={`composer-frame-param-${def.key}`}>{def.label}</label>
           <select
+            id={`composer-frame-param-${def.key}`}
             className="composer-frame-select"
             value={Number(value)}
             onChange={(e) => onChange(Number(e.target.value))}

@@ -27,8 +27,9 @@ export function ColorTweakPanel({
       <label className="section-label">Color Adjust</label>
 
       <div className="hsl-slider-row">
-        <span className="hsl-label">H</span>
+        <label className="hsl-label" htmlFor="color-tweak-hue">H</label>
         <input
+          id="color-tweak-hue"
           type="range"
           min={-180}
           max={180}
@@ -41,8 +42,9 @@ export function ColorTweakPanel({
       </div>
 
       <div className="hsl-slider-row">
-        <span className="hsl-label">S</span>
+        <label className="hsl-label" htmlFor="color-tweak-saturation">S</label>
         <input
+          id="color-tweak-saturation"
           type="range"
           min={-100}
           max={100}
@@ -55,8 +57,9 @@ export function ColorTweakPanel({
       </div>
 
       <div className="hsl-slider-row">
-        <span className="hsl-label">L</span>
+        <label className="hsl-label" htmlFor="color-tweak-lightness">L</label>
         <input
+          id="color-tweak-lightness"
           type="range"
           min={-100}
           max={100}
@@ -69,8 +72,9 @@ export function ColorTweakPanel({
       </div>
 
       <div className="hsl-slider-row">
-        <span className="hsl-label">Con</span>
+        <label className="hsl-label" htmlFor="color-tweak-contrast">Con</label>
         <input
+          id="color-tweak-contrast"
           type="range"
           min={-100}
           max={100}
@@ -83,8 +87,9 @@ export function ColorTweakPanel({
       </div>
 
       <div className="hsl-slider-row">
-        <span className="hsl-label">Bri</span>
+        <label className="hsl-label" htmlFor="color-tweak-brightness">Bri</label>
         <input
+          id="color-tweak-brightness"
           type="range"
           min={-100}
           max={100}
