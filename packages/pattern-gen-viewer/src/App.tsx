@@ -18,13 +18,13 @@ import { ViewTransformPanel } from './components/view-transform-panel.js';
 import { SelectionOverlay, getOutputDimensions } from './components/selection-overlay.js';
 import type { AspectConfig } from './components/selection-overlay.js';
 import { Composer } from './components/composer.js';
-import { ImageOverlayPanel } from './components/image-overlay-panel.js';
+import { ImageLayerPanel } from './components/image-layer-panel.js';
 import { ImageOverlayTransform } from './components/image-overlay-transform.js';
 import type { ImageTransform } from './components/image-overlay-transform.js';
+import type { ViewerImageLayer } from './types/viewer-image-layer.js';
 import { StepIndicator } from './components/step-indicator.js';
 import type { AppStep } from './components/step-indicator.js';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
-import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { triggerDownload } from './utils/trigger-download.js';
 
 const CANVAS_SIZE = 1200;
@@ -212,18 +212,21 @@ export function App() {
   // Params locked to their current value across seed changes
   const [fixedParams, setFixedParams] = useState<Set<string>>(new Set());
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
-  // Image overlay state
-  const [importedImage, setImportedImage] = useState<ProcessedImage | null>(null);
-  const [bgThreshold, setBgThreshold] = useState(0);
-  const [overlayOpacity, setOverlayOpacity] = useState(100);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const [imageTransform, setImageTransform] = useState<ImageTransform | null>(null);
-  const [keepAspectRatio, setKeepAspectRatio] = useState(true);
+  // Image layers state (multi-image)
+  const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cachedImageDataRef = useRef<ImageData | null>(null);
   const hslAdjustedRef = useRef<ImageData | null>(null);
-  const thresholdedRef = useRef<ImageData | null>(null);
+
+  // Derived: selected layer
+  const selectedLayer = useMemo(
+    () => imageLayers.find((l) => l.id === selectedLayerId) ?? null,
+    [imageLayers, selectedLayerId],
+  );
+
+  // Any layer currently processing?
+  const anyProcessing = imageLayers.some((l) => l.isProcessing);
 
   // Get current pattern's paramDefs
   const currentParamDefs = useMemo(() => {
@@ -307,73 +310,69 @@ export function App() {
     generateAndCache();
   }, [generateAndCache]);
 
-  // Cache thresholded image data — only recompute when threshold or image changes,
-  // not on every opacity slider move
+  // Cache thresholded image data per layer — recompute when threshold or image changes
   useEffect(() => {
-    if (!importedImage) {
-      thresholdedRef.current = null;
-      return;
-    }
-    thresholdedRef.current = applyThreshold(importedImage, { threshold: bgThreshold });
-  }, [importedImage, bgThreshold]);
-
-  // Auto-fit image transform on import
-  useEffect(() => {
-    if (!importedImage) return;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const imgAspect = importedImage.width / importedImage.height;
-    const maxW = vw * 0.8;
-    const maxH = vh * 0.8;
-    let w: number;
-    let h: number;
-    if (maxW / maxH > imgAspect) {
-      h = maxH;
-      w = h * imgAspect;
-    } else {
-      w = maxW;
-      h = w / imgAspect;
-    }
-    setImageTransform({
-      x: (vw - w) / 2,
-      y: (vh - h) / 2,
-      width: w,
-      height: h,
+    setImageLayers((prev) => {
+      let changed = false;
+      const next = prev.map((layer) => {
+        if (!layer.processed) {
+          if (layer.thresholdedCache !== null) {
+            changed = true;
+            return { ...layer, thresholdedCache: null };
+          }
+          return layer;
+        }
+        // Only recompute if needed
+        const newCache = layer.bgRemovalEnabled
+          ? applyThreshold(layer.processed, { threshold: layer.bgThreshold })
+          : layer.processed.original;
+        // Simple identity check won't work since applyThreshold always creates new data,
+        // but we gate on the deps: bgThreshold, bgRemovalEnabled, processed
+        changed = true;
+        return { ...layer, thresholdedCache: newCache };
+      });
+      return changed ? next : prev;
     });
-  }, [importedImage]);
+  }, [
+    // We track changes via a stable key derived from layer deps
+    imageLayers.map((l) => `${l.id}:${l.processed ? 'y' : 'n'}:${l.bgThreshold}:${l.bgRemovalEnabled}`).join(','),
+  ]);
 
   // Cache HSL-adjusted pattern when pattern or HSL params change
   useEffect(() => {
     applyHslAndCache();
   }, [applyHslAndCache, generateAndCache]);
 
-  // Composite rendering: restore HSL-adjusted pattern + optional image overlay.
+  // Composite rendering: restore HSL-adjusted pattern + image overlay layers.
   // This runs on overlay-only changes (transform, opacity, threshold) without
   // re-running the expensive HSL per-pixel loop.
   useEffect(() => {
     restoreHslAdjusted();
 
-    // Composite image overlay on top if present
-    const thresholded = thresholdedRef.current;
-    if (!importedImage || !thresholded || !imageTransform) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
-    tempCtx.putImageData(thresholded, 0, 0);
+    // Draw layers bottom-to-top (last in array = back, first = front)
+    for (const layer of [...imageLayers].reverse()) {
+      if (!layer.processed || !layer.transform) continue;
+      const thresholded = layer.thresholdedCache;
+      if (!thresholded) continue;
 
-    // Convert viewport transform to canvas buffer coordinates
-    const buf = viewportToBufferCoords(imageTransform, canvas);
+      const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) continue;
+      tempCtx.putImageData(thresholded, 0, 0);
 
-    ctx.save();
-    ctx.globalAlpha = overlayOpacity / 100;
-    ctx.drawImage(tempCanvas, buf.x, buf.y, buf.width, buf.height);
-    ctx.restore();
-  }, [restoreHslAdjusted, applyHslAndCache, generateAndCache, importedImage, bgThreshold, overlayOpacity, imageTransform]);
+      const buf = viewportToBufferCoords(layer.transform, canvas);
+
+      ctx.save();
+      ctx.globalAlpha = layer.opacity / 100;
+      ctx.drawImage(tempCanvas, buf.x, buf.y, buf.width, buf.height);
+      ctx.restore();
+    }
+  }, [restoreHslAdjusted, applyHslAndCache, generateAndCache, imageLayers]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
@@ -411,50 +410,141 @@ export function App() {
     }
   }, []);
 
-  const [importError, setImportError] = useState<string | null>(null);
+  // Layer counter for unique naming
+  const layerCounterRef = useRef(0);
 
   const handleImageImport = useCallback(async (file: File) => {
-    setIsProcessing(true);
-    setProcessingProgress(0);
-    setImportError(null);
-    setImageTransform(null);
-    setKeepAspectRatio(true);
+    layerCounterRef.current += 1;
+    const newId = crypto.randomUUID();
+    const name = `Image ${layerCounterRef.current}`;
+
+    const newLayer: ViewerImageLayer = {
+      id: newId,
+      name,
+      processed: null,
+      originalFile: file,
+      opacity: 100,
+      bgThreshold: 0,
+      bgRemovalEnabled: true,
+      transform: null,
+      keepAspectRatio: true,
+      isProcessing: true,
+      processingProgress: 0,
+      error: null,
+      thresholdedCache: null,
+    };
+
+    // Add to front of array (topmost layer) and select it
+    setImageLayers((prev) => [newLayer, ...prev]);
+    setSelectedLayerId(newId);
+
     try {
       const processed = await removeBackgroundViaWorker(file, {
-        onProgress: (p: number) => setProcessingProgress(Math.round(p * 100)),
+        onProgress: (p: number) => {
+          setImageLayers((prev) =>
+            prev.map((l) =>
+              l.id === newId ? { ...l, processingProgress: Math.round(p * 100) } : l,
+            ),
+          );
+        },
       });
-      setImportedImage(processed);
-      setBgThreshold(0);
+
+      // Auto-fit transform
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const imgAspect = processed.width / processed.height;
+      const maxW = vw * 0.8;
+      const maxH = vh * 0.8;
+      let w: number;
+      let h: number;
+      if (maxW / maxH > imgAspect) {
+        h = maxH;
+        w = h * imgAspect;
+      } else {
+        w = maxW;
+        h = w / imgAspect;
+      }
+      const transform: ImageTransform = {
+        x: (vw - w) / 2,
+        y: (vh - h) / 2,
+        width: w,
+        height: h,
+      };
+
+      setImageLayers((prev) =>
+        prev.map((l) =>
+          l.id === newId
+            ? { ...l, processed, transform, isProcessing: false, processingProgress: 100 }
+            : l,
+        ),
+      );
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Background removal failed');
-    } finally {
-      setIsProcessing(false);
+      const errMsg = err instanceof Error ? err.message : 'Background removal failed';
+      setImageLayers((prev) =>
+        prev.map((l) =>
+          l.id === newId
+            ? { ...l, error: errMsg, isProcessing: false, bgRemovalEnabled: false }
+            : l,
+        ),
+      );
     }
   }, []);
 
-  const handleImageClear = useCallback(() => {
-    setImportedImage(null);
-    setImageTransform(null);
-    setKeepAspectRatio(true);
-    setBgThreshold(0);
-    setOverlayOpacity(100);
-    setImportError(null);
+  const handleDeleteLayer = useCallback((id: string) => {
+    setImageLayers((prev) => prev.filter((l) => l.id !== id));
+    setSelectedLayerId((prev) => (prev === id ? null : prev));
   }, []);
 
-  const handleKeepAspectRatioChange = useCallback((keep: boolean) => {
-    setKeepAspectRatio(keep);
-    if (keep && importedImage) {
-      const aspect = importedImage.width / importedImage.height;
-      setImageTransform((prev) => {
-        if (!prev) return prev;
-        const cx = prev.x + prev.width / 2;
-        const cy = prev.y + prev.height / 2;
-        const w = prev.width;
-        const h = w / aspect;
-        return { x: cx - w / 2, y: cy - h / 2, width: w, height: h };
-      });
-    }
-  }, [importedImage]);
+  const handleLayerReorder = useCallback((fromIndex: number, toIndex: number) => {
+    setImageLayers((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const handleLayerOpacityChange = useCallback((id: string, value: number) => {
+    setImageLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, opacity: value } : l)),
+    );
+  }, []);
+
+  const handleLayerThresholdChange = useCallback((id: string, value: number) => {
+    setImageLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, bgThreshold: value } : l)),
+    );
+  }, []);
+
+  const handleLayerBgRemovalToggle = useCallback((id: string, enabled: boolean) => {
+    setImageLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, bgRemovalEnabled: enabled } : l)),
+    );
+  }, []);
+
+  const handleLayerKeepAspectRatioChange = useCallback((id: string, keep: boolean) => {
+    setImageLayers((prev) =>
+      prev.map((l) => {
+        if (l.id !== id) return l;
+        if (keep && l.processed && l.transform) {
+          const aspect = l.processed.width / l.processed.height;
+          const cx = l.transform.x + l.transform.width / 2;
+          const cy = l.transform.y + l.transform.height / 2;
+          const w = l.transform.width;
+          const h = w / aspect;
+          return { ...l, keepAspectRatio: true, transform: { x: cx - w / 2, y: cy - h / 2, width: w, height: h } };
+        }
+        return { ...l, keepAspectRatio: keep };
+      }),
+    );
+  }, []);
+
+  const handleLayerTransformChange = useCallback((id: string | null, transform: ImageTransform) => {
+    if (!id) return;
+    setImageLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, transform } : l)),
+    );
+  }, []);
 
   // Randomize only changes slug (seed) — keeps current pattern type
   const randomize = useCallback(() => {
@@ -471,44 +561,45 @@ export function App() {
     triggerDownload(url, `pattern-${patternType}-${slug}.png`);
   }, [patternType, slug]);
 
-  // Composite the imported image overlay onto a canvas (used by export paths)
+  // Composite all image overlay layers onto a canvas (used by export paths)
   const compositeOverlay = useCallback((ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) => {
-    const thresholded = thresholdedRef.current;
-    if (!importedImage || !thresholded) return;
+    // Draw layers bottom-to-top (last in array = back, first = front)
+    for (const layer of [...imageLayers].reverse()) {
+      if (!layer.processed || !layer.thresholdedCache) continue;
 
-    const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
-    tempCtx.putImageData(thresholded, 0, 0);
+      const thresholded = layer.thresholdedCache;
+      const tempCanvas = new OffscreenCanvas(thresholded.width, thresholded.height);
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) continue;
+      tempCtx.putImageData(thresholded, 0, 0);
 
-    let drawX: number;
-    let drawY: number;
-    let drawW: number;
-    let drawH: number;
+      let drawX: number;
+      let drawY: number;
+      let drawW: number;
+      let drawH: number;
 
-    if (imageTransform && canvasRef.current) {
-      // Map viewport transform → main buffer → target canvas
-      const mainCanvas = canvasRef.current;
-      const buf = viewportToBufferCoords(imageTransform, mainCanvas);
-      const scaleFactor = canvasW / mainCanvas.width;
-      drawX = buf.x * scaleFactor;
-      drawY = buf.y * scaleFactor;
-      drawW = buf.width * scaleFactor;
-      drawH = buf.height * scaleFactor;
-    } else {
-      // Fallback: contain-fit
-      const scale = Math.min(canvasW / thresholded.width, canvasH / thresholded.height);
-      drawW = thresholded.width * scale;
-      drawH = thresholded.height * scale;
-      drawX = (canvasW - drawW) / 2;
-      drawY = (canvasH - drawH) / 2;
+      if (layer.transform && canvasRef.current) {
+        const mainCanvas = canvasRef.current;
+        const buf = viewportToBufferCoords(layer.transform, mainCanvas);
+        const scaleFactor = canvasW / mainCanvas.width;
+        drawX = buf.x * scaleFactor;
+        drawY = buf.y * scaleFactor;
+        drawW = buf.width * scaleFactor;
+        drawH = buf.height * scaleFactor;
+      } else {
+        const scale = Math.min(canvasW / thresholded.width, canvasH / thresholded.height);
+        drawW = thresholded.width * scale;
+        drawH = thresholded.height * scale;
+        drawX = (canvasW - drawW) / 2;
+        drawY = (canvasH - drawH) / 2;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = layer.opacity / 100;
+      ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
+      ctx.restore();
     }
-
-    ctx.save();
-    ctx.globalAlpha = overlayOpacity / 100;
-    ctx.drawImage(tempCanvas, drawX, drawY, drawW, drawH);
-    ctx.restore();
-  }, [importedImage, overlayOpacity, imageTransform]);
+  }, [imageLayers]);
 
   const handleSelectionGenerate = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
@@ -690,7 +781,7 @@ export function App() {
     <div className="app">
       <div className="canvas-layer">
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
-        {isProcessing && (
+        {anyProcessing && (
           <div className="canvas-processing-overlay" aria-hidden="true">
             <div className="processing-spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
           </div>
@@ -730,13 +821,13 @@ export function App() {
         </>
       )}
 
-      {currentStep === 'background' && importedImage && imageTransform && (
+      {currentStep === 'background' && selectedLayer?.processed && selectedLayer?.transform && (
         <ImageOverlayTransform
-          transform={imageTransform}
-          onChange={setImageTransform}
-          keepAspectRatio={keepAspectRatio}
-          onKeepAspectRatioChange={handleKeepAspectRatioChange}
-          imageAspect={importedImage.width / importedImage.height}
+          transform={selectedLayer.transform}
+          onChange={(t) => handleLayerTransformChange(selectedLayerId, t)}
+          keepAspectRatio={selectedLayer.keepAspectRatio}
+          onKeepAspectRatioChange={(keep) => handleLayerKeepAspectRatioChange(selectedLayer.id, keep)}
+          imageAspect={selectedLayer.processed.width / selectedLayer.processed.height}
         />
       )}
 
@@ -798,19 +889,17 @@ export function App() {
           Compose &rarr;
         </button>
 
-        <ImageOverlayPanel
-          hasImage={!!importedImage}
-          isProcessing={isProcessing}
-          processingProgress={processingProgress}
-          bgThreshold={bgThreshold}
-          overlayOpacity={overlayOpacity}
-          keepAspectRatio={keepAspectRatio}
-          error={importError}
+        <ImageLayerPanel
+          layers={imageLayers}
+          selectedLayerId={selectedLayerId}
+          onSelectLayer={setSelectedLayerId}
           onImport={handleImageImport}
-          onClear={handleImageClear}
-          onThresholdChange={setBgThreshold}
-          onOpacityChange={setOverlayOpacity}
-          onKeepAspectRatioChange={handleKeepAspectRatioChange}
+          onDeleteLayer={handleDeleteLayer}
+          onReorder={handleLayerReorder}
+          onOpacityChange={handleLayerOpacityChange}
+          onThresholdChange={handleLayerThresholdChange}
+          onBgRemovalToggle={handleLayerBgRemovalToggle}
+          onKeepAspectRatioChange={handleLayerKeepAspectRatioChange}
         />
 
         <button
