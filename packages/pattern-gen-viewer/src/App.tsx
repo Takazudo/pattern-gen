@@ -219,6 +219,7 @@ export function App() {
   // Params locked to their current value across seed changes
   const [fixedParams, setFixedParams] = useState<Set<string>>(new Set());
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
+  const [fixedColorScheme, setFixedColorScheme] = useState(false);
   const [contrastBrightness, setContrastBrightness] = useState({ contrast: 0, brightness: 0 });
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
@@ -611,8 +612,10 @@ export function App() {
   // Randomize changes slug (seed) and color scheme
   const randomize = useCallback(() => {
     setSlug(randomSlug());
-    setColorSchemeIndex(Math.floor(Math.random() * COLOR_SCHEMES.length));
-  }, []);
+    if (!fixedColorScheme) {
+      setColorSchemeIndex(Math.floor(Math.random() * COLOR_SCHEMES.length));
+    }
+  }, [fixedColorScheme]);
 
   // Downloads at the full buffer resolution (CANVAS_SIZE * dpr).
   // To get a fixed 1200×1200 PNG regardless of dpr, draw onto a temporary
@@ -959,7 +962,17 @@ export function App() {
 
           <CollapsibleSection title="Pattern Tweak">
             <div className="control-group">
-              <label htmlFor="scheme-select">Color Scheme</label>
+              <div className="param-label-row">
+                <label htmlFor="scheme-select">Color Scheme</label>
+                <label className="fix-toggle">
+                  <input
+                    type="checkbox"
+                    checked={fixedColorScheme}
+                    onChange={(e) => setFixedColorScheme(e.target.checked)}
+                  />
+                  Fix
+                </label>
+              </div>
               <select
                 id="scheme-select"
                 className="scheme-select"
