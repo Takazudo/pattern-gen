@@ -310,33 +310,13 @@ export function App() {
     generateAndCache();
   }, [generateAndCache]);
 
-  // Cache thresholded image data per layer — recompute when threshold or image changes
-  useEffect(() => {
-    setImageLayers((prev) => {
-      let changed = false;
-      const next = prev.map((layer) => {
-        if (!layer.processed) {
-          if (layer.thresholdedCache !== null) {
-            changed = true;
-            return { ...layer, thresholdedCache: null };
-          }
-          return layer;
-        }
-        // Only recompute if needed
-        const newCache = layer.bgRemovalEnabled
-          ? applyThreshold(layer.processed, { threshold: layer.bgThreshold })
-          : layer.processed.original;
-        // Simple identity check won't work since applyThreshold always creates new data,
-        // but we gate on the deps: bgThreshold, bgRemovalEnabled, processed
-        changed = true;
-        return { ...layer, thresholdedCache: newCache };
-      });
-      return changed ? next : prev;
-    });
-  }, [
-    // We track changes via a stable key derived from layer deps
-    imageLayers.map((l) => `${l.id}:${l.processed ? 'y' : 'n'}:${l.bgThreshold}:${l.bgRemovalEnabled}`).join(','),
-  ]);
+  // Helper: compute thresholded cache for a layer
+  function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
+    if (!layer.processed) return null;
+    return layer.bgRemovalEnabled
+      ? applyThreshold(layer.processed, { threshold: layer.bgThreshold })
+      : layer.processed.original;
+  }
 
   // Cache HSL-adjusted pattern when pattern or HSL params change
   useEffect(() => {
@@ -472,11 +452,12 @@ export function App() {
       };
 
       setImageLayers((prev) =>
-        prev.map((l) =>
-          l.id === newId
-            ? { ...l, processed, transform, isProcessing: false, processingProgress: 100 }
-            : l,
-        ),
+        prev.map((l) => {
+          if (l.id !== newId) return l;
+          const updated = { ...l, processed, transform, isProcessing: false, processingProgress: 100 };
+          updated.thresholdedCache = computeThresholdedCache(updated);
+          return updated;
+        }),
       );
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Background removal failed';
@@ -512,13 +493,23 @@ export function App() {
 
   const handleLayerThresholdChange = useCallback((id: string, value: number) => {
     setImageLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, bgThreshold: value } : l)),
+      prev.map((l) => {
+        if (l.id !== id) return l;
+        const updated = { ...l, bgThreshold: value };
+        updated.thresholdedCache = computeThresholdedCache(updated);
+        return updated;
+      }),
     );
   }, []);
 
   const handleLayerBgRemovalToggle = useCallback((id: string, enabled: boolean) => {
     setImageLayers((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, bgRemovalEnabled: enabled } : l)),
+      prev.map((l) => {
+        if (l.id !== id) return l;
+        const updated = { ...l, bgRemovalEnabled: enabled };
+        updated.thresholdedCache = computeThresholdedCache(updated);
+        return updated;
+      }),
     );
   }, []);
 
@@ -539,8 +530,7 @@ export function App() {
     );
   }, []);
 
-  const handleLayerTransformChange = useCallback((id: string | null, transform: ImageTransform) => {
-    if (!id) return;
+  const handleLayerTransformChange = useCallback((id: string, transform: ImageTransform) => {
     setImageLayers((prev) =>
       prev.map((l) => (l.id === id ? { ...l, transform } : l)),
     );
@@ -824,7 +814,7 @@ export function App() {
       {currentStep === 'background' && selectedLayer?.processed && selectedLayer?.transform && (
         <ImageOverlayTransform
           transform={selectedLayer.transform}
-          onChange={(t) => handleLayerTransformChange(selectedLayerId, t)}
+          onChange={(t) => handleLayerTransformChange(selectedLayer.id, t)}
           keepAspectRatio={selectedLayer.keepAspectRatio}
           onKeepAspectRatioChange={(keep) => handleLayerKeepAspectRatioChange(selectedLayer.id, keep)}
           imageAspect={selectedLayer.processed.width / selectedLayer.processed.height}

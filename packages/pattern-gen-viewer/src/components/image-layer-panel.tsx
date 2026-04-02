@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo, memo } from 'react';
 import type { ViewerImageLayer } from '../types/viewer-image-layer.js';
 
 interface ImageLayerPanelProps {
@@ -155,6 +155,11 @@ export function ImageLayerPanel({
         </div>
       )}
 
+      {/* Error display for selected layer (shown even if processed is null) */}
+      {selectedLayer && !selectedLayer.isProcessing && selectedLayer.error && (
+        <div className="image-overlay-error">{selectedLayer.error}</div>
+      )}
+
       {/* Selected layer controls */}
       {selectedLayer && !selectedLayer.isProcessing && selectedLayer.processed && (
         <div className="image-layer-controls">
@@ -215,10 +220,6 @@ export function ImageLayerPanel({
               </button>
             </div>
           </div>
-
-          {selectedLayer.error && (
-            <div className="image-overlay-error">{selectedLayer.error}</div>
-          )}
         </div>
       )}
 
@@ -246,35 +247,38 @@ export function ImageLayerPanel({
   );
 }
 
-function LayerThumbnail({ layer }: { layer: ViewerImageLayer }) {
-  if (!layer.processed) {
+const LayerThumbnail = memo(function LayerThumbnail({ layer }: { layer: ViewerImageLayer }) {
+  const dataUrl = useMemo(() => {
+    if (!layer.processed) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 40;
+    canvas.height = 40;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const tempCanvas = new OffscreenCanvas(layer.processed.width, layer.processed.height);
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return null;
+    tempCtx.putImageData(layer.processed.original, 0, 0);
+
+    const aspect = layer.processed.width / layer.processed.height;
+    let dw: number;
+    let dh: number;
+    if (aspect > 1) {
+      dw = 40;
+      dh = 40 / aspect;
+    } else {
+      dh = 40;
+      dw = 40 * aspect;
+    }
+    ctx.drawImage(tempCanvas, (40 - dw) / 2, (40 - dh) / 2, dw, dh);
+    return canvas.toDataURL('image/png');
+  }, [layer.processed]);
+
+  if (!dataUrl) {
     return <span className="image-layer-thumbnail image-layer-thumbnail-empty" />;
   }
-
-  // Create a tiny thumbnail from the original image data
-  const canvas = document.createElement('canvas');
-  canvas.width = 40;
-  canvas.height = 40;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return <span className="image-layer-thumbnail image-layer-thumbnail-empty" />;
-
-  const tempCanvas = new OffscreenCanvas(layer.processed.width, layer.processed.height);
-  const tempCtx = tempCanvas.getContext('2d');
-  if (!tempCtx) return <span className="image-layer-thumbnail image-layer-thumbnail-empty" />;
-  tempCtx.putImageData(layer.processed.original, 0, 0);
-
-  const aspect = layer.processed.width / layer.processed.height;
-  let dw: number;
-  let dh: number;
-  if (aspect > 1) {
-    dw = 40;
-    dh = 40 / aspect;
-  } else {
-    dh = 40;
-    dw = 40 * aspect;
-  }
-  ctx.drawImage(tempCanvas, (40 - dw) / 2, (40 - dh) / 2, dw, dh);
-  const dataUrl = canvas.toDataURL('image/png');
 
   return (
     <img
@@ -285,4 +289,4 @@ function LayerThumbnail({ layer }: { layer: ViewerImageLayer }) {
       height={40}
     />
   );
-}
+});
