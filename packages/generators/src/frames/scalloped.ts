@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -52,11 +53,11 @@ export const scalloped: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const scallopsPerSide = (params.scallopsPerSide as number) ?? 15;
-    const borderWidth = (params.borderWidth as number) ?? 25;
-    const color = (params.color as string) ?? '#555555';
-    const direction = (params.direction as number) ?? 0;
-    const fillBorder = (params.fillBorder as number) ?? 1;
+    const scallopsPerSide = getFrameParam(params, 'scallopsPerSide', 15);
+    const borderWidth = getFrameParam(params, 'borderWidth', 25);
+    const color = getFrameParam(params, 'color', '#555555');
+    const direction = getFrameParam(params, 'direction', 0);
+    const fillBorder = getFrameParam(params, 'fillBorder', 1);
 
     ctx.save();
 

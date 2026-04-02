@@ -1,5 +1,7 @@
 import type { FrameGenerator } from '@takazudo/pattern-gen-core';
 
+export { getFrameParam, getFrameParamClamped } from './get-frame-param.js';
+
 // Import all 20 frames
 import { simpleLine } from './simple-line.js';
 import { roundedCorner } from './rounded-corner.js';

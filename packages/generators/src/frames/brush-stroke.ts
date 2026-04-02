@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -145,12 +146,12 @@ export const brushStroke: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height, rand } = options;
-    const strokeWidth = (params.strokeWidth as number) ?? 25;
-    const color = (params.color as string) ?? '#1a1a1a';
-    const irregularity = (params.irregularity as number) ?? 7;
-    const opacity = (params.opacity as number) ?? 80;
-    const splatter = (params.splatter as number) ?? 1;
-    const style = (params.style as number) ?? 0;
+    const strokeWidth = getFrameParam(params, 'strokeWidth', 25);
+    const color = getFrameParam(params, 'color', '#1a1a1a');
+    const irregularity = getFrameParam(params, 'irregularity', 7);
+    const opacity = getFrameParam(params, 'opacity', 80);
+    const splatter = getFrameParam(params, 'splatter', 1);
+    const style = getFrameParam(params, 'style', 0);
 
     const rgba = hexToRgba(color);
     const inset = strokeWidth / 2 + 5;

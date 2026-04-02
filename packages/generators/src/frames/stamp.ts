@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -56,12 +57,12 @@ export const stamp: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height } = options;
-    const perfRadius = (params.perforationRadius as number) ?? 4;
-    const perfSpacing = (params.perforationSpacing as number) ?? 15;
-    const borderWidth = (params.borderWidth as number) ?? 25;
-    const borderColor = (params.borderColor as string) ?? '#f5f0e8';
-    const innerLine = (params.innerLine as number) ?? 1;
-    const innerLineColor = (params.innerLineColor as string) ?? '#cc4444';
+    const perfRadius = getFrameParam(params, 'perforationRadius', 4);
+    const perfSpacing = getFrameParam(params, 'perforationSpacing', 15);
+    const borderWidth = getFrameParam(params, 'borderWidth', 25);
+    const borderColor = getFrameParam(params, 'borderColor', '#f5f0e8');
+    const innerLine = getFrameParam(params, 'innerLine', 1);
+    const innerLineColor = getFrameParam(params, 'innerLineColor', '#cc4444');
 
     ctx.save();
 

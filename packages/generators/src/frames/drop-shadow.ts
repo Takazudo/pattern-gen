@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba, resetShadow } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -69,13 +70,13 @@ export const dropShadow: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const inset = (params.inset as number) ?? 30;
-    const cornerRadius = (params.cornerRadius as number) ?? 12;
-    const shadowBlur = (params.shadowBlur as number) ?? 20;
-    const shadowOffsetX = (params.shadowOffsetX as number) ?? 5;
-    const shadowOffsetY = (params.shadowOffsetY as number) ?? 8;
-    const shadowColor = (params.shadowColor as string) ?? '#00000060';
-    const cardColor = (params.cardColor as string) ?? '#ffffff';
+    const inset = getFrameParam(params, 'inset', 30);
+    const cornerRadius = getFrameParam(params, 'cornerRadius', 12);
+    const shadowBlur = getFrameParam(params, 'shadowBlur', 20);
+    const shadowOffsetX = getFrameParam(params, 'shadowOffsetX', 5);
+    const shadowOffsetY = getFrameParam(params, 'shadowOffsetY', 8);
+    const shadowColor = getFrameParam(params, 'shadowColor', '#00000060');
+    const cardColor = getFrameParam(params, 'cardColor', '#ffffff');
 
     ctx.save();
 

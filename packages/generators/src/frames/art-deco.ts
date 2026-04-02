@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -53,11 +54,11 @@ export const artDeco: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const color = (params.color as string) ?? '#c9a84c';
-    const ornamentSize = (params.ornamentSize as number) ?? 50;
-    const lineWidth = (params.lineWidth as number) ?? 2;
-    const ornamentStyle = (params.ornamentStyle as number) ?? 0;
-    const connectCorners = (params.connectCorners as number) ?? 1;
+    const color = getFrameParam(params, 'color', '#c9a84c');
+    const ornamentSize = getFrameParam(params, 'ornamentSize', 50);
+    const lineWidth = getFrameParam(params, 'lineWidth', 2);
+    const ornamentStyle = getFrameParam(params, 'ornamentStyle', 0);
+    const connectCorners = getFrameParam(params, 'connectCorners', 1);
 
     ctx.save();
 

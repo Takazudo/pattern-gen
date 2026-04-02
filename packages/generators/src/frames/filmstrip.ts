@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -79,13 +80,13 @@ export const filmstrip: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const bandWidth = (params.bandWidth as number) ?? 35;
-    const holeWidth = (params.holeWidth as number) ?? 12;
-    const holeHeight = (params.holeHeight as number) ?? 10;
-    const holeSpacing = (params.holeSpacing as number) ?? 25;
-    const bandColor = (params.bandColor as string) ?? '#1a1a1a';
-    const sides = (params.sides as number) ?? 0;
-    const holeRadius = (params.holeRadius as number) ?? 2;
+    const bandWidth = getFrameParam(params, 'bandWidth', 35);
+    const holeWidth = getFrameParam(params, 'holeWidth', 12);
+    const holeHeight = getFrameParam(params, 'holeHeight', 10);
+    const holeSpacing = getFrameParam(params, 'holeSpacing', 25);
+    const bandColor = getFrameParam(params, 'bandColor', '#1a1a1a');
+    const sides = getFrameParam(params, 'sides', 0);
+    const holeRadius = getFrameParam(params, 'holeRadius', 2);
 
     ctx.save();
 

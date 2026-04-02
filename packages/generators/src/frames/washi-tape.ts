@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba, hexAlpha } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -118,11 +119,11 @@ export const washiTape: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height } = options;
-    const tapeWidth = (params.tapeWidth as number) ?? 30;
-    const tapeColor = (params.tapeColor as string) ?? '#e8b4b8cc';
-    const pattern = (params.pattern as number) ?? 0;
-    const patternScale = (params.patternScale as number) ?? 8;
-    const sides = (params.sides as number) ?? 2;
+    const tapeWidth = getFrameParam(params, 'tapeWidth', 30);
+    const tapeColor = getFrameParam(params, 'tapeColor', '#e8b4b8cc');
+    const pattern = getFrameParam(params, 'pattern', 0);
+    const patternScale = getFrameParam(params, 'patternScale', 8);
+    const sides = getFrameParam(params, 'sides', 2);
 
     // Parse alpha; use for globalAlpha. Extract opaque base via hexToRgba with validation.
     const alpha = hexAlpha(tapeColor);

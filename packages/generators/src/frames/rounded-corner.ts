@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba, resetShadow } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -57,12 +58,12 @@ export const roundedCorner: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const cornerRadius = (params.cornerRadius as number) ?? 30;
-    const borderWidth = (params.borderWidth as number) ?? 6;
-    const color = (params.color as string) ?? '#333333';
-    const fillColor = (params.fillColor as string) ?? '#ffffff00';
-    const shadowBlur = (params.shadowBlur as number) ?? 0;
-    const shadowColor = (params.shadowColor as string) ?? '#00000080';
+    const cornerRadius = getFrameParam(params, 'cornerRadius', 30);
+    const borderWidth = getFrameParam(params, 'borderWidth', 6);
+    const color = getFrameParam(params, 'color', '#333333');
+    const fillColor = getFrameParam(params, 'fillColor', '#ffffff00');
+    const shadowBlur = getFrameParam(params, 'shadowBlur', 0);
+    const shadowColor = getFrameParam(params, 'shadowColor', '#00000080');
 
     ctx.save();
 

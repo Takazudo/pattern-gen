@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -66,12 +67,12 @@ export const dotted: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const dotRadius = (params.dotRadius as number) ?? 3;
-    const spacing = (params.spacing as number) ?? 10;
-    const color = (params.color as string) ?? '#333333';
-    const rows = (params.rows as number) ?? 1;
-    const arrangement = (params.arrangement as number) ?? 0;
-    const borderWidth = (params.borderWidth as number) ?? 20;
+    const dotRadius = getFrameParam(params, 'dotRadius', 3);
+    const spacing = getFrameParam(params, 'spacing', 10);
+    const color = getFrameParam(params, 'color', '#333333');
+    const rows = getFrameParam(params, 'rows', 1);
+    const arrangement = getFrameParam(params, 'arrangement', 0);
+    const borderWidth = getFrameParam(params, 'borderWidth', 20);
 
     ctx.save();
     ctx.fillStyle = hexToRgba(color);
