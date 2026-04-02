@@ -16,17 +16,11 @@ import { ComposerLayerPanel } from './composer-layer-panel.js';
 import { ImageTracePreview } from './image-trace-preview.js';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
 import { triggerDownload } from '../utils/trigger-download.js';
+import { renderTextLayer, drawSelectionHandles, drawGrid, HANDLE_SIZE, LOADING_FONT_DIM_FACTOR } from './composer-canvas-utils.js';
+import { getGridPositions, snapToNearest, snapTransform, MIN_LAYER_SIZE } from './composer-grid-utils.js';
+import { computeAlignment, type AlignmentType } from './composer-align-utils.js';
+export type { AlignmentType } from './composer-align-utils.js';
 import './composer.css';
-
-/* ── Alignment ── */
-
-export type AlignmentType =
-  | 'align-left'
-  | 'align-center-h'
-  | 'align-right'
-  | 'align-top'
-  | 'align-middle-v'
-  | 'align-bottom';
 
 /* ── Props ── */
 
@@ -48,110 +42,7 @@ export interface GridConfig {
   lineColor: string;
 }
 
-/* ── Helpers ── */
-
-
-function renderTextLayer(
-  ctx: CanvasRenderingContext2D,
-  layer: TextLayerData,
-) {
-  const t = layer.transform;
-  const fontStyle = layer.fontStyle === 'italic' ? 'italic ' : '';
-  const fontWeight = layer.fontWeight === 'bold' ? 'bold ' : '';
-  ctx.font = `${fontStyle}${fontWeight}${layer.fontSize}px "${layer.fontFamily}", sans-serif`;
-  ctx.fillStyle = layer.color;
-  ctx.textAlign = layer.textAlign;
-  ctx.textBaseline = 'top';
-
-  if (layer.letterSpacing !== 0) {
-    (ctx as unknown as Record<string, unknown>).letterSpacing =
-      `${layer.letterSpacing}px`;
-  }
-
-  if (layer.shadow.enabled) {
-    ctx.shadowOffsetX = layer.shadow.offsetX;
-    ctx.shadowOffsetY = layer.shadow.offsetY;
-    ctx.shadowBlur = layer.shadow.blur;
-    ctx.shadowColor = layer.shadow.color;
-  }
-
-  const lines = layer.content.split('\n');
-  const lineHeightPx = layer.fontSize * layer.lineHeight;
-  const totalTextHeight =
-    (lines.length - 1) * lineHeightPx + layer.fontSize;
-
-  let textX = t.x;
-  if (layer.textAlign === 'center') textX = t.x + t.width / 2;
-  else if (layer.textAlign === 'right') textX = t.x + t.width;
-
-  let baseY = t.y;
-  if (layer.textVAlign === 'middle') {
-    baseY = t.y + (t.height - totalTextHeight) / 2;
-  } else if (layer.textVAlign === 'bottom') {
-    baseY = t.y + t.height - totalTextHeight;
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const y = baseY + i * lineHeightPx;
-
-    if (layer.stroke.enabled) {
-      ctx.save();
-      ctx.shadowColor = 'transparent';
-      ctx.strokeStyle = layer.stroke.color;
-      ctx.lineWidth = layer.stroke.width;
-      ctx.lineJoin = 'round';
-      ctx.strokeText(lines[i], textX, y);
-      ctx.restore();
-    }
-
-    ctx.fillText(lines[i], textX, y);
-  }
-
-  // Note: letterSpacing is reset by the caller's ctx.save()/ctx.restore()
-}
-
-const HANDLE_SIZE = 8;
-const MIN_LAYER_SIZE = 20;
-const SNAP_THRESHOLD = 10;
-const LOADING_FONT_DIM_FACTOR = 0.3;
-
-function drawSelectionHandles(
-  ctx: CanvasRenderingContext2D,
-  t: LayerTransform,
-) {
-  ctx.save();
-  ctx.strokeStyle = 'rgba(220, 220, 220, 1)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 4]);
-  ctx.strokeRect(t.x, t.y, t.width, t.height);
-  ctx.setLineDash([]);
-
-  // Corner handles
-  ctx.fillStyle = 'white';
-  ctx.strokeStyle = 'rgba(80, 80, 80, 1)';
-  ctx.lineWidth = 1;
-  const corners = [
-    [t.x, t.y],
-    [t.x + t.width, t.y],
-    [t.x, t.y + t.height],
-    [t.x + t.width, t.y + t.height],
-  ];
-  for (const [cx, cy] of corners) {
-    ctx.fillRect(
-      cx - HANDLE_SIZE / 2,
-      cy - HANDLE_SIZE / 2,
-      HANDLE_SIZE,
-      HANDLE_SIZE,
-    );
-    ctx.strokeRect(
-      cx - HANDLE_SIZE / 2,
-      cy - HANDLE_SIZE / 2,
-      HANDLE_SIZE,
-      HANDLE_SIZE,
-    );
-  }
-  ctx.restore();
-}
+/* ── Helpers (kept local — not worth extracting) ── */
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | null;
 
@@ -186,103 +77,6 @@ function hitTestRect(
   cy: number,
 ): boolean {
   return cx >= t.x && cx <= t.x + t.width && cy >= t.y && cy <= t.y + t.height;
-}
-
-/* ── Grid helpers ── */
-
-function drawGrid(
-  ctx: CanvasRenderingContext2D,
-  xPositions: number[],
-  yPositions: number[],
-  lineColor: string,
-  canvasWidth: number,
-  canvasHeight: number,
-) {
-  ctx.save();
-  ctx.strokeStyle = lineColor;
-  ctx.lineWidth = 1;
-
-  // Skip edges (0 and totalSize) — only draw interior lines
-  for (const x of xPositions) {
-    if (x === 0 || x === canvasWidth) continue;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvasHeight);
-    ctx.stroke();
-  }
-
-  for (const y of yPositions) {
-    if (y === 0 || y === canvasHeight) continue;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvasWidth, y);
-    ctx.stroke();
-  }
-
-  ctx.restore();
-}
-
-function getGridPositions(totalSize: number, divide: number): number[] {
-  const positions = [0, totalSize];
-  for (let i = 1; i < divide; i++) {
-    positions.push(Math.round(totalSize * i / divide));
-  }
-  return positions.sort((a, b) => a - b);
-}
-
-function snapToNearest(
-  value: number,
-  gridPositions: number[],
-  threshold: number = SNAP_THRESHOLD,
-): number {
-  let best: number | null = null;
-  let bestDist = threshold;
-  for (const pos of gridPositions) {
-    const dist = Math.abs(value - pos);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = pos;
-    }
-  }
-  return best ?? value;
-}
-
-function snapTransform(
-  t: LayerTransform,
-  xPositions: number[],
-  yPositions: number[],
-  threshold: number = SNAP_THRESHOLD,
-): { x: number; y: number } {
-  let newX = t.x;
-  let newY = t.y;
-
-  // Snap X: check left edge, center, right edge
-  const leftSnap = snapToNearest(t.x, xPositions, threshold);
-  const centerXSnap = snapToNearest(t.x + t.width / 2, xPositions, threshold);
-  const rightSnap = snapToNearest(t.x + t.width, xPositions, threshold);
-
-  if (leftSnap !== t.x) {
-    newX = leftSnap;
-  } else if (centerXSnap !== t.x + t.width / 2) {
-    newX = centerXSnap - t.width / 2;
-  } else if (rightSnap !== t.x + t.width) {
-    newX = rightSnap - t.width;
-  }
-
-  // Snap Y: check top edge, center, bottom edge
-  const topSnap = snapToNearest(t.y, yPositions, threshold);
-  const centerYSnap = snapToNearest(t.y + t.height / 2, yPositions, threshold);
-  const bottomSnap = snapToNearest(t.y + t.height, yPositions, threshold);
-
-  if (topSnap !== t.y) {
-    newY = topSnap;
-  } else if (centerYSnap !== t.y + t.height / 2) {
-    newY = centerYSnap - t.height / 2;
-  } else if (bottomSnap !== t.y + t.height) {
-    newY = bottomSnap - t.height;
-  }
-
-  return { x: newX, y: newY };
 }
 
 /* ── Main Component ── */
@@ -932,61 +726,11 @@ export function Composer({
   const handleAlignLayers = useCallback(
     (ids: string[], alignment: AlignmentType) => {
       setLayers((prev) => {
-        const targets = prev.filter((l) => ids.includes(l.id));
-        if (targets.length < 2) return prev;
-
-        const transforms = targets.map((l) => l.transform);
-
-        let getNewX: ((t: LayerTransform) => number) | null = null;
-        let getNewY: ((t: LayerTransform) => number) | null = null;
-
-        switch (alignment) {
-          case 'align-left': {
-            const minX = Math.min(...transforms.map((t) => t.x));
-            getNewX = () => minX;
-            break;
-          }
-          case 'align-center-h': {
-            const minX = Math.min(...transforms.map((t) => t.x));
-            const maxRight = Math.max(...transforms.map((t) => t.x + t.width));
-            const centerX = (minX + maxRight) / 2;
-            getNewX = (t) => centerX - t.width / 2;
-            break;
-          }
-          case 'align-right': {
-            const maxRight = Math.max(...transforms.map((t) => t.x + t.width));
-            getNewX = (t) => maxRight - t.width;
-            break;
-          }
-          case 'align-top': {
-            const minY = Math.min(...transforms.map((t) => t.y));
-            getNewY = () => minY;
-            break;
-          }
-          case 'align-middle-v': {
-            const minY = Math.min(...transforms.map((t) => t.y));
-            const maxBottom = Math.max(
-              ...transforms.map((t) => t.y + t.height),
-            );
-            const centerY = (minY + maxBottom) / 2;
-            getNewY = (t) => centerY - t.height / 2;
-            break;
-          }
-          case 'align-bottom': {
-            const maxBottom = Math.max(
-              ...transforms.map((t) => t.y + t.height),
-            );
-            getNewY = (t) => maxBottom - t.height;
-            break;
-          }
-        }
-
+        const aligned = computeAlignment(prev, ids, alignment);
+        if (!aligned) return prev;
         return prev.map((l) => {
-          if (!ids.includes(l.id)) return l;
-          const newTransform = { ...l.transform };
-          if (getNewX) newTransform.x = getNewX(l.transform);
-          if (getNewY) newTransform.y = getNewY(l.transform);
-          return { ...l, transform: newTransform };
+          const newTransform = aligned.get(l.id);
+          return newTransform ? { ...l, transform: newTransform } : l;
         });
       });
     },
