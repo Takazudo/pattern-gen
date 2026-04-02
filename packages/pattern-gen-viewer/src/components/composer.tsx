@@ -103,6 +103,7 @@ export function Composer({
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [showImageTrace, setShowImageTrace] = useState(false);
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
+  const [showSettings, setShowSettings] = useState(false);
 
   // Helpers to update document state through history
   const historyRef = useRef(history.state);
@@ -919,6 +920,37 @@ export function Composer({
       });
   }, [buildEditorConfig]);
 
+  // Cmd+Delete shortcut — delete all selected layers
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Backspace') {
+        e.preventDefault();
+        for (const id of selectedIds) {
+          handleLayerDelete(id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIds, handleLayerDelete]);
+
+  // Click-outside to close settings popover
+  useEffect(() => {
+    if (!showSettings) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.composer-settings-popover') && !target.closest('.composer-settings-btn')) {
+        setShowSettings(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [showSettings]);
+
   // JSON Import
   const handleImportJson = useCallback(() => {
     const input = document.createElement('input');
@@ -1042,10 +1074,41 @@ export function Composer({
           >
             Image Trace
           </button>
+          <button
+            className="btn composer-settings-btn"
+            onClick={() => setShowSettings(!showSettings)}
+            title="Settings & Shortcuts"
+            aria-label="Settings"
+          >
+            ⚙
+          </button>
           <button className="btn composer-btn-exit" onClick={onExit}>
             Exit Editor
           </button>
         </div>
+        {showSettings && (
+          <div className="composer-settings-popover">
+            <div className="composer-settings-title">Keyboard Shortcuts</div>
+            <div className="composer-settings-shortcuts">
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Undo</span>
+                <kbd className="composer-shortcut-key">⌘Z</kbd>
+              </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Redo</span>
+                <kbd className="composer-shortcut-key">⌘⇧Z</kbd>
+              </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Delete</span>
+                <kbd className="composer-shortcut-key">⌘⌫</kbd>
+              </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Duplicate</span>
+                <kbd className="composer-shortcut-key">⌘D</kbd>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       <div className="overlay-workspace composer-workspace">
         <div className="composer-canvas-area">
