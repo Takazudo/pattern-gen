@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -57,12 +58,12 @@ export const doubleLine: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const outerWidth = (params.outerWidth as number) ?? 3;
-    const innerWidth = (params.innerWidth as number) ?? 1.5;
-    const gap = (params.gap as number) ?? 10;
-    const outerColor = (params.outerColor as string) ?? '#333333';
-    const innerColor = (params.innerColor as string) ?? '#666666';
-    const cornerDots = (params.cornerDots as number) ?? 0;
+    const outerWidth = getFrameParam(params, 'outerWidth', 3);
+    const innerWidth = getFrameParam(params, 'innerWidth', 1.5);
+    const gap = getFrameParam(params, 'gap', 10);
+    const outerColor = getFrameParam(params, 'outerColor', '#333333');
+    const innerColor = getFrameParam(params, 'innerColor', '#666666');
+    const cornerDots = getFrameParam(params, 'cornerDots', 0);
 
     ctx.save();
 

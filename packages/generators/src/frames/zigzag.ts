@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -121,12 +122,12 @@ export const zigzag: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height } = options;
-    const amplitude = (params.amplitude as number) ?? 12;
-    const frequency = (params.frequency as number) ?? 12;
-    const lineWidth = (params.lineWidth as number) ?? 2;
-    const color = (params.color as string) ?? '#333333';
-    const rows = (params.rows as number) ?? 1;
-    const filled = (params.filled as number) ?? 0;
+    const amplitude = getFrameParam(params, 'amplitude', 12);
+    const frequency = getFrameParam(params, 'frequency', 12);
+    const lineWidth = getFrameParam(params, 'lineWidth', 2);
+    const color = getFrameParam(params, 'color', '#333333');
+    const rows = getFrameParam(params, 'rows', 1);
+    const filled = getFrameParam(params, 'filled', 0);
 
     const rgba = hexToRgba(color);
 

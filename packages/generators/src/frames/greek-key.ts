@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -42,10 +43,10 @@ export const greekKey: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const unitSize = (params.unitSize as number) ?? 20;
-    const lineWidth = (params.lineWidth as number) ?? 2;
-    const color = (params.color as string) ?? '#333333';
-    const cornerSquare = (params.cornerSquare as number) ?? 1;
+    const unitSize = getFrameParam(params, 'unitSize', 20);
+    const lineWidth = getFrameParam(params, 'lineWidth', 2);
+    const color = getFrameParam(params, 'color', '#333333');
+    const cornerSquare = getFrameParam(params, 'cornerSquare', 1);
 
     ctx.save();
 

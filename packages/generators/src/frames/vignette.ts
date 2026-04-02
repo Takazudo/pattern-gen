@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -62,11 +63,11 @@ export const vignette: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height } = options;
-    const color = (params.color as string) ?? '#000000';
-    const strength = (params.strength as number) ?? 60;
-    const shape = (params.shape as number) ?? 1;
-    const fadeStart = (params.fadeStart as number) ?? 50;
-    const softness = (params.softness as number) ?? 50;
+    const color = getFrameParam(params, 'color', '#000000');
+    const strength = getFrameParam(params, 'strength', 60);
+    const shape = getFrameParam(params, 'shape', 1);
+    const fadeStart = getFrameParam(params, 'fadeStart', 50);
+    const softness = getFrameParam(params, 'softness', 50);
 
     const { r, g, b } = parseHexRgb(color);
     const maxAlpha = strength / 100;

@@ -23,7 +23,7 @@ export function ParamControls({ paramDefs, values, fixedParams, onChange, onFixT
             return (
               <div key={def.key} className="control-group param-control">
                 <div className="param-label-row">
-                  <label>{def.label}</label>
+                  <label htmlFor={`param-${def.key}`}>{def.label}</label>
                   <label className="fix-toggle">
                     <input
                       type="checkbox"
@@ -35,6 +35,7 @@ export function ParamControls({ paramDefs, values, fixedParams, onChange, onFixT
                 </div>
                 <div className="range-row">
                   <input
+                    id={`param-${def.key}`}
                     type="range"
                     min={def.min}
                     max={def.max}
@@ -54,7 +55,7 @@ export function ParamControls({ paramDefs, values, fixedParams, onChange, onFixT
             return (
               <div key={def.key} className="control-group param-control">
                 <div className="param-label-row">
-                  <label>{def.label}</label>
+                  <label htmlFor={`param-${def.key}`}>{def.label}</label>
                   <label className="fix-toggle">
                     <input
                       type="checkbox"
@@ -65,6 +66,7 @@ export function ParamControls({ paramDefs, values, fixedParams, onChange, onFixT
                   </label>
                 </div>
                 <select
+                  id={`param-${def.key}`}
                   value={value}
                   disabled={isFixed}
                   onChange={(e) => onChange(def.key, Number(e.target.value))}
@@ -82,7 +84,7 @@ export function ParamControls({ paramDefs, values, fixedParams, onChange, onFixT
             return (
               <div key={def.key} className="control-group param-control toggle-row">
                 <div className="param-label-row">
-                  <label>{def.label}</label>
+                  <label htmlFor={`param-${def.key}`}>{def.label}</label>
                   <label className="fix-toggle">
                     <input
                       type="checkbox"
@@ -93,6 +95,7 @@ export function ParamControls({ paramDefs, values, fixedParams, onChange, onFixT
                   </label>
                 </div>
                 <input
+                  id={`param-${def.key}`}
                   type="checkbox"
                   checked={value === 1}
                   disabled={isFixed}

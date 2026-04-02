@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -124,11 +125,11 @@ export const cornerOrnament: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height } = options;
-    const ornamentSize = (params.ornamentSize as number) ?? 50;
-    const color = (params.color as string) ?? '#333333';
-    const lineWidth = (params.lineWidth as number) ?? 1.5;
-    const style = (params.style as number) ?? 0;
-    const connectLines = (params.connectLines as number) ?? 1;
+    const ornamentSize = getFrameParam(params, 'ornamentSize', 50);
+    const color = getFrameParam(params, 'color', '#333333');
+    const lineWidth = getFrameParam(params, 'lineWidth', 1.5);
+    const style = getFrameParam(params, 'style', 0);
+    const connectLines = getFrameParam(params, 'connectLines', 1);
 
     const rgba = hexToRgba(color);
     const margin = ornamentSize * 0.3;

@@ -28,7 +28,7 @@ import { StepIndicator } from './components/step-indicator.js';
 import type { AppStep } from './components/step-indicator.js';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
-import { triggerDownload } from './utils/trigger-download.js';
+import { downloadBlob, triggerDownload } from './utils/trigger-download.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -761,9 +761,7 @@ export function App() {
       const json = getConfigJson(rect);
       if (!json) return;
       const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      triggerDownload(url, `config-${patternType}-${slug}.json`);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadBlob(blob, `config-${patternType}-${slug}.json`);
     },
     [getConfigJson, patternType, slug],
   );

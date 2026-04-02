@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -45,10 +46,10 @@ export const gradientBorder: FrameGenerator = {
 
   render(ctx, options, params) {
     const { width, height } = options;
-    const bw = (params.borderWidth as number) ?? 12;
-    const colorStart = (params.colorStart as string) ?? '#3b82f6';
-    const colorEnd = (params.colorEnd as string) ?? '#ec4899';
-    const direction = (params.direction as number) ?? 0;
+    const bw = getFrameParam(params, 'borderWidth', 12);
+    const colorStart = getFrameParam(params, 'colorStart', '#3b82f6');
+    const colorEnd = getFrameParam(params, 'colorEnd', '#ec4899');
+    const direction = getFrameParam(params, 'direction', 0);
 
     ctx.save();
 

@@ -6,3 +6,9 @@ export function triggerDownload(dataUrl: string, filename: string) {
   a.click();
   document.body.removeChild(a);
 }
+
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  triggerDownload(url, filename);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

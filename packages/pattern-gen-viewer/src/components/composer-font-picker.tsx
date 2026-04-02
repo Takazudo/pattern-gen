@@ -174,8 +174,15 @@ export function loadGoogleFont(family: string): Promise<void> {
   link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:ital,wght@0,400;0,700;1,400;1,700&display=swap`;
   document.head.appendChild(link);
 
-  // Wait for the specific font to load with a timeout fallback
-  const fontReady = document.fonts.load(`400 1em "${family}"`).then(() => {});
+  // Wait for the stylesheet to load so @font-face rules are registered,
+  // then wait for the actual font binary to be ready.
+  const stylesheetLoaded = new Promise<void>((resolve) => {
+    link.onload = () => resolve();
+    link.onerror = () => resolve();
+  });
+  const fontReady = stylesheetLoaded
+    .then(() => document.fonts.load(`400 1em "${family}"`))
+    .then(() => {});
   const timeout = new Promise<void>((resolve) =>
     setTimeout(resolve, FONT_LOAD_TIMEOUT_MS),
   );
@@ -187,11 +194,12 @@ export function loadGoogleFont(family: string): Promise<void> {
 }
 
 interface FontPickerProps {
+  id?: string;
   value: string;
   onChange: (family: string) => void;
 }
 
-export function ComposerFontPicker({ value, onChange }: FontPickerProps) {
+export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
   const [showMore, setShowMore] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -209,6 +217,7 @@ export function ComposerFontPicker({ value, onChange }: FontPickerProps) {
       {!showMore ? (
         <>
           <select
+            id={id}
             value={value}
             onChange={(e) => {
               onChange(e.target.value);
@@ -233,6 +242,7 @@ export function ComposerFontPicker({ value, onChange }: FontPickerProps) {
       ) : (
         <>
           <input
+            id={id}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

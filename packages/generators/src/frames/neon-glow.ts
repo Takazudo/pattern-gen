@@ -1,5 +1,6 @@
 import type { FrameGenerator, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { hexToRgba } from './frame-utils.js';
+import { getFrameParam } from './get-frame-param.js';
 
 const paramDefs: FrameParamDef[] = [
   {
@@ -84,12 +85,12 @@ export const neonGlow: FrameGenerator = {
   paramDefs,
   render(ctx, options, params) {
     const { width, height } = options;
-    const glowColor = (params.glowColor as string) ?? '#00ffff';
-    const glowRadius = (params.glowRadius as number) ?? 15;
-    const lineWidth = (params.lineWidth as number) ?? 2;
-    const layers = (params.layers as number) ?? 6;
-    const inset = (params.inset as number) ?? 20;
-    const cornerRadius = (params.cornerRadius as number) ?? 0;
+    const glowColor = getFrameParam(params, 'glowColor', '#00ffff');
+    const glowRadius = getFrameParam(params, 'glowRadius', 15);
+    const lineWidth = getFrameParam(params, 'lineWidth', 2);
+    const layers = getFrameParam(params, 'layers', 6);
+    const inset = getFrameParam(params, 'inset', 20);
+    const cornerRadius = getFrameParam(params, 'cornerRadius', 0);
 
     const rgba = hexToRgba(glowColor);
 
