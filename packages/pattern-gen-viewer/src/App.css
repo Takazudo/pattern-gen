@@ -363,8 +363,8 @@ select:focus {
   font-size: var(--font-size-2xs);
 }
 
-.fix-toggle {
-  display: flex;
+label.fix-toggle {
+  display: inline-flex;
   align-items: center;
   gap: 3px;
   font-size: var(--font-size-2xs);
@@ -373,12 +373,13 @@ select:focus {
   cursor: pointer;
 }
 
-.fix-toggle:has(input:checked) {
+label.fix-toggle:has(input:checked) {
   opacity: 1;
 }
 
-.fix-toggle input[type="checkbox"] {
+label.fix-toggle input[type="checkbox"] {
   margin: 0;
+  vertical-align: middle;
   accent-color: var(--color-accent);
 }
 
