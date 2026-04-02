@@ -13,6 +13,7 @@ interface LayerPanelProps {
   onSelect: (ids: string[]) => void;
   onUpdate: (id: string, updates: Partial<EditorLayer>) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onAddImage: () => void;
   onAddText: () => void;
@@ -35,6 +36,7 @@ export function ComposerLayerPanel({
   onSelect,
   onUpdate,
   onDelete,
+  onDuplicate,
   onReorder,
   onAddImage,
   onAddText,
@@ -168,6 +170,17 @@ export function ComposerLayerPanel({
                 {layer.type === 'text' ? 'T' : '\u{1F5BC}'}
               </span>
               <span className="composer-layer-name">{layer.name}</span>
+              <button
+                className="composer-layer-duplicate"
+                aria-label={`Duplicate ${layer.name}`}
+                title="Duplicate layer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(layer.id);
+                }}
+              >
+                ⧉
+              </button>
               <button
                 className="composer-layer-delete"
                 aria-label={`Delete ${layer.name}`}

@@ -144,6 +144,31 @@
   white-space: nowrap;
 }
 
+.composer-layer-duplicate {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: oklch(60% 0 0);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.composer-layer-duplicate:hover {
+  background: oklch(100% 0 0 / 10%);
+  color: oklch(90% 0 0);
+}
+
+.composer-layer-duplicate:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
+}
+
 .composer-layer-delete {
   flex-shrink: 0;
   width: 20px;

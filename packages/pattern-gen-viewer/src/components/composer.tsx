@@ -570,6 +570,25 @@ export function Composer({
     };
   }, [getCanvasCoords]);
 
+  // Cmd+D to duplicate selected layer
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'd' && e.key !== 'D') return;
+      if (!e.metaKey && !e.ctrlKey) return;
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      const ids = selectedIdsRef.current;
+      if (ids.length === 0) return;
+      e.preventDefault();
+      handleDuplicateLayer(ids[0]);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleDuplicateLayer]);
+
   // Layer CRUD
   const handleAddImage = useCallback(() => {
     const input = document.createElement('input');
@@ -772,6 +791,39 @@ export function Composer({
     [],
   );
 
+  const handleDuplicateLayer = useCallback(
+    (id: string) => {
+      setLayers((prev) => {
+        const idx = prev.findIndex((l) => l.id === id);
+        if (idx === -1) return prev;
+        const source = prev[idx];
+        const newId = crypto.randomUUID();
+        const clone: EditorLayer & { id: string } = {
+          ...source,
+          id: newId,
+          name: `${source.name} copy`,
+          transform: {
+            ...source.transform,
+            x: source.transform.x + 20,
+            y: source.transform.y + 20,
+          },
+        };
+        // Copy image refs for image layers
+        if (source.type === 'image') {
+          const loadedImg = loadedImagesRef.current.get(id);
+          if (loadedImg) loadedImagesRef.current.set(newId, loadedImg);
+          const processedImg = processedImagesRef.current.get(id);
+          if (processedImg) processedImagesRef.current.set(newId, processedImg);
+        }
+        const next = [...prev];
+        next.splice(idx + 1, 0, clone);
+        setSelectedIds([newId]);
+        return next;
+      });
+    },
+    [],
+  );
+
   const handleReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
       setLayers((prev) => {
@@ -932,6 +984,7 @@ export function Composer({
           onSelect={setSelectedIds}
           onUpdate={handleLayerUpdate}
           onDelete={handleLayerDelete}
+          onDuplicate={handleDuplicateLayer}
           onReorder={handleReorder}
           onAddImage={handleAddImage}
           onAddText={handleAddText}

@@ -503,6 +503,28 @@ export function App() {
     setSelectedLayerId((prev) => (prev === id ? null : prev));
   }, []);
 
+  const handleDuplicateImageLayer = useCallback((id: string) => {
+    setImageLayers((prev) => {
+      const idx = prev.findIndex((l) => l.id === id);
+      if (idx === -1) return prev;
+      const source = prev[idx];
+      const newId = crypto.randomUUID();
+      const clone: ViewerImageLayer = {
+        ...source,
+        id: newId,
+        name: `${source.name} copy`,
+        transform: source.transform
+          ? { ...source.transform, x: source.transform.x + 20, y: source.transform.y + 20 }
+          : null,
+        thresholdedCache: source.thresholdedCache ?? null,
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, clone);
+      setSelectedLayerId(newId);
+      return next;
+    });
+  }, []);
+
   const handleLayerReorder = useCallback((fromIndex: number, toIndex: number) => {
     setImageLayers((prev) => {
       const next = [...prev];
@@ -1026,6 +1048,7 @@ export function App() {
               onSelectLayer={setSelectedLayerId}
               onImport={handleImageImport}
               onDeleteLayer={handleDeleteLayer}
+              onDuplicateLayer={handleDuplicateImageLayer}
               onReorder={handleLayerReorder}
               onOpacityChange={handleLayerOpacityChange}
               onThresholdChange={handleLayerThresholdChange}

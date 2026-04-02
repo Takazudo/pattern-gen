@@ -888,6 +888,21 @@ label.fix-toggle input[type="checkbox"] {
   background: var(--color-control-bg-hover);
 }
 
+.image-layer-duplicate {
+  background: none;
+  border: none;
+  color: var(--color-fg-faint);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.image-layer-duplicate:hover {
+  color: var(--color-fg);
+}
+
 .image-layer-delete {
   background: none;
   border: none;

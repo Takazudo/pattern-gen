@@ -7,6 +7,7 @@ interface ImageLayerPanelProps {
   onSelectLayer: (id: string | null) => void;
   onImport: (file: File) => void;
   onDeleteLayer: (id: string) => void;
+  onDuplicateLayer: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onOpacityChange: (id: string, value: number) => void;
   onThresholdChange: (id: string, value: number) => void;
@@ -20,6 +21,7 @@ export function ImageLayerPanel({
   onSelectLayer,
   onImport,
   onDeleteLayer,
+  onDuplicateLayer,
   onReorder,
   onOpacityChange,
   onThresholdChange,
@@ -150,6 +152,17 @@ export function ImageLayerPanel({
                 disabled={layer.isProcessing}
               >
                 {!layer.hasBgRemovalData ? 'BG\u00A0Rm' : 'BG'}
+              </button>
+              <button
+                className="image-layer-duplicate"
+                aria-label={`Duplicate ${layer.name}`}
+                title="Duplicate layer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicateLayer(layer.id);
+                }}
+              >
+                ⧉
               </button>
               <button
                 className="image-layer-delete"
