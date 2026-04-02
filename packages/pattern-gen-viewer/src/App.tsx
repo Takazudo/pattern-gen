@@ -1027,14 +1027,14 @@ export function App() {
           </CollapsibleSection>
 
           <CollapsibleSection title="Final Action">
-            <div className="button-row">
+            <div className="final-action-buttons">
               <button className="btn btn-download" onClick={download}>
                 Download PNG
               </button>
+              <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
+                Compose &rarr;
+              </button>
             </div>
-            <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
-              Compose &rarr;
-            </button>
           </CollapsibleSection>
         </div>
       )}
