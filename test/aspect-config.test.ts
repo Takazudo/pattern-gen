@@ -29,6 +29,26 @@ describe('getAspect', () => {
   it('returns fixedW/fixedH for fixed mode', () => {
     expect(getAspect(makeConfig({ mode: 'fixed', fixedW: 800, fixedH: 600 }))).toBeCloseTo(800 / 600);
   });
+
+  it('throws on zero freeH', () => {
+    expect(() => getAspect(makeConfig({ mode: 'free', freeW: 16, freeH: 0 }))).toThrow('freeH must be positive');
+  });
+
+  it('throws on negative freeH', () => {
+    expect(() => getAspect(makeConfig({ mode: 'free', freeW: 16, freeH: -1 }))).toThrow('freeH must be positive');
+  });
+
+  it('throws on zero freeW', () => {
+    expect(() => getAspect(makeConfig({ mode: 'free', freeW: 0, freeH: 9 }))).toThrow('freeW must be positive');
+  });
+
+  it('throws on zero fixedH', () => {
+    expect(() => getAspect(makeConfig({ mode: 'fixed', fixedW: 800, fixedH: 0 }))).toThrow('fixedH must be positive');
+  });
+
+  it('throws on zero fixedW', () => {
+    expect(() => getAspect(makeConfig({ mode: 'fixed', fixedW: 0, fixedH: 600 }))).toThrow('fixedW must be positive');
+  });
 });
 
 describe('getOutputDimensions', () => {

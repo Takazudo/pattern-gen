@@ -274,13 +274,21 @@ export async function renderComposerFromConfig(
       // Multiline text rendering
       const lines = layer.content.split('\n');
       const lineHeightPx = layer.fontSize * layer.lineHeight;
+      const totalTextHeight = (lines.length - 1) * lineHeightPx + layer.fontSize;
 
       let textX = t.x;
       if (layer.textAlign === 'center') textX = t.x + t.width / 2;
       else if (layer.textAlign === 'right') textX = t.x + t.width;
 
+      let baseY = t.y;
+      if (layer.textVAlign === 'middle') {
+        baseY = t.y + (t.height - totalTextHeight) / 2;
+      } else if (layer.textVAlign === 'bottom') {
+        baseY = t.y + t.height - totalTextHeight;
+      }
+
       for (let i = 0; i < lines.length; i++) {
-        const lineY = t.y + i * lineHeightPx;
+        const lineY = baseY + i * lineHeightPx;
 
         if (layer.stroke.enabled) {
           // Save/restore to isolate stroke from shadow state
@@ -360,14 +368,25 @@ function drawTextWithLetterSpacing(
   spacing: number,
   mode: 'fill' | 'stroke',
 ): void {
-  // Override textAlign to prevent double-offset when caller uses center/right
   const savedAlign = ctx.textAlign;
   ctx.textAlign = 'left';
+
+  // Measure all characters once, then reuse for alignment + drawing
+  const chars = [...text];
+  const charWidths = chars.map((char) => ctx.measureText(char).width);
+  let totalWidth = 0;
+  for (let i = 0; i < charWidths.length; i++) {
+    totalWidth += charWidths[i] + (i < charWidths.length - 1 ? spacing : 0);
+  }
+
   let currentX = x;
-  for (const char of text) {
-    if (mode === 'fill') ctx.fillText(char, currentX, y);
-    else ctx.strokeText(char, currentX, y);
-    currentX += ctx.measureText(char).width + spacing;
+  if (savedAlign === 'center') currentX = x - totalWidth / 2;
+  else if (savedAlign === 'right') currentX = x - totalWidth;
+
+  for (let i = 0; i < chars.length; i++) {
+    if (mode === 'fill') ctx.fillText(chars[i], currentX, y);
+    else ctx.strokeText(chars[i], currentX, y);
+    currentX += charWidths[i] + spacing;
   }
   ctx.textAlign = savedAlign;
 }

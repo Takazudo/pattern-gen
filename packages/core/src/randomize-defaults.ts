@@ -60,7 +60,6 @@ export function getEffectiveParams(
   createRandFn: (seed: number) => () => number,
 ): Record<string, number> {
   const rand = createRandFn(seed);
-  const sliderDefs = paramDefs.filter((d) => d.type === 'slider');
 
   const result: Record<string, number> = {};
 
@@ -75,13 +74,6 @@ export function getEffectiveParams(
     const raw = slider.min + randomValue * (slider.max - slider.min);
     const steps = Math.round((raw - slider.min) / slider.step);
     result[def.key] = slider.min + steps * slider.step;
-  }
-
-  // Add non-slider defaults
-  for (const def of paramDefs) {
-    if (def.type !== 'slider') {
-      result[def.key] = def.defaultValue;
-    }
   }
 
   return result;
