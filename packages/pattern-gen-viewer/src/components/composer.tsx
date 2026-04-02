@@ -554,11 +554,12 @@ export function Composer({
             );
           } else if (selectedIds.length > 1 && selectedIds.includes(layer.id)) {
             // Start group drag for all selected layers
-            const startTransforms: Record<string, LayerTransform> = {};
-            for (const sid of selectedIds) {
-              const sl = layers.find((l) => l.id === sid);
-              if (sl) startTransforms[sid] = { ...sl.transform };
-            }
+            const selectedSet = new Set(selectedIds);
+            const startTransforms = Object.fromEntries(
+              layers
+                .filter((l) => selectedSet.has(l.id))
+                .map((l) => [l.id, { ...l.transform }]),
+            );
             setDragState({
               type: 'group-move',
               ids: [...selectedIds],
@@ -634,13 +635,30 @@ export function Composer({
           ),
         );
       } else if (drag.type === 'group-move') {
+        const grid = gridConfigRef.current;
+        let finalDx = dx;
+        let finalDy = dy;
+
+        if (grid.snap && drag.ids.length > 0) {
+          const anchorSt = drag.startTransforms[drag.ids[0]];
+          if (anchorSt) {
+            const snapped = snapTransform(
+              { x: anchorSt.x + dx, y: anchorSt.y + dy, width: anchorSt.width, height: anchorSt.height },
+              xGridRef.current,
+              yGridRef.current,
+            );
+            finalDx = snapped.x - anchorSt.x;
+            finalDy = snapped.y - anchorSt.y;
+          }
+        }
+
         setLayers((prev) =>
           prev.map((l) => {
             const st = drag.startTransforms[l.id];
             if (!st) return l;
             return {
               ...l,
-              transform: { ...l.transform, x: st.x + dx, y: st.y + dy },
+              transform: { ...l.transform, x: st.x + finalDx, y: st.y + finalDy },
             };
           }),
         );
