@@ -174,8 +174,15 @@ export function loadGoogleFont(family: string): Promise<void> {
   link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:ital,wght@0,400;0,700;1,400;1,700&display=swap`;
   document.head.appendChild(link);
 
-  // Wait for the specific font to load with a timeout fallback
-  const fontReady = document.fonts.load(`400 1em "${family}"`).then(() => {});
+  // Wait for the stylesheet to load so @font-face rules are registered,
+  // then wait for the actual font binary to be ready.
+  const stylesheetLoaded = new Promise<void>((resolve) => {
+    link.onload = () => resolve();
+    link.onerror = () => resolve();
+  });
+  const fontReady = stylesheetLoaded
+    .then(() => document.fonts.load(`400 1em "${family}"`))
+    .then(() => {});
   const timeout = new Promise<void>((resolve) =>
     setTimeout(resolve, FONT_LOAD_TIMEOUT_MS),
   );
