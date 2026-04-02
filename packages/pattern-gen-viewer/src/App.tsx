@@ -27,6 +27,7 @@ import { CollapsibleSection } from './components/collapsible-section.js';
 import { StepIndicator } from './components/step-indicator.js';
 import type { AppStep } from './components/step-indicator.js';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
+import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { triggerDownload } from './utils/trigger-download.js';
 
 const CANVAS_SIZE = 1200;
@@ -427,77 +428,64 @@ export function App() {
     const newId = crypto.randomUUID();
     const name = `Image ${layerCounterRef.current}`;
 
+    // Load raw image (no bg removal)
+    const img = await createImageBitmap(file);
+    const rawCanvas = new OffscreenCanvas(img.width, img.height);
+    const rawCtx = rawCanvas.getContext('2d');
+    if (!rawCtx) return;
+    rawCtx.drawImage(img, 0, 0);
+    const imageData = rawCtx.getImageData(0, 0, img.width, img.height);
+
+    // Create ProcessedImage with fully opaque alpha mask (no bg removal yet)
+    const processed: ProcessedImage = {
+      original: imageData,
+      alphaMask: new Uint8ClampedArray(img.width * img.height).fill(255),
+      width: img.width,
+      height: img.height,
+    };
+
+    // Auto-fit transform
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const imgAspect = img.width / img.height;
+    const maxW = vw * 0.8;
+    const maxH = vh * 0.8;
+    let w: number;
+    let h: number;
+    if (maxW / maxH > imgAspect) {
+      h = maxH;
+      w = h * imgAspect;
+    } else {
+      w = maxW;
+      h = w / imgAspect;
+    }
+    const transform: ImageTransform = {
+      x: (vw - w) / 2,
+      y: (vh - h) / 2,
+      width: w,
+      height: h,
+    };
+
     const newLayer: ViewerImageLayer = {
       id: newId,
       name,
-      processed: null,
+      processed,
       originalFile: file,
       opacity: 100,
       bgThreshold: 0,
-      bgRemovalEnabled: true,
-      transform: null,
+      bgRemovalEnabled: false,
+      hasBgRemovalData: false,
+      transform,
       keepAspectRatio: true,
-      isProcessing: true,
+      isProcessing: false,
       processingProgress: 0,
       error: null,
       thresholdedCache: null,
     };
+    newLayer.thresholdedCache = computeThresholdedCache(newLayer);
 
-    // Add to front of array (topmost layer) and select it
     setImageLayers((prev) => [newLayer, ...prev]);
     setSelectedLayerId(newId);
-
-    try {
-      const processed = await removeBackgroundViaWorker(file, {
-        onProgress: (p: number) => {
-          setImageLayers((prev) =>
-            prev.map((l) =>
-              l.id === newId ? { ...l, processingProgress: Math.round(p * 100) } : l,
-            ),
-          );
-        },
-      });
-
-      // Auto-fit transform
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const imgAspect = processed.width / processed.height;
-      const maxW = vw * 0.8;
-      const maxH = vh * 0.8;
-      let w: number;
-      let h: number;
-      if (maxW / maxH > imgAspect) {
-        h = maxH;
-        w = h * imgAspect;
-      } else {
-        w = maxW;
-        h = w / imgAspect;
-      }
-      const transform: ImageTransform = {
-        x: (vw - w) / 2,
-        y: (vh - h) / 2,
-        width: w,
-        height: h,
-      };
-
-      setImageLayers((prev) =>
-        prev.map((l) => {
-          if (l.id !== newId) return l;
-          const updated = { ...l, processed, transform, isProcessing: false, processingProgress: 100 };
-          updated.thresholdedCache = computeThresholdedCache(updated);
-          return updated;
-        }),
-      );
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Background removal failed';
-      setImageLayers((prev) =>
-        prev.map((l) =>
-          l.id === newId
-            ? { ...l, error: errMsg, isProcessing: false, bgRemovalEnabled: false }
-            : l,
-        ),
-      );
-    }
   }, []);
 
   const handleDeleteLayer = useCallback((id: string) => {
@@ -531,16 +519,71 @@ export function App() {
     );
   }, []);
 
-  const handleLayerBgRemovalToggle = useCallback((id: string, enabled: boolean) => {
+  const handleLayerBgRemovalToggle = useCallback(async (id: string, enabled: boolean) => {
+    if (!enabled) {
+      // Turning off bg removal — just toggle the flag
+      setImageLayers((prev) =>
+        prev.map((l) => {
+          if (l.id !== id) return l;
+          const updated = { ...l, bgRemovalEnabled: false };
+          updated.thresholdedCache = computeThresholdedCache(updated);
+          return updated;
+        }),
+      );
+      return;
+    }
+
+    // Enabling bg removal — check if ML data already exists
+    const layer = imageLayers.find((l) => l.id === id);
+    if (!layer) return;
+
+    if (layer.hasBgRemovalData) {
+      // Already has ML data, just enable
+      setImageLayers((prev) =>
+        prev.map((l) => {
+          if (l.id !== id) return l;
+          const updated = { ...l, bgRemovalEnabled: true };
+          updated.thresholdedCache = computeThresholdedCache(updated);
+          return updated;
+        }),
+      );
+      return;
+    }
+
+    // Run ML bg removal for the first time
+    if (!layer.originalFile) return;
     setImageLayers((prev) =>
-      prev.map((l) => {
-        if (l.id !== id) return l;
-        const updated = { ...l, bgRemovalEnabled: enabled };
-        updated.thresholdedCache = computeThresholdedCache(updated);
-        return updated;
-      }),
+      prev.map((l) => (l.id === id ? { ...l, isProcessing: true, processingProgress: 0, error: null } : l)),
     );
-  }, []);
+
+    try {
+      const processed = await removeBackgroundViaWorker(layer.originalFile, {
+        onProgress: (p: number) => {
+          setImageLayers((prev) =>
+            prev.map((l) =>
+              l.id === id ? { ...l, processingProgress: Math.round(p * 100) } : l,
+            ),
+          );
+        },
+      });
+
+      setImageLayers((prev) =>
+        prev.map((l) => {
+          if (l.id !== id) return l;
+          const updated = { ...l, processed, hasBgRemovalData: true, bgRemovalEnabled: true, isProcessing: false, processingProgress: 100 };
+          updated.thresholdedCache = computeThresholdedCache(updated);
+          return updated;
+        }),
+      );
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Background removal failed';
+      setImageLayers((prev) =>
+        prev.map((l) =>
+          l.id === id ? { ...l, error: errMsg, isProcessing: false } : l,
+        ),
+      );
+    }
+  }, [imageLayers]);
 
   const handleLayerKeepAspectRatioChange = useCallback((id: string, keep: boolean) => {
     setImageLayers((prev) =>

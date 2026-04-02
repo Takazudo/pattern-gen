@@ -131,14 +131,25 @@ export function ImageLayerPanel({
                 <span className="processing-spinner image-layer-spinner" aria-label="Processing" />
               )}
               <button
-                className={`image-layer-bg-toggle${layer.bgRemovalEnabled ? ' active' : ''}`}
-                title={layer.bgRemovalEnabled ? 'BG removal on' : 'BG removal off'}
+                className={`image-layer-bg-toggle${layer.bgRemovalEnabled ? ' active' : ''}${!layer.hasBgRemovalData ? ' no-data' : ''}`}
+                title={
+                  !layer.hasBgRemovalData
+                    ? 'Remove background'
+                    : layer.bgRemovalEnabled
+                      ? 'BG removal on'
+                      : 'BG removal off'
+                }
                 onClick={(e) => {
                   e.stopPropagation();
-                  onBgRemovalToggle(layer.id, !layer.bgRemovalEnabled);
+                  if (!layer.hasBgRemovalData) {
+                    onBgRemovalToggle(layer.id, true);
+                  } else {
+                    onBgRemovalToggle(layer.id, !layer.bgRemovalEnabled);
+                  }
                 }}
+                disabled={layer.isProcessing}
               >
-                BG
+                {!layer.hasBgRemovalData ? 'BG\u00A0Rm' : 'BG'}
               </button>
               <button
                 className="image-layer-delete"

@@ -9,6 +9,8 @@ export interface ViewerImageLayer {
   opacity: number; // 0-100
   bgThreshold: number; // 0-255
   bgRemovalEnabled: boolean;
+  /** Whether ML bg removal has been run (alphaMask is real, not dummy) */
+  hasBgRemovalData: boolean;
   transform: ImageTransform | null;
   keepAspectRatio: boolean;
   isProcessing: boolean;
