@@ -15,7 +15,7 @@ import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { ComposerLayerPanel } from './composer-layer-panel.js';
 import { ImageTracePreview } from './image-trace-preview.js';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
-import { triggerDownload } from '../utils/trigger-download.js';
+import { downloadBlob, triggerDownload } from '../utils/trigger-download.js';
 import './composer.css';
 
 /* ── Alignment ── */
@@ -1005,9 +1005,7 @@ export function Composer({
     if (!config) return;
     const json = JSON.stringify(config, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    triggerDownload(url, 'composer-config.json');
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadBlob(blob, 'composer-config.json');
   }, [buildEditorConfig]);
 
   const handleCopyJson = useCallback(() => {
