@@ -56,6 +56,11 @@
   color: oklch(95% 0 0);
 }
 
+.composer-btn-exit:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
+}
+
 /* ── Workspace (canvas + panel) ── */
 
 .composer-workspace {
@@ -152,6 +157,11 @@
   background: oklch(100% 0 0 / 8%);
 }
 
+.composer-layer-item:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
+}
+
 .composer-layer-item.selected {
   background: oklch(100% 0 0 / 14%);
   color: oklch(95% 0 0);
@@ -195,6 +205,11 @@
   color: oklch(90% 0 0);
 }
 
+.composer-layer-delete:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
+}
+
 .composer-layer-empty {
   padding: 12px;
   text-align: center;
@@ -224,6 +239,11 @@
 .composer-align-btn:hover {
   background: oklch(100% 0 0 / 14%);
   color: oklch(95% 0 0);
+}
+
+.composer-align-btn:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
 }
 
 /* ── Properties panel ── */
@@ -308,6 +328,11 @@
 .composer-prop-toggle {
   font-size: 11px;
   padding: 3px 8px;
+}
+
+.composer-prop-toggle:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
 }
 
 .composer-prop-toggle.active {
@@ -425,6 +450,11 @@
 
 .composer-font-item:hover {
   background: oklch(100% 0 0 / 8%);
+}
+
+.composer-font-item:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
 }
 
 .composer-font-item.active {
