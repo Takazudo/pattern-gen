@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useId } from 'react';
 import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { FRAME_GENERATORS, framesByName } from '@takazudo/pattern-gen-generators';
 import type { AlignmentType, GridConfig } from './composer.js';
@@ -25,6 +25,42 @@ interface LayerPanelProps {
   processingLayers: Set<string>;
   onBgRemovalToggle: (id: string, enabled: boolean) => void;
   onBgThresholdChange: (id: string, threshold: number) => void;
+}
+
+/* ── Collapsible section for composer panel ── */
+
+function ComposerCollapsibleSection({
+  title,
+  defaultOpen = true,
+  className,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const contentId = useId();
+
+  return (
+    <div className={`composer-panel-section${className ? ` ${className}` : ''}`}>
+      <button
+        className="composer-section-toggle"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-controls={contentId}
+      >
+        <span className="composer-props-title" style={{ marginBottom: 0 }}>{title}</span>
+        <span className="composer-section-chevron">{isOpen ? '\u25B2' : '\u25BC'}</span>
+      </button>
+      {isOpen && (
+        <div id={contentId} className="composer-section-content">
+          {children}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── Component ── */
@@ -128,8 +164,7 @@ export function ComposerLayerPanel({
   return (
     <div className="overlay-panel composer-panel">
       {/* Layers section (actions + list) */}
-      <div className="composer-panel-section">
-        <div className="composer-props-title">Layers</div>
+      <ComposerCollapsibleSection title="Layers" defaultOpen={true}>
         <div className="composer-panel-actions">
           <button className="btn composer-panel-btn" onClick={onAddImage}>
             Add Image
@@ -184,11 +219,10 @@ export function ComposerLayerPanel({
             <div className="composer-layer-empty">No layers yet</div>
           )}
         </div>
-      </div>
+      </ComposerCollapsibleSection>
 
       {/* Frame section */}
-      <div className="composer-panel-section composer-frame-section">
-        <div className="composer-props-title">Frame</div>
+      <ComposerCollapsibleSection title="Frame" defaultOpen={false} className="composer-frame-section">
         <select
           className="composer-frame-select"
           value={frameConfig?.type ?? ''}
@@ -208,14 +242,11 @@ export function ComposerLayerPanel({
             onChange={handleFrameParamChange}
           />
         )}
-      </div>
+      </ComposerCollapsibleSection>
 
       {/* Alignment panel (2+ layers selected) */}
       {selectedIds.length >= 2 && (
-        <div className="composer-panel-section composer-align-panel">
-          <div className="composer-props-title">
-            Align ({selectedIds.length} layers)
-          </div>
+        <ComposerCollapsibleSection title={`Align (${selectedIds.length} layers)`} defaultOpen={true} className="composer-align-panel">
           <div className="composer-align-grid">
             {([
               { type: 'align-left', label: 'Left', title: 'Align Left' },
@@ -235,14 +266,12 @@ export function ComposerLayerPanel({
               </button>
             ))}
           </div>
-        </div>
+        </ComposerCollapsibleSection>
       )}
 
       {/* Properties panel */}
       {selected && (
-        <div className="composer-panel-section composer-props">
-          <div className="composer-props-title">Properties</div>
-
+        <ComposerCollapsibleSection title="Properties" defaultOpen={true} className="composer-props">
           {/* Common: name */}
           <label className="composer-prop-label" htmlFor="composer-prop-name">Name</label>
           <input
@@ -362,12 +391,11 @@ export function ComposerLayerPanel({
               onUpdate={(updates) => onUpdate(selected.id, updates)}
             />
           )}
-        </div>
+        </ComposerCollapsibleSection>
       )}
 
       {/* Grid panel — always visible */}
-      <div className="composer-panel-section composer-grid-panel">
-        <div className="composer-props-title">Grid</div>
+      <ComposerCollapsibleSection title="Grid" defaultOpen={false} className="composer-grid-panel">
         <div className="composer-prop-grid">
           <div className="composer-prop-field">
             <label className="composer-prop-label" htmlFor="composer-grid-vdivide">V Divide</label>
@@ -448,7 +476,7 @@ export function ComposerLayerPanel({
           />
           <span className="composer-prop-label">Show Grid</span>
         </label>
-      </div>
+      </ComposerCollapsibleSection>
     </div>
   );
 }

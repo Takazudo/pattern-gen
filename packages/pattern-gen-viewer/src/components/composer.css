@@ -468,6 +468,46 @@
   gap: 2px;
 }
 
+/* ── Collapsible section toggle ── */
+
+.composer-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.composer-section-toggle:hover .composer-props-title {
+  color: oklch(80% 0 0);
+}
+
+.composer-section-toggle:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.composer-section-chevron {
+  font-size: 8px;
+  color: oklch(50% 0 0);
+  transition: color 0.15s;
+}
+
+.composer-section-toggle:hover .composer-section-chevron {
+  color: oklch(70% 0 0);
+}
+
+.composer-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* ── Grid panel ── */
 
 .composer-grid-panel {
