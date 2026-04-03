@@ -107,7 +107,16 @@ export const handlers = [
     const buffer = await request.arrayBuffer();
     userPhotoData = new Uint8Array(buffer);
     user.photoUrl = '/api/me/photo';
-    return HttpResponse.json({ ok: true, photoUrl: '/api/me/photo' });
+    return HttpResponse.json({
+      id: user.id,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      name: user.name,
+      nickname: user.nickname,
+      photoUrl: user.photoUrl,
+      pictureUrl: user.pictureUrl,
+      createdAt: user.createdAt,
+    });
   }),
 
   http.get('/api/me/photo', () => {

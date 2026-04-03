@@ -493,13 +493,13 @@ app.delete("/patterns/:id/permanent", async (c) => {
   const id = c.req.param("id");
 
   const pattern = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2"
+    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
   )
     .bind(id, auth.userId)
     .first<PatternRow>();
 
   if (!pattern) {
-    return c.json({ error: "Pattern not found" }, 404);
+    return c.json({ error: "Pattern not found in trash" }, 404);
   }
 
   // Delete preview from R2 if exists
@@ -718,13 +718,13 @@ app.delete("/files/:id/permanent", async (c) => {
   const id = c.req.param("id");
 
   const file = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2"
+    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
   )
     .bind(id, auth.userId)
     .first<FileRow>();
 
   if (!file) {
-    return c.json({ error: "File not found" }, 404);
+    return c.json({ error: "File not found in trash" }, 404);
   }
 
   await c.env.FILES.delete(file.r2_key);

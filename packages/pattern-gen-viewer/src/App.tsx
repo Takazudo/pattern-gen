@@ -283,6 +283,7 @@ function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
 }
 
 export function App() {
+  const { isAuthenticated } = useAuth();
   const [slug, setSlug] = useState(randomSlug);
   const [patternType, setPatternType] = useState(patternRegistry[0].name);
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
@@ -1139,8 +1140,6 @@ export function App() {
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
-
-  const { isAuthenticated } = useAuth();
 
   const handleStepChange = useCallback((step: AppStep) => {
     setCurrentStep(step);

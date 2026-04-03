@@ -9,6 +9,7 @@ export interface MockUser {
   emailVerified: boolean;
   name: string;
   nickname: string | null;
+  pictureUrl: string | null;
   photoUrl: string | null;
   createdAt: number;
 }
@@ -42,6 +43,7 @@ export const mockUser: MockUser = {
   emailVerified: true,
   name: 'Test User',
   nickname: 'tester',
+  pictureUrl: null,
   photoUrl: '/api/me/photo',
   createdAt: now - 30 * day,
 };
