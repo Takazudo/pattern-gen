@@ -1,4 +1,5 @@
 import { centerDetentToZoom } from '@takazudo/pattern-gen-core';
+import * as Popover from '@radix-ui/react-popover';
 
 interface ViewTransformPanelProps {
   zoomSlider: number; // 0-100 slider value
@@ -80,14 +81,29 @@ export function ViewTransformPanel({
         <span className="view-transform-value">{zoomDisplay}x</span>
       </div>
 
-      <label className="view-transform-checkbox-row">
-        <input
-          type="checkbox"
-          checked={useTranslate}
-          onChange={(e) => onUseTranslateChange(e.target.checked)}
-        />
-        <span>Paint Patterns Too</span>
-      </label>
+      <div className="view-transform-checkbox-row">
+        <label>
+          <input
+            type="checkbox"
+            checked={useTranslate}
+            onChange={(e) => onUseTranslateChange(e.target.checked)}
+          />
+          <span>Use big canvas</span>
+        </label>
+        <Popover.Root>
+          <Popover.Trigger asChild>
+            <button className="info-trigger" type="button" aria-label="What is big canvas?">
+              &#9432;
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content className="info-popover" side="top" sideOffset={5}>
+              Renders patterns on a larger canvas for smooth panning and rotation. Uses more memory and may be slower on some devices.
+              <Popover.Arrow className="info-popover-arrow" />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
 
       <div className="view-transform-slider-row">
         <span className="view-transform-label">X</span>
