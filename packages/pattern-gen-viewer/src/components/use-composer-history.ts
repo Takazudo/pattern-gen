@@ -1,4 +1,4 @@
-import { useReducer, useCallback } from 'react';
+import { useReducer, useCallback, useRef, useEffect } from 'react';
 import type { EditorLayer, FrameConfig } from '@takazudo/pattern-gen-core';
 import type { GridConfig } from './composer.js';
 
@@ -96,6 +96,10 @@ interface ComposerHistory {
   set: (newState: ComposerDocumentState) => void;
   setLayers: (updater: LayerUpdater) => void;
   commit: () => void;
+  /** Mark that a continuous interaction (e.g. slider drag) is in progress. No snapshot yet. */
+  commitContinuous: () => void;
+  /** End continuous interaction and create one history snapshot. */
+  flushContinuous: () => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -121,19 +125,59 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     dispatch({ type: 'COMMIT' });
   }, []);
 
-  const undo = useCallback(() => {
-    dispatch({ type: 'UNDO' });
+  // --- Continuous interaction support ---
+  const continuousRef = useRef(false);
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearSafetyTimer = useCallback(() => {
+    if (safetyTimerRef.current !== null) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
   }, []);
 
+  const flushContinuous = useCallback(() => {
+    if (continuousRef.current) {
+      clearSafetyTimer();
+      continuousRef.current = false;
+      dispatch({ type: 'COMMIT' });
+    }
+  }, [clearSafetyTimer]);
+
+  const commitContinuous = useCallback(() => {
+    continuousRef.current = true;
+    clearSafetyTimer();
+    safetyTimerRef.current = setTimeout(() => {
+      safetyTimerRef.current = null;
+      if (continuousRef.current) {
+        continuousRef.current = false;
+        dispatch({ type: 'COMMIT' });
+      }
+    }, 500);
+  }, [clearSafetyTimer]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => clearSafetyTimer();
+  }, [clearSafetyTimer]);
+
+  const undo = useCallback(() => {
+    flushContinuous();
+    dispatch({ type: 'UNDO' });
+  }, [flushContinuous]);
+
   const redo = useCallback(() => {
+    flushContinuous();
     dispatch({ type: 'REDO' });
-  }, []);
+  }, [flushContinuous]);
 
   return {
     state: history.present,
     set,
     setLayers,
     commit,
+    commitContinuous,
+    flushContinuous,
     undo,
     redo,
     canUndo: history.past.length > 0,

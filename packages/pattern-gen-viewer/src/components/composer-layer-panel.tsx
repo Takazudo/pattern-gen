@@ -65,6 +65,8 @@ interface LayerPanelProps {
   selectedIds: string[];
   onSelect: (ids: string[]) => void;
   onUpdate: (id: string, updates: Partial<EditorLayer>) => void;
+  onUpdateContinuous: (id: string, updates: Partial<EditorLayer>) => void;
+  onCommitContinuous: () => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
@@ -76,9 +78,12 @@ interface LayerPanelProps {
   onGridConfigChange: (config: GridConfig) => void;
   frameConfig: FrameConfig | null;
   onFrameConfigChange: (config: FrameConfig | null) => void;
+  onFrameConfigChangeContinuous: (config: FrameConfig | null) => void;
+  onFrameConfigCommitContinuous: () => void;
   processingLayers: Set<string>;
   onBgRemovalToggle: (id: string, enabled: boolean) => void;
   onBgThresholdChange: (id: string, threshold: number) => void;
+  onBgThresholdCommit: () => void;
 }
 
 /* ── Collapsible section for composer panel ── */
@@ -124,6 +129,8 @@ export function ComposerLayerPanel({
   selectedIds,
   onSelect,
   onUpdate,
+  onUpdateContinuous,
+  onCommitContinuous,
   onDelete,
   onDuplicate,
   onReorder,
@@ -135,9 +142,12 @@ export function ComposerLayerPanel({
   onGridConfigChange,
   frameConfig,
   onFrameConfigChange,
+  onFrameConfigChangeContinuous,
+  onFrameConfigCommitContinuous,
   processingLayers,
   onBgRemovalToggle,
   onBgThresholdChange,
+  onBgThresholdCommit,
 }: LayerPanelProps) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
@@ -210,6 +220,17 @@ export function ComposerLayerPanel({
       });
     },
     [frameConfig, onFrameConfigChange],
+  );
+
+  const handleFrameParamChangeContinuous = useCallback(
+    (key: string, value: number | string) => {
+      if (!frameConfig) return;
+      onFrameConfigChangeContinuous({
+        ...frameConfig,
+        params: { ...frameConfig.params, [key]: value },
+      });
+    },
+    [frameConfig, onFrameConfigChangeContinuous],
   );
 
   const activeFrameGenerator = frameConfig
@@ -306,6 +327,8 @@ export function ComposerLayerPanel({
             paramDefs={activeFrameGenerator.paramDefs}
             params={frameConfig.params}
             onChange={handleFrameParamChange}
+            onChangeContinuous={handleFrameParamChangeContinuous}
+            onCommitContinuous={onFrameConfigCommitContinuous}
           />
         )}
       </ComposerCollapsibleSection>
@@ -433,10 +456,11 @@ export function ComposerLayerPanel({
             max={100}
             value={Math.round(selected.opacity * 100)}
             onChange={(e) =>
-              onUpdate(selected.id, {
+              onUpdateContinuous(selected.id, {
                 opacity: Number(e.target.value) / 100,
               })
             }
+            onPointerUp={onCommitContinuous}
           />
 
           {/* Image-specific */}
@@ -447,6 +471,7 @@ export function ComposerLayerPanel({
               onUpdate={(updates) => onUpdate(selected.id, updates)}
               onBgRemovalToggle={(enabled) => onBgRemovalToggle(selected.id, enabled)}
               onBgThresholdChange={(threshold) => onBgThresholdChange(selected.id, threshold)}
+              onBgThresholdCommit={onBgThresholdCommit}
             />
           )}
 
@@ -455,6 +480,8 @@ export function ComposerLayerPanel({
             <TextProps
               layer={selected}
               onUpdate={(updates) => onUpdate(selected.id, updates)}
+              onUpdateContinuous={(updates) => onUpdateContinuous(selected.id, updates)}
+              onCommitContinuous={onCommitContinuous}
             />
           )}
         </ComposerCollapsibleSection>
@@ -555,12 +582,14 @@ function ImageProps({
   onUpdate,
   onBgRemovalToggle,
   onBgThresholdChange,
+  onBgThresholdCommit,
 }: {
   layer: ImageLayerData & { id: string };
   isProcessing: boolean;
   onUpdate: (updates: Partial<ImageLayerData>) => void;
   onBgRemovalToggle: (enabled: boolean) => void;
   onBgThresholdChange: (threshold: number) => void;
+  onBgThresholdCommit: () => void;
 }) {
   const truncatedSrc =
     layer.src.length > 40
@@ -627,6 +656,7 @@ function ImageProps({
                   step={1}
                   value={bgThreshold}
                   onChange={(e) => onBgThresholdChange(parseInt(e.target.value, 10))}
+                  onPointerUp={onBgThresholdCommit}
                   style={{ flex: 1, accentColor: 'var(--color-accent)' }}
                 />
                 <span style={{ fontSize: 11, minWidth: 24, textAlign: 'right', color: 'var(--color-fg-muted)' }}>
@@ -646,9 +676,13 @@ function ImageProps({
 function TextProps({
   layer,
   onUpdate,
+  onUpdateContinuous,
+  onCommitContinuous,
 }: {
   layer: TextLayerData & { id: string };
   onUpdate: (updates: Partial<TextLayerData>) => void;
+  onUpdateContinuous: (updates: Partial<TextLayerData>) => void;
+  onCommitContinuous: () => void;
 }) {
   return (
     <div className="composer-props-section">
@@ -681,8 +715,9 @@ function TextProps({
         max={200}
         value={layer.fontSize}
         onChange={(e) =>
-          onUpdate({ fontSize: Number(e.target.value) })
+          onUpdateContinuous({ fontSize: Number(e.target.value) })
         }
+        onPointerUp={onCommitContinuous}
       />
 
       {/* Font weight / style toggles */}
@@ -770,8 +805,9 @@ function TextProps({
         step={0.5}
         value={layer.letterSpacing}
         onChange={(e) =>
-          onUpdate({ letterSpacing: Number(e.target.value) })
+          onUpdateContinuous({ letterSpacing: Number(e.target.value) })
         }
+        onPointerUp={onCommitContinuous}
       />
 
       {/* Line height */}
@@ -786,8 +822,9 @@ function TextProps({
         step={0.1}
         value={layer.lineHeight}
         onChange={(e) =>
-          onUpdate({ lineHeight: Number(e.target.value) })
+          onUpdateContinuous({ lineHeight: Number(e.target.value) })
         }
+        onPointerUp={onCommitContinuous}
       />
 
       {/* Shadow */}
@@ -936,13 +973,14 @@ function TextProps({
                   step={0.5}
                   value={layer.stroke.width}
                   onChange={(e) =>
-                    onUpdate({
+                    onUpdateContinuous({
                       stroke: {
                         ...layer.stroke,
                         width: Number(e.target.value),
                       },
                     })
                   }
+                  onPointerUp={onCommitContinuous}
                 />
                 <input
                   type="number"
@@ -976,10 +1014,14 @@ function FrameParams({
   paramDefs,
   params,
   onChange,
+  onChangeContinuous,
+  onCommitContinuous,
 }: {
   paramDefs: FrameParamDef[];
   params: Record<string, number | string>;
   onChange: (key: string, value: number | string) => void;
+  onChangeContinuous: (key: string, value: number | string) => void;
+  onCommitContinuous: () => void;
 }) {
   if (paramDefs.length === 0) return null;
 
@@ -991,6 +1033,8 @@ function FrameParams({
           def={def}
           value={params[def.key] ?? def.defaultValue}
           onChange={(v) => onChange(def.key, v)}
+          onChangeContinuous={(v) => onChangeContinuous(def.key, v)}
+          onCommitContinuous={onCommitContinuous}
         />
       ))}
     </div>
@@ -1001,10 +1045,14 @@ function FrameParamControl({
   def,
   value,
   onChange,
+  onChangeContinuous,
+  onCommitContinuous,
 }: {
   def: FrameParamDef;
   value: number | string;
   onChange: (value: number | string) => void;
+  onChangeContinuous: (value: number | string) => void;
+  onCommitContinuous: () => void;
 }) {
   switch (def.type) {
     case 'slider':
@@ -1020,7 +1068,8 @@ function FrameParamControl({
             max={def.max}
             step={def.step}
             value={Number(value)}
-            onChange={(e) => onChange(Number(e.target.value))}
+            onChange={(e) => onChangeContinuous(Number(e.target.value))}
+            onPointerUp={onCommitContinuous}
           />
         </div>
       );

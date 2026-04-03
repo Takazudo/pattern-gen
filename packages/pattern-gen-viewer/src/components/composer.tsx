@@ -129,6 +129,19 @@ export function Composer({
     [history.set, history.commit],
   );
 
+  const setFrameConfigContinuous = useCallback(
+    (config: FrameConfig | null) => {
+      const current = historyRef.current;
+      history.set({ ...current, frameConfig: config });
+      history.commitContinuous();
+    },
+    [history.set, history.commitContinuous],
+  );
+
+  const flushFrameConfigContinuous = useCallback(() => {
+    history.flushContinuous();
+  }, [history.flushContinuous]);
+
   const [dragState, setDragState] = useState<
     | {
         type: 'move';
@@ -717,6 +730,22 @@ export function Composer({
     [trackFontLoad, history.commit],
   );
 
+  const handleLayerUpdateContinuous = useCallback(
+    (id: string, updates: Partial<EditorLayer>) => {
+      setLayers((prev) =>
+        prev.map((l) =>
+          l.id === id ? ({ ...l, ...updates } as EditorLayer & { id: string }) : l,
+        ),
+      );
+      history.commitContinuous();
+    },
+    [history.commitContinuous],
+  );
+
+  const handleLayerCommitContinuous = useCallback(() => {
+    history.flushContinuous();
+  }, [history.flushContinuous]);
+
   // Toggle bg removal on an image layer — runs ML processing
   const handleBgRemovalToggle = useCallback(
     async (id: string, enabled: boolean) => {
@@ -789,24 +818,30 @@ export function Composer({
             : l,
         ),
       );
-      history.commit();
+      history.commitContinuous();
     },
-    [history.commit],
+    [history.commitContinuous],
   );
+
+  const handleBgThresholdCommit = useCallback(() => {
+    history.flushContinuous();
+  }, [history.flushContinuous]);
 
   const handleLayerDelete = useCallback(
     (id: string) => {
+      history.flushContinuous();
       setLayers((prev) => prev.filter((l) => l.id !== id));
       loadedImagesRef.current.delete(id);
       processedImagesRef.current.delete(id);
       setSelectedIds((prev) => prev.filter((sid) => sid !== id));
       history.commit();
     },
-    [history.commit],
+    [history.flushContinuous, history.commit],
   );
 
   const handleDuplicateLayer = useCallback(
     (id: string) => {
+      history.flushContinuous();
       const newId = crypto.randomUUID();
       setLayers((prev) => {
         const idx = prev.findIndex((l) => l.id === id);
@@ -836,7 +871,7 @@ export function Composer({
       setSelectedIds([newId]);
       history.commit();
     },
-    [history.commit],
+    [history.flushContinuous, history.commit],
   );
 
   // Cmd+D to duplicate selected layer
@@ -860,6 +895,7 @@ export function Composer({
 
   const handleReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
+      history.flushContinuous();
       setLayers((prev) => {
         const next = [...prev];
         const [moved] = next.splice(fromIndex, 1);
@@ -868,12 +904,13 @@ export function Composer({
       });
       history.commit();
     },
-    [history.commit],
+    [history.flushContinuous, history.commit],
   );
 
   // Alignment handler
   const handleAlignLayers = useCallback(
     (ids: string[], alignment: AlignmentType) => {
+      history.flushContinuous();
       setLayers((prev) => {
         const aligned = computeAlignment(prev, ids, alignment);
         if (!aligned) return prev;
@@ -884,7 +921,7 @@ export function Composer({
       });
       history.commit();
     },
-    [history.commit],
+    [history.flushContinuous, history.commit],
   );
 
   // Export handlers
@@ -1125,6 +1162,8 @@ export function Composer({
           selectedIds={selectedIds}
           onSelect={setSelectedIds}
           onUpdate={handleLayerUpdate}
+          onUpdateContinuous={handleLayerUpdateContinuous}
+          onCommitContinuous={handleLayerCommitContinuous}
           onDelete={handleLayerDelete}
           onDuplicate={handleDuplicateLayer}
           onReorder={handleReorder}
@@ -1136,9 +1175,12 @@ export function Composer({
           onGridConfigChange={setGridConfig}
           frameConfig={frameConfig}
           onFrameConfigChange={setFrameConfig}
+          onFrameConfigChangeContinuous={setFrameConfigContinuous}
+          onFrameConfigCommitContinuous={flushFrameConfigContinuous}
           processingLayers={processingLayers}
           onBgRemovalToggle={handleBgRemovalToggle}
           onBgThresholdChange={handleBgThresholdChange}
+          onBgThresholdCommit={handleBgThresholdCommit}
         />
       </div>
       {showImageTrace && (
