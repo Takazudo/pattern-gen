@@ -6,7 +6,7 @@
  * Imports from the backend will resolve after the backend branch is merged.
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Miniflare } from 'miniflare';
 import {
   createTestEnv,
@@ -25,6 +25,18 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error — backend not yet merged
 import { app } from '../auth/[[route]]';
+
+/**
+ * Extract Set-Cookie headers from a Response.
+ * Uses the standard getSetCookie() when available, falls back to get().
+ */
+function getSetCookieHeaders(res: Response): string[] {
+  if ('getSetCookie' in res.headers && typeof (res.headers as any).getSetCookie === 'function') {
+    return (res.headers as any).getSetCookie();
+  }
+  const single = res.headers.get('Set-Cookie');
+  return single ? [single] : [];
+}
 
 let mf: Miniflare;
 let env: TestEnv;
@@ -74,9 +86,7 @@ describe('GET /auth/login', () => {
     const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/auth/login`);
     const res = await app.request(req, {}, env);
 
-    const setCookies = res.headers.getAll
-      ? res.headers.getAll('Set-Cookie')
-      : [res.headers.get('Set-Cookie')].filter(Boolean);
+    const setCookies = getSetCookieHeaders(res);
 
     const txCookie = setCookies.find(
       (c) => c && c.includes('__Host-auth0-tx'),
@@ -155,9 +165,7 @@ describe('POST /auth/logout', () => {
     expect(res.status).toBe(200);
 
     // Check that cookies are cleared (Max-Age=0 or Expires in past)
-    const setCookies = res.headers.getAll
-      ? res.headers.getAll('Set-Cookie')
-      : [res.headers.get('Set-Cookie')].filter(Boolean);
+    const setCookies = getSetCookieHeaders(res);
 
     const accessClear = setCookies.find(
       (c) => c && c.includes('__Host-access'),
@@ -229,9 +237,7 @@ describe('POST /auth/refresh', () => {
     expect(res.status).toBe(200);
 
     // Should set new access and refresh cookies
-    const setCookies = res.headers.getAll
-      ? res.headers.getAll('Set-Cookie')
-      : [res.headers.get('Set-Cookie')].filter(Boolean);
+    const setCookies = getSetCookieHeaders(res);
 
     const newAccess = setCookies.find(
       (c) => c && c.includes('__Host-access'),
