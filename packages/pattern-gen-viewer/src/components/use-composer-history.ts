@@ -153,7 +153,7 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
         continuousRef.current = false;
         dispatch({ type: 'COMMIT' });
       }
-    }, 500);
+    }, 2000);
   }, [clearSafetyTimer]);
 
   // Clean up timer on unmount

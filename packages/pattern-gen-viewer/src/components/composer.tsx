@@ -113,20 +113,22 @@ export function Composer({
 
   const setGridConfig = useCallback(
     (config: GridConfig) => {
+      history.flushContinuous();
       const current = historyRef.current;
       history.set({ ...current, gridConfig: config });
       history.commit();
     },
-    [history.set, history.commit],
+    [history.flushContinuous, history.set, history.commit],
   );
 
   const setFrameConfig = useCallback(
     (config: FrameConfig | null) => {
+      history.flushContinuous();
       const current = historyRef.current;
       history.set({ ...current, frameConfig: config });
       history.commit();
     },
-    [history.set, history.commit],
+    [history.flushContinuous, history.set, history.commit],
   );
 
   const setFrameConfigContinuous = useCallback(
@@ -594,6 +596,7 @@ export function Composer({
 
     const handleMouseUp = () => {
       if (dragStateRef.current) {
+        history.flushContinuous();
         history.commit();
       }
       setDragState(null);
@@ -610,6 +613,7 @@ export function Composer({
 
   // Layer CRUD
   const handleAddImage = useCallback(() => {
+    history.flushContinuous();
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -653,7 +657,7 @@ export function Composer({
       reader.readAsDataURL(file);
     };
     input.click();
-  }, [history.commit]);
+  }, [history.flushContinuous, history.commit]);
 
   // Track a font load: add to loadingFonts, remove when loaded
   const trackFontLoad = useCallback((family: string) => {
@@ -669,6 +673,7 @@ export function Composer({
   }, []);
 
   const handleAddText = useCallback(() => {
+    history.flushContinuous();
     const id = crypto.randomUUID();
     const newLayer: TextLayerData & { id: string } = {
       id,
@@ -699,10 +704,11 @@ export function Composer({
     setSelectedIds([id]);
     trackFontLoad('Inter');
     history.commit();
-  }, [trackFontLoad, history.commit]);
+  }, [trackFontLoad, history.flushContinuous, history.commit]);
 
   const handleLayerUpdate = useCallback(
     (id: string, updates: Partial<EditorLayer>) => {
+      history.flushContinuous();
       // Track font loading when fontFamily changes
       if ('fontFamily' in updates && typeof updates.fontFamily === 'string') {
         trackFontLoad(updates.fontFamily);
@@ -727,7 +733,7 @@ export function Composer({
       );
       history.commit();
     },
-    [trackFontLoad, history.commit],
+    [trackFontLoad, history.flushContinuous, history.commit],
   );
 
   const handleLayerUpdateContinuous = useCallback(
@@ -749,6 +755,7 @@ export function Composer({
   // Toggle bg removal on an image layer — runs ML processing
   const handleBgRemovalToggle = useCallback(
     async (id: string, enabled: boolean) => {
+      history.flushContinuous();
       if (!enabled) {
         // Just disable — keep cached data for quick re-enable
         setLayers((prev) =>
@@ -806,7 +813,7 @@ export function Composer({
         });
       }
     },
-    [history.commit],
+    [history.flushContinuous, history.commit],
   );
 
   const handleBgThresholdChange = useCallback(
@@ -991,6 +998,7 @@ export function Composer({
 
   // JSON Import
   const handleImportJson = useCallback(() => {
+    history.flushContinuous();
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -1042,7 +1050,7 @@ export function Composer({
       reader.readAsText(file);
     };
     input.click();
-  }, [trackFontLoad, history.set, history.commit]);
+  }, [trackFontLoad, history.flushContinuous, history.set, history.commit]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
