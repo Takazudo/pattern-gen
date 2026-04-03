@@ -181,13 +181,17 @@ function generateOnCanvas(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  const hasTransforms = rotate !== 0 || skewX !== 0 || skewY !== 0 ||
+    translateX !== 0 || translateY !== 0;
+
   if (useTranslate) {
     // Render pattern on a larger offscreen canvas so panning reveals
     // continuous content at any translate position (±100% range).
-    // Determine the largest safe scale for the offscreen canvas.
-    // iOS Safari (and some other browsers) silently fail when total
-    // canvas pixels exceed device memory limits (~16.7M on older iOS).
-    const MAX_CANVAS_PIXELS = 16_777_216; // 4096×4096, safe for most devices
+    // iOS Safari silently fails when total canvas pixels exceed device
+    // memory limits (~16.7M). Desktop browsers handle 100M+ fine.
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const MAX_CANVAS_PIXELS = isIOS ? 16_777_216 : Number.MAX_SAFE_INTEGER;
     let scale = 3;
     while (scale > 1) {
       const totalPixels = (canvas.width * scale) * (canvas.height * scale);
@@ -236,8 +240,25 @@ function generateOnCanvas(
     ctx.translate(baseOffset + tx, baseOffset + ty);
     ctx.drawImage(offscreen, 0, 0);
     ctx.restore();
+  } else if (hasTransforms) {
+    // No big canvas — apply transforms directly to the main canvas.
+    // Black edges may appear at extreme values (no extra canvas buffer).
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate((rotate * Math.PI) / 180);
+    if (skewX !== 0 || skewY !== 0) {
+      const tanX = Math.tan((skewX * Math.PI) / 180);
+      const tanY = Math.tan((skewY * Math.PI) / 180);
+      ctx.transform(1, tanY, tanX, 1, 0, 0);
+    }
+    ctx.translate(-cx, -cy);
+    ctx.translate(translateX * canvas.width, translateY * canvas.height);
+    pattern.generate(ctx, options);
+    ctx.restore();
   } else {
-    // Direct render — no offscreen canvas, much faster
+    // Direct render — no transforms, fastest path
     pattern.generate(ctx, options);
   }
 }
@@ -563,11 +584,9 @@ export function App() {
 
     // Only include non-default values
     if (zoomSlider !== 50) params.set('zoom', String(zoomSlider));
-    if (useTranslate) {
-      params.set('translate', '1');
-      if (translateX !== 0) params.set('tx', String(translateX));
-      if (translateY !== 0) params.set('ty', String(translateY));
-    }
+    if (useTranslate) params.set('translate', '1');
+    if (translateX !== 0) params.set('tx', String(translateX));
+    if (translateY !== 0) params.set('ty', String(translateY));
     if (rotate !== 0) params.set('rotate', String(rotate));
     if (skewX !== 0) params.set('skewX', String(skewX));
     if (skewY !== 0) params.set('skewY', String(skewY));

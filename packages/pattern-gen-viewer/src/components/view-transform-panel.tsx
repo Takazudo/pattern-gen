@@ -1,6 +1,9 @@
 import { centerDetentToZoom } from '@takazudo/pattern-gen-core';
 import * as Popover from '@radix-ui/react-popover';
 
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 interface ViewTransformPanelProps {
   zoomSlider: number; // 0-100 slider value
   translateX: number; // -100 to 100
@@ -81,29 +84,31 @@ export function ViewTransformPanel({
         <span className="view-transform-value">{zoomDisplay}x</span>
       </div>
 
-      <div className="view-transform-checkbox-row">
-        <label>
-          <input
-            type="checkbox"
-            checked={useTranslate}
-            onChange={(e) => onUseTranslateChange(e.target.checked)}
-          />
-          <span>Use big canvas</span>
-        </label>
-        <Popover.Root>
-          <Popover.Trigger asChild>
-            <button className="info-trigger" type="button" aria-label="What is big canvas?">
-              &#9432;
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content className="info-popover" side="top" sideOffset={5}>
-              Renders patterns on a larger canvas for smooth panning and rotation. Uses more memory and may be slower on some devices.
-              <Popover.Arrow className="info-popover-arrow" />
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-      </div>
+      {!isIOS && (
+        <div className="view-transform-checkbox-row">
+          <label>
+            <input
+              type="checkbox"
+              checked={useTranslate}
+              onChange={(e) => onUseTranslateChange(e.target.checked)}
+            />
+            <span>Use big canvas</span>
+          </label>
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <button className="info-trigger" type="button" aria-label="What is big canvas?">
+                &#9432;
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content className="info-popover" side="top" sideOffset={5}>
+                Renders patterns on a larger canvas for smooth panning and rotation. Uses more memory and may be slower on some devices.
+                <Popover.Arrow className="info-popover-arrow" />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        </div>
+      )}
 
       <div className="view-transform-slider-row">
         <span className="view-transform-label">X</span>
@@ -113,7 +118,7 @@ export function ViewTransformPanel({
           max={100}
           step={1}
           value={translateX}
-          disabled={!useTranslate}
+
           onChange={(e) => onChange(zoomSlider, parseInt(e.target.value), translateY)}
           aria-label="Translate X"
         />
@@ -128,7 +133,7 @@ export function ViewTransformPanel({
           max={100}
           step={1}
           value={translateY}
-          disabled={!useTranslate}
+
           onChange={(e) => onChange(zoomSlider, translateX, parseInt(e.target.value))}
           aria-label="Translate Y"
         />
@@ -143,7 +148,7 @@ export function ViewTransformPanel({
           max={180}
           step={1}
           value={rotate}
-          disabled={!useTranslate}
+
           onChange={(e) => onRotateChange(parseInt(e.target.value))}
           aria-label="Rotate"
         />
@@ -158,7 +163,7 @@ export function ViewTransformPanel({
           max={45}
           step={1}
           value={skewX}
-          disabled={!useTranslate}
+
           onChange={(e) => onSkewChange(parseInt(e.target.value), skewY)}
           aria-label="Skew X"
         />
@@ -173,7 +178,7 @@ export function ViewTransformPanel({
           max={45}
           step={1}
           value={skewY}
-          disabled={!useTranslate}
+
           onChange={(e) => onSkewChange(skewX, parseInt(e.target.value))}
           aria-label="Skew Y"
         />
