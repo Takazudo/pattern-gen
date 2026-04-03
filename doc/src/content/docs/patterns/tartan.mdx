@@ -1,0 +1,34 @@
+---
+title: Tartan
+sidebar_position: 50
+---
+
+# Tartan
+
+Woven plaid pattern that draws semi-transparent horizontal and vertical stripes of varying widths, using palette colors whose overlaps create the characteristic tartan look.
+
+## Algorithm
+
+1. **Background fill** — The canvas is filled with the first palette color (`palette[0]`).
+
+2. **Stripe sequence generation** — A sequence of `stripeCount` stripes is built. Each stripe gets a randomized width (0.4x–1.6x of the base stripe width) and a randomly chosen foreground color with a per-stripe alpha value that varies around the `stripeAlpha` base (±0.2).
+
+3. **Vertical stripes** — The stripe sequence is drawn as vertical columns from left to right, tiling across the full canvas width. Each stripe is rendered with its assigned color at its per-stripe alpha using `withAlpha()`.
+
+4. **Horizontal stripes with multiply blending** — The same stripe sequence is drawn as horizontal rows from top to bottom. The canvas composite operation is set to `multiply`, so where horizontal and vertical stripes overlap, colors blend darkly — simulating the warp-and-weft intersection of real tartan weaving.
+
+5. **Accent lines** — Thin semi-transparent lines (using the background color at 15% opacity) are drawn at every stripe boundary, both vertically and horizontally. These fine lines simulate the thread boundaries visible in real tartan cloth, adding a subtle woven texture.
+
+All randomness uses `options.rand` for deterministic output. The stripe width scales inversely with the `zoom` parameter.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Stripe Width | 5–60 | 30 | Controls base stripe width as a divisor of canvas size. Higher values produce narrower stripes. |
+| Stripe Count | 3–20 | 8 | Number of stripes in the repeating sequence. More stripes create more complex plaids. |
+| Stripe Alpha | 0.1–0.9 | 0.5 | Base transparency of each stripe. Lower values produce softer, more blended plaids; higher values produce bolder, more saturated stripes. |
+
+## Visual Characteristics
+
+Tartan produces the familiar Scottish plaid look — a grid of colored bands that darken where they cross. The multiply blending at warp-and-weft intersections is key to the realistic appearance: two semi-transparent stripes of different colors produce a third, darker color at their overlap, just as dyed threads do in real tartan weaving. The thin accent lines at stripe boundaries add depth by suggesting individual thread separations. Because stripe widths are randomized within a range, the pattern avoids the mechanical uniformity of a simple grid, producing the slightly irregular rhythm found in authentic tartan cloth.

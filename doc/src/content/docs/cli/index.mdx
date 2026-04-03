@@ -1,0 +1,142 @@
+---
+title: CLI Reference
+sidebar_position: 2
+---
+
+# CLI Reference
+
+The `pattern-gen` CLI generates PNG images from text seeds. It operates in three modes: Basic, OGP, and Composer.
+
+## Basic Mode
+
+Generate a pattern directly from command-line flags.
+
+```bash
+pattern-gen <slug> [options]
+```
+
+The `<slug>` argument is a text seed that determines the pattern's randomness. The same slug always produces the same output (deterministic generation).
+
+### Example
+
+```bash
+# Basic usage
+pattern-gen hello-world --type voronoi --out pattern.png
+
+# With color scheme and HSL adjustments
+pattern-gen my-seed --type flow-field --color-scheme dracula --size 1200 --hue 30 --saturation 20
+
+# With contrast and brightness
+pattern-gen banner --type marble --color-scheme nord --contrast 25 --brightness -15
+
+# Custom background color
+pattern-gen demo --type truchet --bg ff6600 --size 600
+```
+
+### Flags
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--type` | `-t` | Pattern type name | `wood-block` |
+| `--size` | `-s` | Output size in pixels (1-10000) | `800` |
+| `--zoom` | `-z` | Zoom factor (>0, max 100) | `1` |
+| `--bg` | | Override background color (hex, e.g. `ff0000` or `#ff0000`) | auto |
+| `--color-scheme` | `-c` | Color scheme name or `"random"` | auto |
+| `--hue` | | Hue shift (-180 to 180) | `0` |
+| `--saturation` | | Saturation shift (-100 to 100) | `0` |
+| `--lightness` | | Lightness shift (-100 to 100) | `0` |
+| `--contrast` | | Contrast adjustment (-100 to 100) | `0` |
+| `--brightness` | | Brightness adjustment (-100 to 100) | `0` |
+| `--out` | `-o` | Output file path | `{slug}.png` |
+| `--out-dir` | | Output directory | cwd |
+
+### Utility Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--list-types` | | List all available pattern type names |
+| `--list-color-schemes` | | List all available color scheme names |
+| `--help` | `-h` | Show help text |
+
+## OGP Mode
+
+Render from an OGP config JSON file. This mode skips the positional `<slug>` argument.
+
+```bash
+pattern-gen --ogp-config <path> [--out <path>] [--out-dir <dir>]
+```
+
+The OGP config file contains all rendering parameters (pattern type, seed, color scheme, zoom, transforms, HSL adjustments, contrast/brightness, and crop region). The output is a 1200x630 PNG suitable for Open Graph images.
+
+### Example
+
+```bash
+# Render OGP image
+pattern-gen --ogp-config ogp-config.json --out ogp-image.png
+
+# Output to specific directory
+pattern-gen --ogp-config ogp-config.json --out-dir ./output/
+```
+
+The default output filename is `ogp-{type}-{slug}.png` in the current directory.
+
+See [OGP Config](/docs/config/ogp-config) for the full JSON schema.
+
+## Composer Mode
+
+Render from a Composer config JSON file. This mode produces composite images with background patterns, text/image layers, and optional frame decorators.
+
+```bash
+pattern-gen --composer-config <path> [--out <path>] [--out-dir <dir>] [--assets-dir <dir>]
+```
+
+### Example
+
+```bash
+# Render from composer config
+pattern-gen --composer-config composer-config.json --out output.png
+
+# With custom assets directory for relative image paths
+pattern-gen --composer-config composer-config.json --assets-dir ./images/ --out output.png
+```
+
+The default output filename is `composer-{type}-{slug}.png` in the current directory.
+
+### Assets Directory
+
+The `--assets-dir` flag sets the base directory for resolving relative image paths in composer configs. When image layers reference relative file paths (instead of URLs or data URIs), they are resolved relative to this directory.
+
+```bash
+pattern-gen --composer-config config.json --assets-dir /path/to/assets/
+```
+
+See [Composer Config](/docs/config/composer-config) for the full JSON schema.
+
+## Color Adjustments
+
+All three modes support post-processing color adjustments:
+
+- **HSL shifts** (`--hue`, `--saturation`, `--lightness`) — shift the hue, saturation, and lightness of the entire output
+- **Contrast/Brightness** (`--contrast`, `--brightness`) — adjust contrast and brightness of the final image
+
+In Basic mode, these are passed as CLI flags. In OGP/Composer modes, they are embedded in the JSON config as `hsl` and `contrastBrightness` fields.
+
+## Output
+
+All modes produce PNG files. The output includes metadata printed to stdout:
+
+```
+Generated: ./pattern.png (voronoi, Nord, 800x800)
+```
+
+For OGP mode:
+
+```
+Generated OGP: ./ogp-image.png (voronoi, Nord, 1200x630)
+```
+
+For Composer mode:
+
+```
+Generated Composer: ./output.png (voronoi, 1200x630)
+```

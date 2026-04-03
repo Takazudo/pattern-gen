@@ -1,12 +1,129 @@
 ---
-title: Welcome
+title: Getting Started
 sidebar_position: 1
 ---
 
-# Welcome to Doc
+# pattern-gen
 
-This documentation site was created with [zudo-doc](https://github.com/zudolab/zudo-doc).
+Generate deterministic visual patterns from text seeds. 30 algorithms spanning geometric tiles, noise-based textures, Voronoi cells, traditional cultural patterns, textile designs, and mathematical effects.
 
-## Getting Started
+## Features
 
-Edit the files in `src/content/docs/` to add your documentation.
+- **30 pattern types** — from wood-block grids to reaction-diffusion simulations
+- **Simple backgrounds** — solid color, gradient, glassmorphism, and texture patterns for quick starts
+- **20 decorative frames** — borders, shadows, neon glow, filmstrip, polaroid, and more
+- **Deterministic** — same seed always produces the same output
+- **36 color schemes** — terminal-inspired palettes (Dracula, Nord, Catppuccin, etc.)
+- **HSL + contrast/brightness adjustments** — fine-tune hue, saturation, lightness, contrast, and brightness
+- **CLI tool** — generate PNGs from the command line with three modes (basic, OGP, Composer)
+- **Library** — use programmatically in Node.js or browser
+- **Interactive viewer** — browse and customize patterns with a step-based workflow
+- **Composer** — layer-based composition with text, images, and frames for OGP and custom-sized exports
+
+## Quick Start
+
+### Install
+
+```bash
+pnpm add @takazudo/pattern-gen
+```
+
+### CLI Usage
+
+```bash
+# Generate a pattern
+pattern-gen hello-world --type voronoi --out pattern.png
+
+# Specify color scheme and adjustments
+pattern-gen my-seed --type flow-field --color-scheme dracula --size 1200 --contrast 20 --brightness -10
+
+# Render from OGP config JSON
+pattern-gen --ogp-config ogp-config.json --out image.png
+
+# Render from Composer config JSON (layers + frames)
+pattern-gen --composer-config composer-config.json --out image.png
+
+# List available types and color schemes
+pattern-gen --list-types
+pattern-gen --list-color-schemes
+```
+
+### Programmatic Usage
+
+```typescript
+import { renderPattern } from '@takazudo/pattern-gen';
+
+const result = await renderPattern({
+  slug: 'hello-world',
+  type: 'voronoi',
+  size: 800,
+  colorScheme: 'nord',
+});
+
+// result.buffer is a PNG Buffer
+fs.writeFileSync('output.png', result.buffer);
+```
+
+### Browser Usage
+
+```typescript
+import { renderPatternToCanvas } from '@takazudo/pattern-gen';
+
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+
+renderPatternToCanvas(ctx, 'hello-world', 'voronoi', {
+  colorScheme: 'dracula',
+  zoom: 2,
+});
+```
+
+## Viewer Workflow
+
+The interactive viewer uses a step-based workflow:
+
+### Step 1: Background
+
+1. Open the viewer and choose a background — simple (Solid, Gradient, Glass, Texture) or algorithmic patterns
+2. Configure seed, colors, zoom, and pattern parameters
+3. Click **Compose** to proceed to the composition step
+
+### Step 2: Compose
+
+1. Drag and resize the selection rectangle to crop the pattern
+2. Choose an aspect ratio (OGP 1200x630, Square, Free, Fixed)
+3. Use the action bar:
+   - **Generate** — download the selected area as a high-res PNG
+   - **Download JSON** — save the full pattern config + crop region as a JSON file
+   - **Copy JSON** — copy the config to clipboard
+   - **Edit** — open the full Composer for layer-based composition
+
+### CLI Reproduction
+
+Use the exported JSON config to reproduce the exact same image from the command line:
+
+```bash
+pattern-gen --ogp-config config.json --out image.png
+```
+
+The CLI re-renders the pattern at high resolution and crops to the same region, producing an identical output.
+
+## Composer
+
+The Composer provides a full layer-based composition system.
+
+### Layers
+
+Click **Edit** in the Compose step to open the Composer. Add image and text layers with configurable properties:
+
+- **Text layers** — font family (140+ Google Fonts), size, weight, style, color (HSLA), alignment, letter spacing, line height, shadow, stroke
+- **Image layers** — drag to position/resize, opacity control
+- Layer reordering via drag-and-drop, multi-select alignment tools, snap-to-grid
+
+### Frames
+
+The Composer includes 20 decorative frame patterns that render on top of the image. Select a frame from the dropdown and configure its parameters.
+
+### HSLA Color Picker
+
+All color inputs in the Composer use an HSLA color picker with four sliders (Hue, Saturation, Lightness, Alpha). The picker supports both `#RRGGBB` and `#RRGGBBAA` hex formats, enabling semi-transparent colors for text, frames, and grid overlays.

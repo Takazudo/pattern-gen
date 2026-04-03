@@ -1,0 +1,37 @@
+---
+title: Wave Interference
+sidebar_position: 24
+---
+
+# Wave Interference
+
+Multiple sine wave sources placed at random positions create overlapping concentric rings, producing classic wave interference patterns.
+
+## Algorithm
+
+The pattern simulates the superposition of circular waves emanating from point sources:
+
+1. `sourceCount` wave sources are generated, each with a random position on the canvas.
+2. Each source is assigned:
+   - A **frequency** derived from `baseFreq` plus a random offset scaled by a seed-based spread factor (0.5×–2.5× variation).
+   - A random **phase** offset (0–2π) so waves are not all synchronized.
+   - A random **amplitude** (0.3–1.0) controlling each source's contribution strength.
+3. For each pixel `(x, y)`:
+   - The Euclidean distance from the pixel to each source is computed.
+   - Each source contributes `amplitude * sin(distance * frequency + phase)` to a running sum.
+   - The sum is normalized by dividing by the total amplitude of all sources, then mapped from `[-1, 1]` to `[0, 1]`.
+4. The normalized value is mapped to a palette color index spanning the full palette (background + foreground colors).
+5. Pixels are written via `ImageData` for efficient rendering.
+
+The key to the interference effect is that waves from different sources reinforce (constructive interference) where their phases align and cancel (destructive interference) where they oppose, creating the characteristic moiré-like banding.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Source Count | 2 – 12 | 6 | Number of wave emitter points. More sources = more complex interference |
+| Frequency | 0.005 – 0.15 | 0.04 | Base wave frequency. Higher = tighter concentric rings |
+
+## Visual Characteristics
+
+Wave Interference produces bold, concentric ring patterns radiating from multiple points, with dramatic interference bands where rings overlap. With few sources, the pattern shows clean bullseye rings with simple intersection zones. As source count increases, the interference becomes increasingly intricate, creating complex moiré-like textures. The per-source frequency variation (controlled by a seed-based spread factor) prevents uniform spacing and adds organic irregularity. The full palette mapping creates vivid color banding across the interference zones.

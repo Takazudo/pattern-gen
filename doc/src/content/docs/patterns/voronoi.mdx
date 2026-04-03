@@ -1,0 +1,33 @@
+---
+title: Voronoi
+sidebar_position: 30
+---
+
+# Voronoi
+
+Classic Voronoi diagram that partitions the canvas into colored cells based on proximity to randomly placed seed points, with visible borders drawn at cell boundaries.
+
+## Algorithm
+
+1. **Seed point generation**: Place `seedCount × zoom²` random points across the canvas. Each seed is assigned a color by cycling through the shuffled foreground palette.
+2. **Pixel classification (brute-force nearest-neighbor)**: For every pixel, compute the squared Euclidean distance to all seed points. Track the closest distance (d1) and the second-closest distance (d2), along with the index of the nearest seed.
+3. **Border detection**: Compute `borderDist = √d2 − √d1`. When this difference is less than the `borderThreshold` (derived from `borderWidth / zoom`), the pixel lies near the boundary between two cells.
+4. **Coloring**: Border pixels are filled with a darkened version of the background color (`darken(bg, 0.5)`). Interior pixels receive the RGB color of their nearest seed point.
+5. **Rendering**: The entire image is written as a single `ImageData` buffer and put back to the canvas in one operation.
+
+The border detection technique exploits the property that Voronoi cell edges are the set of points equidistant from two seed points — where d1 and d2 converge, `borderDist` approaches zero.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+| --- | --- | --- | --- |
+| Seed Count | 5–200 | 40 | Base number of seed points (scales with zoom²) |
+| Border Width | 0.5–8 | 2.5 | Thickness of cell borders in pixels |
+
+## Visual Characteristics
+
+- Irregular polygonal cells resembling cracked mud, giraffe skin, or stained glass
+- Each cell is a single solid color from the palette, with no internal shading
+- Cell sizes vary naturally based on random seed placement — denser seeds produce smaller cells
+- Borders are uniform in width and drawn in a darkened background color, giving clean separation between cells
+- Higher seed counts create finer tessellations; lower counts produce large, dramatic regions

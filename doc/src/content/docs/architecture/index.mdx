@@ -1,0 +1,120 @@
+---
+title: Architecture
+sidebar_position: 6
+---
+
+# Architecture
+
+pattern-gen is a pnpm workspace monorepo with internal sub-packages. The CLI and viewer share the same rendering code.
+
+## Package Structure
+
+```
+pattern-gen/
+  packages/
+    core/           @takazudo/pattern-gen-core
+    generators/     @takazudo/pattern-gen-generators
+    pattern-gen-viewer/   Vite + React interactive viewer
+  src/
+    cli.ts          CLI entry point
+    renderer.ts     Rendering pipeline
+    index.ts        Re-exports from core + generators + renderer
+  doc/              Documentation site (zudo-doc / Astro)
+```
+
+### `@takazudo/pattern-gen-core`
+
+Shared utilities and type definitions:
+
+- **Hash** — FNV-1a string hashing for seed-to-number conversion
+- **PRNG** — Mulberry32 seeded pseudo-random number generator
+- **Noise** — 2D simplex noise and fractal Brownian motion
+- **Color utilities** — hex/RGB conversion, interpolation, darken/lighten, alpha
+- **Color schemes** — 36 terminal-inspired palettes (Dracula, Nord, Catppuccin, etc.)
+- **HSL adjustment** — post-render hue, saturation, lightness transforms
+- **OGP config** — `OgpConfig` type, `parseOgpConfig()`, `serializeOgpConfig()`
+- **Composer config** — `ComposerConfig` type, layer/frame types, parser/serializer
+- **Frame types** — `FrameGenerator`, `FrameParamDef`, `FrameRenderOptions` interfaces
+
+### `@takazudo/pattern-gen-generators`
+
+Pattern generators and frame decorators:
+
+- **36 patterns** — 30 algorithmic + 4 simple (solid, gradient, glass, texture) + kumiko + gradient
+- **20 frames** — decorative border effects (simple-line, neon-glow, polaroid, etc.)
+- **Registry** — `patternRegistry`, `patternsByName`, `FRAME_GENERATORS`, `framesByName`
+
+### Root Package (`@takazudo/pattern-gen`)
+
+The published package bundles everything via tsup with `noExternal`. Sub-packages are `private: true`.
+
+- **`src/renderer.ts`** — rendering pipeline with four public functions
+- **`src/cli.ts`** — CLI with three modes (basic, OGP, Composer)
+- **`src/index.ts`** — unified re-exports
+
+## Rendering Pipeline
+
+### `renderPattern(options)`
+
+Node.js PNG rendering for basic mode:
+
+1. Hash the slug to create a seed
+2. Create a seeded PRNG from the seed
+3. Resolve the color scheme (by name or random)
+4. Create a `node-canvas` instance at the requested size
+5. Apply zoom transforms
+6. Execute the pattern generator's `generate()` method
+7. Apply HSL adjustments to the canvas pixel data
+8. Apply contrast/brightness adjustments
+9. Export as PNG buffer
+
+### `renderOgpFromConfig(config)`
+
+OGP mode (1200x630 output):
+
+1. Parse and validate `OgpConfig`
+2. Render the pattern at a larger internal buffer size
+3. Apply transforms (zoom, translate, rotate, skew)
+4. Apply HSL and contrast/brightness adjustments
+5. Crop to the specified region
+6. Scale to 1200x630
+
+### `renderComposerFromConfig(config)`
+
+Composer mode (composite output):
+
+1. Render the background using `renderOgpFromConfig(config.background)`
+2. Draw each layer in order:
+   - **Image layers** — load from URL/data URI/file, draw with transform and opacity
+   - **Text layers** — render with font, color, shadow, stroke, alignment, letter spacing
+3. Apply the frame decorator (if specified) on top
+4. Export as PNG buffer
+
+### `renderPatternToCanvas(ctx, slug, type, options?)`
+
+Browser-compatible rendering (no Node.js dependencies):
+
+1. Same pattern generation logic but operates on a provided Canvas 2D context
+2. Used by the viewer app for real-time preview
+
+## Data Flow
+
+```
+Text Seed (slug)
+  → FNV-1a hash → 32-bit seed
+  → Mulberry32 PRNG → deterministic random stream
+  → Pattern generator → Canvas 2D drawing
+  → HSL adjustment → pixel-level color transform
+  → Contrast/Brightness → pixel-level adjustment
+  → PNG export
+```
+
+The key invariant: **same slug + same options = identical output**, guaranteed by the deterministic PRNG chain.
+
+## Build Pipeline
+
+```
+core → generators → root (tsup)
+```
+
+Sub-packages build first (core, then generators), then the root package bundles them with tsup. The viewer app runs independently via Vite.

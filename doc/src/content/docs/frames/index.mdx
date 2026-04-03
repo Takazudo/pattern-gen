@@ -1,0 +1,106 @@
+---
+title: Frame Catalog
+sidebar_position: 4
+---
+
+# Frame Catalog
+
+pattern-gen includes 20 decorative frame patterns for OGP images. Frames render on top of the background and layers, adding borders, shadows, and artistic effects. Each frame is deterministic and has configurable parameters.
+
+## Minimal & Modern
+
+| Frame | Name | Description |
+|-------|------|-------------|
+| Simple Line | `simple-line` | Rectangular border with configurable width, dash style, and corner radius |
+| Rounded Corner | `rounded-corner` | Soft card-like border with shadow and fill color |
+| Drop Shadow | `drop-shadow` | Elevated card effect with configurable shadow offset and blur |
+| Double Line | `double-line` | Two parallel borders with gap, optional corner dots |
+
+## Gradient & Glow
+
+| Frame | Name | Description |
+|-------|------|-------------|
+| Gradient Border | `gradient-border` | Per-side color transitions (clockwise, horizontal, vertical, diagonal) |
+| Neon Glow | `neon-glow` | Multi-layer glow effect with bright core line |
+| Vignette | `vignette` | Gradual fade-to-color at edges (elliptical or rectangular) |
+
+## Classical & Ornate
+
+| Frame | Name | Description |
+|-------|------|-------------|
+| Art Deco | `art-deco` | 1920s geometric corner ornaments (fan, chevron, stepped) |
+| Greek Key | `greek-key` | Classic meander/key pattern with corner squares |
+| Corner Ornament | `corner-ornament` | Scrollwork, bracket, or floral flourishes at corners |
+
+## Patterned & Geometric
+
+| Frame | Name | Description |
+|-------|------|-------------|
+| Dotted | `dotted` | Stippled border with grid or staggered arrangement |
+| Scalloped | `scalloped` | Semicircular wave edge (inward or outward direction) |
+| Zigzag | `zigzag` | Chevron border with filled triangle mode |
+| Halftone | `halftone` | Ben-Day dot pattern with gradient (circle, diamond, square shapes) |
+
+## Photographic & Nostalgic
+
+| Frame | Name | Description |
+|-------|------|-------------|
+| Filmstrip | `filmstrip` | 35mm sprocket bands with transparent holes |
+| Polaroid | `polaroid` | Instant photo frame, wider bottom border, optional rotation |
+| Stamp | `stamp` | Postage perforations with optional inner decorative line |
+
+## Textural & Organic
+
+| Frame | Name | Description |
+|-------|------|-------------|
+| Torn Edge | `torn-edge` | Hand-torn paper edge with seeded randomness |
+| Washi Tape | `washi-tape` | Semi-transparent tape strips with patterns (stripes, dots, crosshatch) |
+| Brush Stroke | `brush-stroke` | Ink wash border with splatters and calligraphic styles |
+
+## Usage
+
+### In the Composer
+
+1. Open the viewer and navigate to the Compose step
+2. Click **Edit** to open the Composer
+3. Select a frame from the **Frame** dropdown
+4. Adjust parameters using the controls (sliders, color pickers, toggles)
+5. Export as PNG or JSON
+
+### Via CLI
+
+Frames are included in Composer config JSON files. Use `--composer-config` to render:
+
+```bash
+pattern-gen --composer-config config.json --out output.png
+```
+
+### Programmatically
+
+```typescript
+import { renderComposerFromConfig, parseComposerConfig } from '@takazudo/pattern-gen';
+
+const config = parseComposerConfig(JSON.stringify({
+  version: 1,
+  background: { /* OgpConfig */ },
+  layers: [],
+  frame: {
+    type: 'neon-glow',
+    params: { glowColor: '#00ffff', glowRadius: 20, lineWidth: 3 },
+  },
+}));
+
+const result = await renderComposerFromConfig(config);
+fs.writeFileSync('framed-ogp.png', result.buffer);
+```
+
+## Parameter Types
+
+Each frame defines its own parameters. The four parameter types are:
+
+| Type | UI Control | Value |
+|------|-----------|-------|
+| `slider` | Range slider | Number with min/max/step |
+| `color` | HSLA picker | Hex string (`#RRGGBB` or `#RRGGBBAA`) |
+| `select` | Dropdown | Numeric option value |
+| `toggle` | Checkbox | `0` (off) or `1` (on) |
