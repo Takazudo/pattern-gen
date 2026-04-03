@@ -48,11 +48,11 @@ export function SaveCompositionModal({
           Give your composition a name to save it to your account.
         </p>
         <div className="save-pattern-field">
-          <label htmlFor="pattern-name-input" className="save-pattern-label">
+          <label htmlFor="composition-name-input" className="save-pattern-label">
             Name
           </label>
           <input
-            id="pattern-name-input"
+            id="composition-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
