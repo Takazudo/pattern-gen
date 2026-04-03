@@ -144,12 +144,22 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
   // Create the pattern canvas
   let patternCanvas: ReturnType<typeof createCanvas>;
 
-  if (config.useTranslate) {
-    // Server-side (Node.js) has no canvas memory constraints — always use scale=3
-    const scale = 3;
+  const rotate = config.rotate ?? 0;
+  const skewX = config.skewX ?? 0;
+  const skewY = config.skewY ?? 0;
+  const hasTransforms = rotate !== 0 || skewX !== 0 || skewY !== 0 ||
+    config.translateX !== 0 || config.translateY !== 0;
 
-    // scale is at least 1 — at scale=1 offscreen matches renderSize;
-    // translate may show edges but the offset math is preserved.
+  if (config.useTranslate) {
+    // Server-side canvas guard: cap at ~100M pixels (~10000×10000)
+    const MAX_SERVER_CANVAS_PIXELS = 100_000_000;
+    let scale = 3;
+    while (scale > 1) {
+      const totalPixels = (renderSize * scale) * (renderSize * scale);
+      if (totalPixels <= MAX_SERVER_CANVAS_PIXELS) break;
+      scale--;
+    }
+
     const bigSize = renderSize * scale;
     const offscreen = createCanvas(bigSize, bigSize);
     const offCtx = offscreen.getContext('2d');
@@ -163,33 +173,63 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
       params: Object.keys(config.params).length > 0 ? config.params : undefined,
     });
 
-    // Extract the visible portion with translate offset
+    // Extract the visible portion with translate offset + transforms
     patternCanvas = createCanvas(renderSize, renderSize);
     const patCtx = patternCanvas.getContext('2d');
     const baseOffset = -renderSize * (scale - 1) / 2;
     const tx = config.translateX * renderSize;
     const ty = config.translateY * renderSize;
     patCtx.save();
+    const cx = renderSize / 2;
+    const cy = renderSize / 2;
+    patCtx.translate(cx, cy);
+    patCtx.rotate((rotate * Math.PI) / 180);
+    if (skewX !== 0 || skewY !== 0) {
+      const tanX = Math.tan((skewX * Math.PI) / 180);
+      const tanY = Math.tan((skewY * Math.PI) / 180);
+      patCtx.transform(1, tanY, tanX, 1, 0, 0);
+    }
+    patCtx.translate(-cx, -cy);
     patCtx.translate(baseOffset + tx, baseOffset + ty);
     patCtx.drawImage(offscreen, 0, 0);
     patCtx.restore();
-  } else {
-    // Simple render (no translate offscreen)
+  } else if (hasTransforms) {
+    // No big canvas but transforms active — apply directly
     patternCanvas = createCanvas(renderSize, renderSize);
     const patCtx = patternCanvas.getContext('2d');
-
-    const patternOptions: PatternOptions = {
+    const cx = renderSize / 2;
+    const cy = renderSize / 2;
+    patCtx.save();
+    patCtx.translate(cx, cy);
+    patCtx.rotate((rotate * Math.PI) / 180);
+    if (skewX !== 0 || skewY !== 0) {
+      const tanX = Math.tan((skewX * Math.PI) / 180);
+      const tanY = Math.tan((skewY * Math.PI) / 180);
+      patCtx.transform(1, tanY, tanX, 1, 0, 0);
+    }
+    patCtx.translate(-cx, -cy);
+    patCtx.translate(config.translateX * renderSize, config.translateY * renderSize);
+    pattern.generate(patCtx as unknown as CanvasRenderingContext2D, {
       width: renderSize,
       height: renderSize,
       rand,
       colorScheme: scheme,
       zoom: config.zoom,
       params: Object.keys(config.params).length > 0 ? config.params : undefined,
-    };
-
-    // When useTranslate is false, the viewer skips translate entirely
-    // (translateX/Y are reset to 0), so we render directly without offset.
-    pattern.generate(patCtx as unknown as CanvasRenderingContext2D, patternOptions);
+    });
+    patCtx.restore();
+  } else {
+    // Direct render — no transforms, fastest path
+    patternCanvas = createCanvas(renderSize, renderSize);
+    const patCtx = patternCanvas.getContext('2d');
+    pattern.generate(patCtx as unknown as CanvasRenderingContext2D, {
+      width: renderSize,
+      height: renderSize,
+      rand,
+      colorScheme: scheme,
+      zoom: config.zoom,
+      params: Object.keys(config.params).length > 0 ? config.params : undefined,
+    });
   }
 
   // Apply HSL adjustments

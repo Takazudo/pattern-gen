@@ -584,11 +584,9 @@ export function App() {
 
     // Only include non-default values
     if (zoomSlider !== 50) params.set('zoom', String(zoomSlider));
-    if (useTranslate) {
-      params.set('translate', '1');
-      if (translateX !== 0) params.set('tx', String(translateX));
-      if (translateY !== 0) params.set('ty', String(translateY));
-    }
+    if (useTranslate) params.set('translate', '1');
+    if (translateX !== 0) params.set('tx', String(translateX));
+    if (translateY !== 0) params.set('ty', String(translateY));
     if (rotate !== 0) params.set('rotate', String(rotate));
     if (skewX !== 0) params.set('skewX', String(skewX));
     if (skewY !== 0) params.set('skewY', String(skewY));
