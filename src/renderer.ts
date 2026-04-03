@@ -145,8 +145,17 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
   let patternCanvas: ReturnType<typeof createCanvas>;
 
   if (config.useTranslate) {
-    // Replicate the viewer's 3x offscreen canvas approach
-    const scale = 3;
+    // Replicate the viewer's offscreen canvas approach with safe scaling
+    const MAX_CANVAS_PIXELS = 16_777_216;
+    let scale = 3;
+    while (scale > 1) {
+      const totalPixels = (renderSize * scale) * (renderSize * scale);
+      if (totalPixels <= MAX_CANVAS_PIXELS) break;
+      scale--;
+    }
+
+    // scale is at least 1 — at scale=1 offscreen matches renderSize;
+    // translate may show edges but the offset math is preserved.
     const bigSize = renderSize * scale;
     const offscreen = createCanvas(bigSize, bigSize);
     const offCtx = offscreen.getContext('2d');
@@ -156,7 +165,7 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
       height: bigSize,
       rand,
       colorScheme: scheme,
-      zoom: config.zoom,
+      zoom: config.zoom * scale,
       params: Object.keys(config.params).length > 0 ? config.params : undefined,
     });
 
