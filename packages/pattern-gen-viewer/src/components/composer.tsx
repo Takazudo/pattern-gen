@@ -595,25 +595,6 @@ export function Composer({
     };
   }, [getCanvasCoords, history.commit]);
 
-  // Cmd+D to duplicate selected layer
-  const selectedIdsRef = useRef(selectedIds);
-  selectedIdsRef.current = selectedIds;
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'd' && e.key !== 'D') return;
-      if (!e.metaKey && !e.ctrlKey) return;
-      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-      const ids = selectedIdsRef.current;
-      if (ids.length === 0) return;
-      e.preventDefault();
-      handleDuplicateLayer(ids[0]);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleDuplicateLayer]);
-
   // Layer CRUD
   const handleAddImage = useCallback(() => {
     const input = document.createElement('input');
@@ -857,6 +838,25 @@ export function Composer({
     },
     [history.commit],
   );
+
+  // Cmd+D to duplicate selected layer
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'd' && e.key !== 'D') return;
+      if (!e.metaKey && !e.ctrlKey) return;
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      const ids = selectedIdsRef.current;
+      if (ids.length === 0) return;
+      e.preventDefault();
+      handleDuplicateLayer(ids[0]);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleDuplicateLayer]);
 
   const handleReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
