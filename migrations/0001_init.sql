@@ -22,7 +22,7 @@ CREATE TABLE sessions (
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
 
-CREATE TABLE patterns (
+CREATE TABLE compositions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -33,9 +33,9 @@ CREATE TABLE patterns (
   updated_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_patterns_user_id ON patterns(user_id, created_at DESC);
+CREATE INDEX idx_compositions_user_id ON compositions(user_id, created_at DESC);
 
-CREATE TABLE files (
+CREATE TABLE assets (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   r2_key TEXT NOT NULL UNIQUE,
@@ -45,4 +45,4 @@ CREATE TABLE files (
   created_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_files_user_id ON files(user_id, created_at DESC);
+CREATE INDEX idx_assets_user_id ON assets(user_id, created_at DESC);

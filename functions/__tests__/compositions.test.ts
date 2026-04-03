@@ -1,5 +1,5 @@
 /**
- * Patterns API tests — CRUD operations on /api/patterns.
+ * Compositions API tests — CRUD operations on /api/compositions.
  *
  * All endpoints are protected by JWT auth middleware.
  * The backend returns camelCase fields and paginated responses
@@ -20,7 +20,7 @@ import {
   signTestAccessToken,
   makeAuthCookies,
   createTestAuthMiddleware,
-  samplePatternConfig,
+  sampleCompositionConfig,
   type TestEnv,
   TEST_CONFIG,
 } from './helpers';
@@ -85,16 +85,16 @@ function authedRequest(
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/patterns — list
+// GET /api/compositions — list
 // ---------------------------------------------------------------------------
 
-describe('GET /api/patterns', () => {
+describe('GET /api/compositions', () => {
   it('returns empty list for a new user', async () => {
     const freshUser = await createTestUser(env.DB);
     const freshSession = await createTestSession(env.DB, freshUser.id);
     const freshToken = await signTestAccessToken(freshUser.id, freshSession.id);
 
-    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns`, {
+    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions`, {
       headers: {
         Cookie: makeAuthCookies(freshToken),
         Origin: TEST_CONFIG.APP_BASE_URL,
@@ -111,16 +111,16 @@ describe('GET /api/patterns', () => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/patterns — create
+// POST /api/compositions — create
 // ---------------------------------------------------------------------------
 
-describe('POST /api/patterns', () => {
-  it('creates a pattern and returns it', async () => {
-    const config = samplePatternConfig();
-    const req = authedRequest('/api/patterns', {
+describe('POST /api/compositions', () => {
+  it('creates a composition and returns it', async () => {
+    const config = sampleCompositionConfig();
+    const req = authedRequest('/api/compositions', {
       method: 'POST',
       body: {
-        name: 'My Pattern',
+        name: 'My Composition',
         configJson: JSON.stringify(config),
         patternType: config.type,
       },
@@ -130,13 +130,13 @@ describe('POST /api/patterns', () => {
 
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.name).toBe('My Pattern');
+    expect(body.name).toBe('My Composition');
     expect(body.patternType).toBe('wood-block');
     expect(body.id).toBeTruthy();
   });
 
   it('returns 400 when required fields are missing', async () => {
-    const req = authedRequest('/api/patterns', {
+    const req = authedRequest('/api/compositions', {
       method: 'POST',
       body: { name: 'No config' },
     });
@@ -148,16 +148,16 @@ describe('POST /api/patterns', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/patterns — list after creation
+// GET /api/compositions — list after creation
 // ---------------------------------------------------------------------------
 
-describe('GET /api/patterns — after creation', () => {
+describe('GET /api/compositions — after creation', () => {
   beforeAll(async () => {
-    const config = samplePatternConfig();
-    const req = authedRequest('/api/patterns', {
+    const config = sampleCompositionConfig();
+    const req = authedRequest('/api/compositions', {
       method: 'POST',
       body: {
-        name: 'Listed Pattern',
+        name: 'Listed Composition',
         configJson: JSON.stringify(config),
         patternType: config.type,
       },
@@ -165,8 +165,8 @@ describe('GET /api/patterns — after creation', () => {
     await app.request(req, {}, env);
   });
 
-  it('returns created patterns (most recent first)', async () => {
-    const req = authedRequest('/api/patterns');
+  it('returns created compositions (most recent first)', async () => {
+    const req = authedRequest('/api/compositions');
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(200);
@@ -183,38 +183,38 @@ describe('GET /api/patterns — after creation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/patterns/:id — get specific
+// GET /api/compositions/:id — get specific
 // ---------------------------------------------------------------------------
 
-describe('GET /api/patterns/:id', () => {
-  let patternId: string;
+describe('GET /api/compositions/:id', () => {
+  let compositionId: string;
 
   beforeAll(async () => {
-    const req = authedRequest('/api/patterns', {
+    const req = authedRequest('/api/compositions', {
       method: 'POST',
       body: {
-        name: 'Specific Pattern',
-        configJson: JSON.stringify(samplePatternConfig()),
+        name: 'Specific Composition',
+        configJson: JSON.stringify(sampleCompositionConfig()),
         patternType: 'wood-block',
       },
     });
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    patternId = body.id;
+    compositionId = body.id;
   });
 
-  it('returns the specific pattern', async () => {
-    const req = authedRequest(`/api/patterns/${patternId}`);
+  it('returns the specific composition', async () => {
+    const req = authedRequest(`/api/compositions/${compositionId}`);
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.id).toBe(patternId);
-    expect(body.name).toBe('Specific Pattern');
+    expect(body.id).toBe(compositionId);
+    expect(body.name).toBe('Specific Composition');
     expect(body.configJson).toBeTruthy();
   });
 
-  it('returns 404 for another user accessing the pattern', async () => {
+  it('returns 404 for another user accessing the composition', async () => {
     const otherUser = await createTestUser(env.DB);
     const otherSession = await createTestSession(env.DB, otherUser.id);
     const otherToken = await signTestAccessToken(
@@ -223,7 +223,7 @@ describe('GET /api/patterns/:id', () => {
     );
 
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/patterns/${patternId}`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/compositions/${compositionId}`,
       {
         headers: {
           Cookie: makeAuthCookies(otherToken),
@@ -237,8 +237,8 @@ describe('GET /api/patterns/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it('returns 404 for non-existent pattern', async () => {
-    const req = authedRequest('/api/patterns/non-existent-id');
+  it('returns 404 for non-existent composition', async () => {
+    const req = authedRequest('/api/compositions/non-existent-id');
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(404);
@@ -246,29 +246,29 @@ describe('GET /api/patterns/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/patterns/:id — update
+// PUT /api/compositions/:id — update
 // ---------------------------------------------------------------------------
 
-describe('PUT /api/patterns/:id', () => {
-  let patternId: string;
+describe('PUT /api/compositions/:id', () => {
+  let compositionId: string;
 
   beforeAll(async () => {
-    const req = authedRequest('/api/patterns', {
+    const req = authedRequest('/api/compositions', {
       method: 'POST',
       body: {
         name: 'Before Update',
-        configJson: JSON.stringify(samplePatternConfig()),
+        configJson: JSON.stringify(sampleCompositionConfig()),
         patternType: 'wood-block',
       },
     });
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    patternId = body.id;
+    compositionId = body.id;
   });
 
-  it('updates a pattern', async () => {
-    const updatedConfig = { ...samplePatternConfig(), zoom: 2 };
-    const req = authedRequest(`/api/patterns/${patternId}`, {
+  it('updates a composition', async () => {
+    const updatedConfig = { ...sampleCompositionConfig(), zoom: 2 };
+    const req = authedRequest(`/api/compositions/${compositionId}`, {
       method: 'PUT',
       body: {
         name: 'After Update',
@@ -292,7 +292,7 @@ describe('PUT /api/patterns/:id', () => {
     );
 
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/patterns/${patternId}`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/compositions/${compositionId}`,
       {
         method: 'PUT',
         headers: {
@@ -311,28 +311,28 @@ describe('PUT /api/patterns/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/patterns/:id
+// DELETE /api/compositions/:id
 // ---------------------------------------------------------------------------
 
-describe('DELETE /api/patterns/:id', () => {
-  let patternId: string;
+describe('DELETE /api/compositions/:id', () => {
+  let compositionId: string;
 
   beforeAll(async () => {
-    const req = authedRequest('/api/patterns', {
+    const req = authedRequest('/api/compositions', {
       method: 'POST',
       body: {
         name: 'To Delete',
-        configJson: JSON.stringify(samplePatternConfig()),
+        configJson: JSON.stringify(sampleCompositionConfig()),
         patternType: 'wood-block',
       },
     });
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    patternId = body.id;
+    compositionId = body.id;
   });
 
-  it('deletes a pattern', async () => {
-    const req = authedRequest(`/api/patterns/${patternId}`, {
+  it('deletes a composition', async () => {
+    const req = authedRequest(`/api/compositions/${compositionId}`, {
       method: 'DELETE',
     });
 
@@ -341,18 +341,18 @@ describe('DELETE /api/patterns/:id', () => {
     expect(res.status).toBe(200);
 
     // Verify it's gone
-    const getReq = authedRequest(`/api/patterns/${patternId}`);
+    const getReq = authedRequest(`/api/compositions/${compositionId}`);
     const getRes = await app.request(getReq, {}, env);
     expect(getRes.status).toBe(404);
   });
 
   it('returns 404 when another user tries to delete', async () => {
-    // Create a new pattern for this test
-    const createReq = authedRequest('/api/patterns', {
+    // Create a new composition for this test
+    const createReq = authedRequest('/api/compositions', {
       method: 'POST',
       body: {
         name: 'Other Delete',
-        configJson: JSON.stringify(samplePatternConfig()),
+        configJson: JSON.stringify(sampleCompositionConfig()),
         patternType: 'wood-block',
       },
     });
@@ -368,7 +368,7 @@ describe('DELETE /api/patterns/:id', () => {
     );
 
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/patterns/${newId}`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/compositions/${newId}`,
       {
         method: 'DELETE',
         headers: {
@@ -388,7 +388,7 @@ describe('DELETE /api/patterns/:id', () => {
 // Pagination
 // ---------------------------------------------------------------------------
 
-describe('GET /api/patterns — pagination', () => {
+describe('GET /api/compositions — pagination', () => {
   let paginationUser: Awaited<ReturnType<typeof createTestUser>>;
   let paginationToken: string;
 
@@ -400,9 +400,9 @@ describe('GET /api/patterns — pagination', () => {
       session.id,
     );
 
-    // Create 5 patterns
+    // Create 5 compositions
     for (let i = 0; i < 5; i++) {
-      const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns`, {
+      const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions`, {
         method: 'POST',
         headers: {
           Cookie: makeAuthCookies(paginationToken),
@@ -410,8 +410,8 @@ describe('GET /api/patterns — pagination', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: `Pagination Pattern ${i}`,
-          configJson: JSON.stringify(samplePatternConfig()),
+          name: `Pagination Composition ${i}`,
+          configJson: JSON.stringify(sampleCompositionConfig()),
           patternType: 'wood-block',
         }),
       });
@@ -421,7 +421,7 @@ describe('GET /api/patterns — pagination', () => {
 
   it('supports limit parameter', async () => {
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/patterns?limit=2`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/compositions?limit=2`,
       {
         headers: {
           Cookie: makeAuthCookies(paginationToken),
@@ -441,7 +441,7 @@ describe('GET /api/patterns — pagination', () => {
 
   it('supports offset parameter', async () => {
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/patterns?limit=2&offset=2`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/compositions?limit=2&offset=2`,
       {
         headers: {
           Cookie: makeAuthCookies(paginationToken),
@@ -460,7 +460,7 @@ describe('GET /api/patterns — pagination', () => {
 
   it('returns remaining items when offset + limit exceeds total', async () => {
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/patterns?limit=10&offset=3`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/compositions?limit=10&offset=3`,
       {
         headers: {
           Cookie: makeAuthCookies(paginationToken),

@@ -1,23 +1,23 @@
 import { useState, useCallback } from 'react';
 import { api } from '../lib/api-client.js';
-import type { Pattern } from '../lib/api-types.js';
+import type { Composition } from '../lib/api-types.js';
 
-interface SavePatternModalProps {
+interface SaveCompositionModalProps {
   patternType: string;
   configJson: string;
   previewDataUrl?: string;
   onClose: () => void;
-  onSaved: (pattern: Pattern) => void;
+  onSaved: (composition: Composition) => void;
 }
 
-export function SavePatternModal({
+export function SaveCompositionModal({
   patternType,
   configJson,
   previewDataUrl,
   onClose,
   onSaved,
-}: SavePatternModalProps) {
-  const [name, setName] = useState(`${patternType} pattern`);
+}: SaveCompositionModalProps) {
+  const [name, setName] = useState(`${patternType} composition`);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,15 +26,15 @@ export function SavePatternModal({
     setSaving(true);
     setError(null);
     try {
-      const pattern = await api.post<Pattern>('/api/patterns', {
+      const composition = await api.post<Composition>('/api/compositions', {
         name: name.trim(),
         configJson,
         patternType,
         previewDataUrl,
       });
-      onSaved(pattern);
+      onSaved(composition);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save pattern');
+      setError(err instanceof Error ? err.message : 'Failed to save composition');
     } finally {
       setSaving(false);
     }
@@ -43,16 +43,16 @@ export function SavePatternModal({
   return (
     <div className="url-modal-overlay" onClick={onClose}>
       <div className="url-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="url-modal-title">Save Pattern</div>
+        <div className="url-modal-title">Save Composition</div>
         <p className="url-modal-description">
-          Give your pattern a name to save it to your account.
+          Give your composition a name to save it to your account.
         </p>
         <div className="save-pattern-field">
-          <label htmlFor="pattern-name-input" className="save-pattern-label">
+          <label htmlFor="composition-name-input" className="save-pattern-label">
             Name
           </label>
           <input
-            id="pattern-name-input"
+            id="composition-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -64,7 +64,7 @@ export function SavePatternModal({
         </div>
         {previewDataUrl && (
           <div className="save-pattern-preview">
-            <img src={previewDataUrl} alt="Pattern preview" />
+            <img src={previewDataUrl} alt="Composition preview" />
           </div>
         )}
         {error && <div className="save-pattern-error">{error}</div>}

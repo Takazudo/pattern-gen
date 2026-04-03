@@ -1,0 +1,73 @@
+---
+title: Domain Language
+sidebar_position: 1
+---
+
+# Domain Language
+
+This page defines the key terms used throughout the pattern-gen codebase and documentation.
+
+## Core Concepts
+
+### Pattern
+
+A visual pattern algorithm. pattern-gen includes 30+ algorithms (e.g., wood-block, voronoi, hexagonal-tile). Each produces a deterministic image from a seed string.
+
+### Pattern Type
+
+The specific algorithm name (e.g., `wood-block`). Determines which generator is used.
+
+### Seed / Slug
+
+A text string used as input to the pattern generator. The same seed always produces the same pattern output. This is what makes patterns deterministic and shareable.
+
+### Color Scheme
+
+A named palette of 8 colors: 1 background color and 7 foreground colors. Applied to the generated pattern.
+
+## User Creations
+
+### Composition
+
+A user's saved creation. A composition captures the complete state of a pattern customization:
+
+- Pattern type and seed
+- Color scheme and HSL adjustments
+- Zoom, rotation, skew transforms
+- Contrast and brightness settings
+- Image layers and their transforms
+- Composer layout (if using the composer)
+
+Compositions are stored in Cloudflare D1 with optional preview images in R2.
+
+### Asset
+
+A user-uploaded image file (PNG, JPG, WebP, etc.). Assets are stored in Cloudflare R2 and can be used as image layers in the composer. When an authenticated user drags an image onto the canvas, it's automatically saved as an asset.
+
+## Editing Modes
+
+### Viewer
+
+The main interface for browsing pattern types, adjusting seeds, colors, and transforms. Step 1 of the workflow.
+
+### Composer
+
+The full-screen editor (Step 2) for creating finished compositions. Allows adding text layers, image layers, and frames on top of a pattern background.
+
+### OGP Config
+
+A composition configuration formatted for Open Graph preview images (1200×630 pixels).
+
+### Composer Config
+
+A full composition configuration including the background pattern and all overlay layers.
+
+## User Features
+
+### Dustbox
+
+A soft-delete trash bin. When a user deletes a composition or asset, it moves to the dustbox rather than being permanently removed. Items can be restored or permanently deleted from the dustbox.
+
+### Media Browser
+
+A dialog for browsing and selecting from previously uploaded assets, available when adding image layers in the composer.

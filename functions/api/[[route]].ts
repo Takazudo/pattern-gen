@@ -4,13 +4,13 @@ import type {
   Bindings,
   AuthContext,
   UserRow,
-  PatternRow,
-  FileRow,
-  CreatePatternRequest,
-  UpdatePatternRequest,
+  CompositionRow,
+  AssetRow,
+  CreateCompositionRequest,
+  UpdateCompositionRequest,
   UpdateProfileRequest,
-  PatternResponse,
-  FileResponse,
+  CompositionResponse,
+  AssetResponse,
   PaginatedResponse,
 } from "../types.js";
 
@@ -35,8 +35,8 @@ function randomId(bytes = 16): string {
     .join("");
 }
 
-/** Convert a PatternRow to API response shape */
-function toPatternResponse(row: PatternRow): PatternResponse {
+/** Convert a CompositionRow to API response shape */
+function toCompositionResponse(row: CompositionRow): CompositionResponse {
   return {
     id: row.id,
     name: row.name,
@@ -48,8 +48,8 @@ function toPatternResponse(row: PatternRow): PatternResponse {
   };
 }
 
-/** Convert a FileRow to API response shape */
-function toFileResponse(row: FileRow): FileResponse {
+/** Convert an AssetRow to API response shape */
+function toAssetResponse(row: AssetRow): AssetResponse {
   return {
     id: row.id,
     filename: row.filename,
@@ -239,78 +239,78 @@ app.delete("/me/photo", async (c) => {
   return c.json({ ok: true });
 });
 
-// ─── Patterns ───────────────────────────────────────────────
+// ─── Compositions ─────────────────────────────────────────────
 
-app.get("/patterns", async (c) => {
+app.get("/compositions", async (c) => {
   const auth = c.get("auth");
   const limit = Math.min(parseInt(c.req.query("limit") || "20", 10), 100);
   const offset = parseInt(c.req.query("offset") || "0", 10);
 
   const [countResult, listResult] = await c.env.DB.batch([
     c.env.DB.prepare(
-      "SELECT COUNT(*) as total FROM patterns WHERE user_id = ?1 AND deleted_at IS NULL"
+      "SELECT COUNT(*) as total FROM compositions WHERE user_id = ?1 AND deleted_at IS NULL"
     ).bind(auth.userId),
     c.env.DB.prepare(
-      "SELECT * FROM patterns WHERE user_id = ?1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?2 OFFSET ?3"
+      "SELECT * FROM compositions WHERE user_id = ?1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?2 OFFSET ?3"
     ).bind(auth.userId, limit, offset),
   ]);
 
   const total = (countResult.results[0] as { total: number }).total;
-  const items = (listResult.results as PatternRow[]).map(toPatternResponse);
+  const items = (listResult.results as CompositionRow[]).map(toCompositionResponse);
 
   return c.json({
     items,
     total,
     limit,
     offset,
-  } satisfies PaginatedResponse<PatternResponse>);
+  } satisfies PaginatedResponse<CompositionResponse>);
 });
 
-app.get("/patterns/trash", async (c) => {
+app.get("/compositions/trash", async (c) => {
   const auth = c.get("auth");
   const limit = Math.min(parseInt(c.req.query("limit") || "20", 10), 100);
   const offset = parseInt(c.req.query("offset") || "0", 10);
 
   const [countResult, listResult] = await c.env.DB.batch([
     c.env.DB.prepare(
-      "SELECT COUNT(*) as total FROM patterns WHERE user_id = ?1 AND deleted_at IS NOT NULL"
+      "SELECT COUNT(*) as total FROM compositions WHERE user_id = ?1 AND deleted_at IS NOT NULL"
     ).bind(auth.userId),
     c.env.DB.prepare(
-      "SELECT * FROM patterns WHERE user_id = ?1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT ?2 OFFSET ?3"
+      "SELECT * FROM compositions WHERE user_id = ?1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT ?2 OFFSET ?3"
     ).bind(auth.userId, limit, offset),
   ]);
 
   const total = (countResult.results[0] as { total: number }).total;
-  const items = (listResult.results as PatternRow[]).map(toPatternResponse);
+  const items = (listResult.results as CompositionRow[]).map(toCompositionResponse);
 
   return c.json({
     items,
     total,
     limit,
     offset,
-  } satisfies PaginatedResponse<PatternResponse>);
+  } satisfies PaginatedResponse<CompositionResponse>);
 });
 
-app.get("/patterns/:id", async (c) => {
+app.get("/compositions/:id", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const pattern = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
+  const composition = await c.env.DB.prepare(
+    "SELECT * FROM compositions WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
-    .first<PatternRow>();
+    .first<CompositionRow>();
 
-  if (!pattern) {
-    return c.json({ error: "Pattern not found" }, 404);
+  if (!composition) {
+    return c.json({ error: "Composition not found" }, 404);
   }
 
-  return c.json(toPatternResponse(pattern));
+  return c.json(toCompositionResponse(composition));
 });
 
-app.post("/patterns", async (c) => {
+app.post("/compositions", async (c) => {
   const auth = c.get("auth");
-  const body = await c.req.json<CreatePatternRequest>();
+  const body = await c.req.json<CreateCompositionRequest>();
 
   if (!body.name || !body.configJson || !body.patternType) {
     return c.json({ error: "Missing required fields: name, configJson, patternType" }, 400);
@@ -339,36 +339,36 @@ app.post("/patterns", async (c) => {
   }
 
   await c.env.DB.prepare(
-    `INSERT INTO patterns (id, user_id, name, config_json, pattern_type, preview_r2_key, created_at, updated_at)
+    `INSERT INTO compositions (id, user_id, name, config_json, pattern_type, preview_r2_key, created_at, updated_at)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
   )
     .bind(id, auth.userId, body.name, body.configJson, body.patternType, previewR2Key, now, now)
     .run();
 
-  const pattern = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1"
+  const composition = await c.env.DB.prepare(
+    "SELECT * FROM compositions WHERE id = ?1"
   )
     .bind(id)
-    .first<PatternRow>();
+    .first<CompositionRow>();
 
-  return c.json(toPatternResponse(pattern!), 201);
+  return c.json(toCompositionResponse(composition!), 201);
 });
 
-app.put("/patterns/:id", async (c) => {
+app.put("/compositions/:id", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
   const existing = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
+    "SELECT * FROM compositions WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
-    .first<PatternRow>();
+    .first<CompositionRow>();
 
   if (!existing) {
-    return c.json({ error: "Pattern not found" }, 404);
+    return c.json({ error: "Composition not found" }, 404);
   }
 
-  const body = await c.req.json<UpdatePatternRequest>();
+  const body = await c.req.json<UpdateCompositionRequest>();
   const now = Date.now();
 
   const name = body.name ?? existing.name;
@@ -399,36 +399,36 @@ app.put("/patterns/:id", async (c) => {
   }
 
   await c.env.DB.prepare(
-    `UPDATE patterns SET name = ?1, config_json = ?2, pattern_type = ?3, preview_r2_key = ?4, updated_at = ?5
+    `UPDATE compositions SET name = ?1, config_json = ?2, pattern_type = ?3, preview_r2_key = ?4, updated_at = ?5
      WHERE id = ?6 AND user_id = ?7`
   )
     .bind(name, configJson, patternType, previewR2Key, now, id, auth.userId)
     .run();
 
   const updated = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1"
+    "SELECT * FROM compositions WHERE id = ?1"
   )
     .bind(id)
-    .first<PatternRow>();
+    .first<CompositionRow>();
 
-  return c.json(toPatternResponse(updated!));
+  return c.json(toCompositionResponse(updated!));
 });
 
-app.get("/patterns/:id/preview", async (c) => {
+app.get("/compositions/:id/preview", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const pattern = await c.env.DB.prepare(
-    "SELECT preview_r2_key FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
+  const composition = await c.env.DB.prepare(
+    "SELECT preview_r2_key FROM compositions WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
     .first<{ preview_r2_key: string | null }>();
 
-  if (!pattern?.preview_r2_key) {
+  if (!composition?.preview_r2_key) {
     return c.json({ error: "Preview not found" }, 404);
   }
 
-  const r2Object = await c.env.FILES.get(pattern.preview_r2_key);
+  const r2Object = await c.env.FILES.get(composition.preview_r2_key);
   if (!r2Object) {
     return c.json({ error: "Preview not found in storage" }, 404);
   }
@@ -441,23 +441,23 @@ app.get("/patterns/:id/preview", async (c) => {
   });
 });
 
-app.delete("/patterns/:id", async (c) => {
+app.delete("/compositions/:id", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const pattern = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
+  const composition = await c.env.DB.prepare(
+    "SELECT * FROM compositions WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
-    .first<PatternRow>();
+    .first<CompositionRow>();
 
-  if (!pattern) {
-    return c.json({ error: "Pattern not found" }, 404);
+  if (!composition) {
+    return c.json({ error: "Composition not found" }, 404);
   }
 
   const now = Date.now();
   await c.env.DB.prepare(
-    "UPDATE patterns SET deleted_at = ?1 WHERE id = ?2 AND user_id = ?3"
+    "UPDATE compositions SET deleted_at = ?1 WHERE id = ?2 AND user_id = ?3"
   )
     .bind(now, id, auth.userId)
     .run();
@@ -465,50 +465,50 @@ app.delete("/patterns/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-app.post("/patterns/:id/restore", async (c) => {
+app.post("/compositions/:id/restore", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const pattern = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
+  const composition = await c.env.DB.prepare(
+    "SELECT * FROM compositions WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
   )
     .bind(id, auth.userId)
-    .first<PatternRow>();
+    .first<CompositionRow>();
 
-  if (!pattern) {
-    return c.json({ error: "Pattern not found in trash" }, 404);
+  if (!composition) {
+    return c.json({ error: "Composition not found in trash" }, 404);
   }
 
   await c.env.DB.prepare(
-    "UPDATE patterns SET deleted_at = NULL WHERE id = ?1 AND user_id = ?2"
+    "UPDATE compositions SET deleted_at = NULL WHERE id = ?1 AND user_id = ?2"
   )
     .bind(id, auth.userId)
     .run();
 
-  return c.json(toPatternResponse({ ...pattern, deleted_at: null }));
+  return c.json(toCompositionResponse({ ...composition, deleted_at: null }));
 });
 
-app.delete("/patterns/:id/permanent", async (c) => {
+app.delete("/compositions/:id/permanent", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const pattern = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
+  const composition = await c.env.DB.prepare(
+    "SELECT * FROM compositions WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
   )
     .bind(id, auth.userId)
-    .first<PatternRow>();
+    .first<CompositionRow>();
 
-  if (!pattern) {
-    return c.json({ error: "Pattern not found in trash" }, 404);
+  if (!composition) {
+    return c.json({ error: "Composition not found in trash" }, 404);
   }
 
   // Delete preview from R2 if exists
-  if (pattern.preview_r2_key) {
-    await c.env.FILES.delete(pattern.preview_r2_key);
+  if (composition.preview_r2_key) {
+    await c.env.FILES.delete(composition.preview_r2_key);
   }
 
   await c.env.DB.prepare(
-    "DELETE FROM patterns WHERE id = ?1 AND user_id = ?2"
+    "DELETE FROM compositions WHERE id = ?1 AND user_id = ?2"
   )
     .bind(id, auth.userId)
     .run();
@@ -516,59 +516,59 @@ app.delete("/patterns/:id/permanent", async (c) => {
   return c.json({ ok: true });
 });
 
-// ─── Files ──────────────────────────────────────────────────
+// ─── Assets ────────────────────────────────────────────────
 
-app.get("/files", async (c) => {
+app.get("/assets", async (c) => {
   const auth = c.get("auth");
   const limit = Math.min(parseInt(c.req.query("limit") || "20", 10), 100);
   const offset = parseInt(c.req.query("offset") || "0", 10);
 
   const [countResult, listResult] = await c.env.DB.batch([
     c.env.DB.prepare(
-      "SELECT COUNT(*) as total FROM files WHERE user_id = ?1 AND deleted_at IS NULL"
+      "SELECT COUNT(*) as total FROM assets WHERE user_id = ?1 AND deleted_at IS NULL"
     ).bind(auth.userId),
     c.env.DB.prepare(
-      "SELECT * FROM files WHERE user_id = ?1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?2 OFFSET ?3"
+      "SELECT * FROM assets WHERE user_id = ?1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?2 OFFSET ?3"
     ).bind(auth.userId, limit, offset),
   ]);
 
   const total = (countResult.results[0] as { total: number }).total;
-  const items = (listResult.results as FileRow[]).map(toFileResponse);
+  const items = (listResult.results as AssetRow[]).map(toAssetResponse);
 
   return c.json({
     items,
     total,
     limit,
     offset,
-  } satisfies PaginatedResponse<FileResponse>);
+  } satisfies PaginatedResponse<AssetResponse>);
 });
 
-app.get("/files/trash", async (c) => {
+app.get("/assets/trash", async (c) => {
   const auth = c.get("auth");
   const limit = Math.min(parseInt(c.req.query("limit") || "20", 10), 100);
   const offset = parseInt(c.req.query("offset") || "0", 10);
 
   const [countResult, listResult] = await c.env.DB.batch([
     c.env.DB.prepare(
-      "SELECT COUNT(*) as total FROM files WHERE user_id = ?1 AND deleted_at IS NOT NULL"
+      "SELECT COUNT(*) as total FROM assets WHERE user_id = ?1 AND deleted_at IS NOT NULL"
     ).bind(auth.userId),
     c.env.DB.prepare(
-      "SELECT * FROM files WHERE user_id = ?1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT ?2 OFFSET ?3"
+      "SELECT * FROM assets WHERE user_id = ?1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT ?2 OFFSET ?3"
     ).bind(auth.userId, limit, offset),
   ]);
 
   const total = (countResult.results[0] as { total: number }).total;
-  const items = (listResult.results as FileRow[]).map(toFileResponse);
+  const items = (listResult.results as AssetRow[]).map(toAssetResponse);
 
   return c.json({
     items,
     total,
     limit,
     offset,
-  } satisfies PaginatedResponse<FileResponse>);
+  } satisfies PaginatedResponse<AssetResponse>);
 });
 
-app.post("/files", async (c) => {
+app.post("/assets", async (c) => {
   const auth = c.get("auth");
   const contentType = c.req.header("Content-Type") || "";
 
@@ -606,83 +606,83 @@ app.post("/files", async (c) => {
   });
 
   await c.env.DB.prepare(
-    `INSERT INTO files (id, user_id, r2_key, filename, content_type, size_bytes, created_at)
+    `INSERT INTO assets (id, user_id, r2_key, filename, content_type, size_bytes, created_at)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
   )
     .bind(id, auth.userId, r2Key, filename, mimeType, fileData.byteLength, now)
     .run();
 
   const row = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1"
+    "SELECT * FROM assets WHERE id = ?1"
   )
     .bind(id)
-    .first<FileRow>();
+    .first<AssetRow>();
 
-  return c.json(toFileResponse(row!), 201);
+  return c.json(toAssetResponse(row!), 201);
 });
 
-app.get("/files/:id", async (c) => {
+app.get("/assets/:id", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const file = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
+  const asset = await c.env.DB.prepare(
+    "SELECT * FROM assets WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
-    .first<FileRow>();
+    .first<AssetRow>();
 
-  if (!file) {
-    return c.json({ error: "File not found" }, 404);
+  if (!asset) {
+    return c.json({ error: "Asset not found" }, 404);
   }
 
-  return c.json(toFileResponse(file));
+  return c.json(toAssetResponse(asset));
 });
 
-app.get("/files/:id/download", async (c) => {
+app.get("/assets/:id/download", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const file = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
+  const asset = await c.env.DB.prepare(
+    "SELECT * FROM assets WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
-    .first<FileRow>();
+    .first<AssetRow>();
 
-  if (!file) {
-    return c.json({ error: "File not found" }, 404);
+  if (!asset) {
+    return c.json({ error: "Asset not found" }, 404);
   }
 
-  const r2Object = await c.env.FILES.get(file.r2_key);
+  const r2Object = await c.env.FILES.get(asset.r2_key);
   if (!r2Object) {
-    return c.json({ error: "File not found in storage" }, 404);
+    return c.json({ error: "Asset not found in storage" }, 404);
   }
 
   return new Response(r2Object.body, {
     headers: {
-      "Content-Type": file.content_type,
-      "Content-Disposition": `attachment; filename="${file.filename}"`,
-      "Content-Length": file.size_bytes.toString(),
+      "Content-Type": asset.content_type,
+      "Content-Disposition": `attachment; filename="${asset.filename}"`,
+      "Content-Length": asset.size_bytes.toString(),
     },
   });
 });
 
-app.delete("/files/:id", async (c) => {
+app.delete("/assets/:id", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const file = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
+  const asset = await c.env.DB.prepare(
+    "SELECT * FROM assets WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
-    .first<FileRow>();
+    .first<AssetRow>();
 
-  if (!file) {
-    return c.json({ error: "File not found" }, 404);
+  if (!asset) {
+    return c.json({ error: "Asset not found" }, 404);
   }
 
   const now = Date.now();
   await c.env.DB.prepare(
-    "UPDATE files SET deleted_at = ?1 WHERE id = ?2 AND user_id = ?3"
+    "UPDATE assets SET deleted_at = ?1 WHERE id = ?2 AND user_id = ?3"
   )
     .bind(now, id, auth.userId)
     .run();
@@ -690,47 +690,47 @@ app.delete("/files/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-app.post("/files/:id/restore", async (c) => {
+app.post("/assets/:id/restore", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const file = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
+  const asset = await c.env.DB.prepare(
+    "SELECT * FROM assets WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
   )
     .bind(id, auth.userId)
-    .first<FileRow>();
+    .first<AssetRow>();
 
-  if (!file) {
-    return c.json({ error: "File not found in trash" }, 404);
+  if (!asset) {
+    return c.json({ error: "Asset not found in trash" }, 404);
   }
 
   await c.env.DB.prepare(
-    "UPDATE files SET deleted_at = NULL WHERE id = ?1 AND user_id = ?2"
+    "UPDATE assets SET deleted_at = NULL WHERE id = ?1 AND user_id = ?2"
   )
     .bind(id, auth.userId)
     .run();
 
-  return c.json(toFileResponse({ ...file, deleted_at: null }));
+  return c.json(toAssetResponse({ ...asset, deleted_at: null }));
 });
 
-app.delete("/files/:id/permanent", async (c) => {
+app.delete("/assets/:id/permanent", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
 
-  const file = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
+  const asset = await c.env.DB.prepare(
+    "SELECT * FROM assets WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NOT NULL"
   )
     .bind(id, auth.userId)
-    .first<FileRow>();
+    .first<AssetRow>();
 
-  if (!file) {
-    return c.json({ error: "File not found in trash" }, 404);
+  if (!asset) {
+    return c.json({ error: "Asset not found in trash" }, 404);
   }
 
-  await c.env.FILES.delete(file.r2_key);
+  await c.env.FILES.delete(asset.r2_key);
 
   await c.env.DB.prepare(
-    "DELETE FROM files WHERE id = ?1 AND user_id = ?2"
+    "DELETE FROM assets WHERE id = ?1 AND user_id = ?2"
   )
     .bind(id, auth.userId)
     .run();

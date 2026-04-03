@@ -14,7 +14,7 @@ export interface MockUser {
   createdAt: number;
 }
 
-export interface MockPattern {
+export interface MockComposition {
   id: string;
   name: string;
   configJson: string;
@@ -25,7 +25,7 @@ export interface MockPattern {
   deletedAt: number | null;
 }
 
-export interface MockFile {
+export interface MockAsset {
   id: string;
   filename: string;
   contentType: string;
@@ -48,7 +48,7 @@ export const mockUser: MockUser = {
   createdAt: now - 30 * day,
 };
 
-export const initialPatterns: MockPattern[] = [
+export const initialCompositions: MockComposition[] = [
   {
     id: 'pat-001',
     name: 'Warm Woodblock',
@@ -131,7 +131,7 @@ export const initialPatterns: MockPattern[] = [
   },
 ];
 
-export const initialTrashedPatterns: MockPattern[] = [
+export const initialTrashedCompositions: MockComposition[] = [
   {
     id: 'pat-trash-001',
     name: 'Old Circles',
@@ -154,7 +154,7 @@ export const initialTrashedPatterns: MockPattern[] = [
   },
 ];
 
-export const initialFiles: MockFile[] = [
+export const initialAssets: MockAsset[] = [
   {
     id: 'file-001',
     filename: 'background.png',
@@ -197,7 +197,7 @@ export const initialFiles: MockFile[] = [
   },
 ];
 
-export const initialTrashedFiles: MockFile[] = [
+export const initialTrashedAssets: MockAsset[] = [
   {
     id: 'file-trash-001',
     filename: 'old-banner.jpg',

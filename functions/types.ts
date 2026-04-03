@@ -34,8 +34,8 @@ export interface SessionRow {
   last_seen_at: number;
 }
 
-/** D1 row: patterns table */
-export interface PatternRow {
+/** D1 row: compositions table */
+export interface CompositionRow {
   id: string;
   user_id: string;
   name: string;
@@ -47,8 +47,8 @@ export interface PatternRow {
   updated_at: number;
 }
 
-/** D1 row: files table */
-export interface FileRow {
+/** D1 row: assets table */
+export interface AssetRow {
   id: string;
   user_id: string;
   r2_key: string;
@@ -82,8 +82,8 @@ export interface UpdateProfileRequest {
   nickname?: string;
 }
 
-/** API response: pattern */
-export interface PatternResponse {
+/** API response: composition */
+export interface CompositionResponse {
   id: string;
   name: string;
   configJson: string;
@@ -93,8 +93,8 @@ export interface PatternResponse {
   updatedAt: number;
 }
 
-/** API response: file */
-export interface FileResponse {
+/** API response: asset */
+export interface AssetResponse {
   id: string;
   filename: string;
   contentType: string;
@@ -102,16 +102,16 @@ export interface FileResponse {
   createdAt: number;
 }
 
-/** API request: create pattern */
-export interface CreatePatternRequest {
+/** API request: create composition */
+export interface CreateCompositionRequest {
   name: string;
   configJson: string;
   patternType: string;
   previewDataUrl?: string;
 }
 
-/** API request: update pattern */
-export interface UpdatePatternRequest {
+/** API request: update composition */
+export interface UpdateCompositionRequest {
   name?: string;
   configJson?: string;
   patternType?: string;
