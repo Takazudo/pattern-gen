@@ -14,11 +14,14 @@
   "bin": {
     "pattern-gen": "dist/cli.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build:deps": "pnpm --filter @takazudo/pattern-gen-core run build && pnpm --filter @takazudo/pattern-gen-image-processor run build && pnpm --filter @takazudo/pattern-gen-generators run build",
     "build": "pnpm run build:deps && tsup",
     "test": "vitest run",
+    "test:functions": "vitest run --config vitest.config.functions.ts",
     "test:watch": "vitest --watch",
     "prepublishOnly": "pnpm run build && vitest run",
     "// ── Viewer ──────────────────────────────────────": "",
@@ -39,7 +42,15 @@
     "// ── Typecheck ───────────────────────────────────": "",
     "typecheck": "pnpm --filter @takazudo/pattern-gen-core run typecheck && pnpm --filter @takazudo/pattern-gen-image-processor run typecheck && pnpm --filter @takazudo/pattern-gen-generators run typecheck && tsc --noEmit"
   },
-  "keywords": ["pattern", "generative", "geometric", "texture", "canvas", "cli", "deterministic"],
+  "keywords": [
+    "pattern",
+    "generative",
+    "geometric",
+    "texture",
+    "canvas",
+    "cli",
+    "deterministic"
+  ],
   "author": "Takazudo",
   "license": "MIT",
   "repository": {
@@ -59,7 +70,11 @@
     "canvas": "^3.1.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260403.1",
     "@types/node": "^22.0.0",
+    "hono": "^4.12.10",
+    "jose": "^6.2.2",
+    "miniflare": "^4.20260401.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0",
