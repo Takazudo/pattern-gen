@@ -145,14 +145,8 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
   let patternCanvas: ReturnType<typeof createCanvas>;
 
   if (config.useTranslate) {
-    // Replicate the viewer's offscreen canvas approach with safe scaling
-    const MAX_CANVAS_PIXELS = 16_777_216;
-    let scale = 3;
-    while (scale > 1) {
-      const totalPixels = (renderSize * scale) * (renderSize * scale);
-      if (totalPixels <= MAX_CANVAS_PIXELS) break;
-      scale--;
-    }
+    // Server-side (Node.js) has no canvas memory constraints — always use scale=3
+    const scale = 3;
 
     // scale is at least 1 — at scale=1 offscreen matches renderSize;
     // translate may show edges but the offset math is preserved.

@@ -184,10 +184,11 @@ function generateOnCanvas(
   if (useTranslate) {
     // Render pattern on a larger offscreen canvas so panning reveals
     // continuous content at any translate position (±100% range).
-    // Determine the largest safe scale for the offscreen canvas.
-    // iOS Safari (and some other browsers) silently fail when total
-    // canvas pixels exceed device memory limits (~16.7M on older iOS).
-    const MAX_CANVAS_PIXELS = 16_777_216; // 4096×4096, safe for most devices
+    // iOS Safari silently fails when total canvas pixels exceed device
+    // memory limits (~16.7M). Desktop browsers handle 100M+ fine.
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const MAX_CANVAS_PIXELS = isIOS ? 16_777_216 : Number.MAX_SAFE_INTEGER;
     let scale = 3;
     while (scale > 1) {
       const totalPixels = (canvas.width * scale) * (canvas.height * scale);
