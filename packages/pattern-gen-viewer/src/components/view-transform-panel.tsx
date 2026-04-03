@@ -8,10 +8,12 @@ interface ViewTransformPanelProps {
   rotate: number; // -180 to 180 degrees
   skewX: number; // -45 to 45 degrees
   skewY: number; // -45 to 45 degrees
+  fixedViewTransform: boolean;
   onChange: (zoomSlider: number, translateX: number, translateY: number) => void;
   onUseTranslateChange: (enabled: boolean) => void;
   onRotateChange: (degrees: number) => void;
   onSkewChange: (skewX: number, skewY: number) => void;
+  onFixedViewTransformChange: (fixed: boolean) => void;
 }
 
 /** Snap to center if within ±2 of 50 */
@@ -27,10 +29,12 @@ export function ViewTransformPanel({
   rotate,
   skewX,
   skewY,
+  fixedViewTransform,
   onChange,
   onUseTranslateChange,
   onRotateChange,
   onSkewChange,
+  onFixedViewTransformChange,
 }: ViewTransformPanelProps) {
   const handleReset = () => {
     onChange(50, 0, 0);
@@ -47,7 +51,17 @@ export function ViewTransformPanel({
 
   return (
     <div className="view-transform-section">
-      <label className="section-label">View Transform</label>
+      <div className="param-label-row">
+        <label className="section-label">View Transform</label>
+        <label className="fix-toggle">
+          <input
+            type="checkbox"
+            checked={fixedViewTransform}
+            onChange={(e) => onFixedViewTransformChange(e.target.checked)}
+          />
+          Fix
+        </label>
+      </div>
 
       <div className="view-transform-slider-row view-transform-zoom-row">
         <span className="view-transform-label">Z</span>
