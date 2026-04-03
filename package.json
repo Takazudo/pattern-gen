@@ -75,6 +75,7 @@
     "hono": "^4.12.10",
     "jose": "^6.2.2",
     "miniflare": "^4.20260401.0",
+    "msw": "^2.12.14",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0",
@@ -89,6 +90,11 @@
       "canvas",
       "esbuild",
       "workerd"
+    ]
+  },
+  "msw": {
+    "workerDirectory": [
+      "packages/pattern-gen-viewer/public"
     ]
   }
 }
