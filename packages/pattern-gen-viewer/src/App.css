@@ -506,8 +506,14 @@ label.fix-toggle input[type="checkbox"] {
   gap: var(--spacing-sp-xs);
   font-size: var(--font-size-xs);
   color: var(--color-fg);
-  cursor: pointer;
   margin-bottom: var(--spacing-sp-xs);
+}
+
+.view-transform-checkbox-row > label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-xs);
+  cursor: pointer;
 }
 
 .view-transform-checkbox-row input[type="checkbox"] {
@@ -1015,4 +1021,44 @@ label.fix-toggle input[type="checkbox"] {
 
 .url-modal-close-btn {
   background: oklch(100% 0 0 / 6%);
+}
+
+/* ── Info Popover ── */
+
+.info-trigger {
+  background: none;
+  border: none;
+  color: var(--color-fg-faint);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.info-trigger:hover {
+  opacity: 1;
+}
+
+.info-popover {
+  background: oklch(18% 0 0);
+  color: var(--color-fg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sp-sm) var(--spacing-sp-md);
+  font-size: var(--font-size-sm);
+  max-width: 250px;
+  line-height: 1.4;
+  z-index: 100;
+  animation: popover-fade-in 0.15s ease-out;
+}
+
+.info-popover-arrow {
+  fill: oklch(18% 0 0);
+}
+
+@keyframes popover-fade-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
 }
