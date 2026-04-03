@@ -17,7 +17,6 @@ import { remarkAdmonitions } from "./src/plugins/remark-admonitions";
 import { remarkResolveMarkdownLinks } from "./src/plugins/remark-resolve-markdown-links";
 import { rehypeCodeTitle } from "./src/plugins/rehype-code-title";
 import { rehypeHeadingLinks } from "./src/plugins/rehype-heading-links";
-import { rehypeMermaid } from "./src/plugins/rehype-mermaid";
 import { rehypeStripMdExtension } from "./src/plugins/rehype-strip-md-extension";
 
 const activeScheme = colorSchemes[settings.colorScheme];
@@ -83,7 +82,6 @@ export default defineConfig({
       rehypeCodeTitle,
       rehypeHeadingLinks,
       rehypeStripMdExtension,
-      ...(settings.mermaid ? [rehypeMermaid] : []),
     ],
   },
 });
