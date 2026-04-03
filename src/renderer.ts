@@ -145,8 +145,29 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
   let patternCanvas: ReturnType<typeof createCanvas>;
 
   if (config.useTranslate) {
-    // Replicate the viewer's 3x offscreen canvas approach
-    const scale = 3;
+    // Replicate the viewer's offscreen canvas approach with safe scaling
+    const MAX_CANVAS_PIXELS = 16_777_216;
+    let scale = 3;
+    while (scale > 1) {
+      const totalPixels = (renderSize * scale) * (renderSize * scale);
+      if (totalPixels <= MAX_CANVAS_PIXELS) break;
+      scale--;
+    }
+
+    if (scale <= 1) {
+      // Cannot create a useful offscreen canvas — render directly
+      patternCanvas = createCanvas(renderSize, renderSize);
+      const patCtx = patternCanvas.getContext('2d');
+      pattern.generate(patCtx as unknown as CanvasRenderingContext2D, {
+        width: renderSize,
+        height: renderSize,
+        rand,
+        colorScheme: scheme,
+        zoom: config.zoom,
+        params: Object.keys(config.params).length > 0 ? config.params : undefined,
+      });
+    } else {
+
     const bigSize = renderSize * scale;
     const offscreen = createCanvas(bigSize, bigSize);
     const offCtx = offscreen.getContext('2d');
@@ -156,7 +177,7 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
       height: bigSize,
       rand,
       colorScheme: scheme,
-      zoom: config.zoom,
+      zoom: config.zoom * scale,
       params: Object.keys(config.params).length > 0 ? config.params : undefined,
     });
 
@@ -170,6 +191,7 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
     patCtx.translate(baseOffset + tx, baseOffset + ty);
     patCtx.drawImage(offscreen, 0, 0);
     patCtx.restore();
+    }
   } else {
     // Simple render (no translate offscreen)
     patternCanvas = createCanvas(renderSize, renderSize);

@@ -182,18 +182,39 @@ function generateOnCanvas(
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (useTranslate) {
-    // Render pattern on a 3x larger offscreen canvas so panning reveals
+    // Render pattern on a larger offscreen canvas so panning reveals
     // continuous content at any translate position (±100% range).
-    const scale = 3;
+    // Determine the largest safe scale for the offscreen canvas.
+    // iOS Safari (and some other browsers) silently fail when total
+    // canvas pixels exceed device memory limits (~16.7M on older iOS).
+    const MAX_CANVAS_PIXELS = 16_777_216; // 4096×4096, safe for most devices
+    let scale = 3;
+    while (scale > 1) {
+      const totalPixels = (canvas.width * scale) * (canvas.height * scale);
+      if (totalPixels <= MAX_CANVAS_PIXELS) break;
+      scale--;
+    }
+
+    if (scale <= 1) {
+      // Cannot create a useful offscreen canvas — render directly
+      pattern.generate(ctx, options);
+      return;
+    }
+
     const ow = canvas.width * scale;
     const oh = canvas.height * scale;
     const offscreen = new OffscreenCanvas(ow, oh);
     const offCtx = offscreen.getContext('2d');
-    if (!offCtx) return;
+    if (!offCtx) {
+      // Fallback: render directly without offscreen canvas
+      pattern.generate(ctx, options);
+      return;
+    }
     pattern.generate(offCtx as unknown as CanvasRenderingContext2D, {
       ...options,
       width: ow,
       height: oh,
+      zoom: zoom * scale,
     });
 
     // Center the oversized canvas, then apply translate offset
