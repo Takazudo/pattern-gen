@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '../contexts/auth-context.js';
 import { api } from '../lib/api-client.js';
-import type { FileEntry } from '../lib/api-types.js';
+import type { AssetEntry } from '../lib/api-types.js';
 
 interface ImageUploadProps {
   file: File | null;
@@ -16,7 +16,7 @@ export function ImageUpload({ file }: ImageUploadProps) {
     if (!file) return;
     setUploading(true);
     try {
-      await api.upload<FileEntry>('/api/files', file);
+      await api.upload<AssetEntry>('/api/assets', file);
       setUploaded(true);
       setTimeout(() => setUploaded(false), 2000);
     } catch {
@@ -33,9 +33,9 @@ export function ImageUpload({ file }: ImageUploadProps) {
       className="btn image-upload-btn"
       onClick={handleUpload}
       disabled={uploading}
-      title="Upload to My Files"
+      title="Upload to My Assets"
     >
-      {uploading ? 'Uploading...' : uploaded ? 'Uploaded!' : 'Upload to My Files'}
+      {uploading ? 'Uploading...' : uploaded ? 'Uploaded!' : 'Upload to My Assets'}
     </button>
   );
 }

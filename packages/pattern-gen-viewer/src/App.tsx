@@ -32,14 +32,14 @@ import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { downloadBlob, triggerDownload } from './utils/trigger-download.js';
 import { useAuth } from './contexts/auth-context.js';
 import { AuthButton } from './components/auth-button.js';
-import { SavePatternModal } from './components/save-pattern-modal.js';
-import { MyPatterns } from './components/my-patterns.js';
-import { MyFiles } from './components/my-files.js';
+import { SaveCompositionModal } from './components/save-composition-modal.js';
+import { MyCompositions } from './components/my-compositions.js';
+import { MyAssets } from './components/my-assets.js';
 import { ImageUpload } from './components/image-upload.js';
 import { UserPage } from './components/user-page.js';
 import { MediaBrowserDialog } from './components/media-browser-dialog.js';
 import { api } from './lib/api-client.js';
-import type { FileEntry } from './lib/api-types.js';
+import type { AssetEntry } from './lib/api-types.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -317,8 +317,8 @@ export function App() {
   // Auth-related UI state
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalData, setSaveModalData] = useState<{ configJson: string; previewDataUrl?: string } | null>(null);
-  const [showMyPatterns, setShowMyPatterns] = useState(false);
-  const [showMyFiles, setShowMyFiles] = useState(false);
+  const [showMyCompositions, setShowMyCompositions] = useState(false);
+  const [showMyAssets, setShowMyAssets] = useState(false);
   const [showUserPage, setShowUserPage] = useState(false);
   const [mediaBrowserLayerId, setMediaBrowserLayerId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -709,8 +709,8 @@ export function App() {
 
     // Auto-save for authenticated users (non-blocking)
     if (isAuthenticated) {
-      api.upload<FileEntry>('/api/files', file).then(
-        () => showToast('Image saved to My Files'),
+      api.upload<AssetEntry>('/api/assets', file).then(
+        () => showToast('Image saved to My Assets'),
         () => { /* silent failure for auto-save */ },
       );
     }
@@ -1187,7 +1187,7 @@ export function App() {
     return preview.toDataURL('image/png');
   }, []);
 
-  const handleSavePattern = useCallback(() => {
+  const handleSaveComposition = useCallback(() => {
     setSaveModalData({
       configJson: getSaveConfigJson(),
       previewDataUrl: getSavePreviewDataUrl(),
@@ -1195,7 +1195,7 @@ export function App() {
     setShowSaveModal(true);
   }, [getSaveConfigJson, getSavePreviewDataUrl]);
 
-  const handleLoadPattern = useCallback((configJson: string, _patternType: string) => {
+  const handleLoadComposition = useCallback((configJson: string, _patternType: string) => {
     try {
       const config = JSON.parse(configJson) as OgpConfig;
       if (config.slug) setSlug(config.slug);
@@ -1222,9 +1222,9 @@ export function App() {
       if (config.params) setUserOverrides(config.params);
       if (config.hsl) setHslAdjust(config.hsl);
       if (config.contrastBrightness) setContrastBrightness(config.contrastBrightness);
-      showToast('Pattern loaded');
+      showToast('Composition loaded');
     } catch {
-      showToast('Failed to load pattern config');
+      showToast('Failed to load composition config');
     }
   }, [showToast]);
 
@@ -1447,11 +1447,11 @@ export function App() {
               </button>
               {isAuthenticated && (
                 <>
-                  <button className="btn" onClick={handleSavePattern}>
-                    Save Pattern
+                  <button className="btn" onClick={handleSaveComposition}>
+                    Save Composition
                   </button>
-                  <button className="btn" onClick={() => setShowMyPatterns(true)}>
-                    Load from My Patterns
+                  <button className="btn" onClick={() => setShowMyCompositions(true)}>
+                    Load from My Compositions
                   </button>
                 </>
               )}
@@ -1503,7 +1503,7 @@ export function App() {
         </div>
       )}
       {showSaveModal && saveModalData && (
-        <SavePatternModal
+        <SaveCompositionModal
           patternType={patternType}
           configJson={saveModalData.configJson}
           previewDataUrl={saveModalData.previewDataUrl}
@@ -1514,26 +1514,26 @@ export function App() {
           onSaved={() => {
             setShowSaveModal(false);
             setSaveModalData(null);
-            showToast('Pattern saved!');
+            showToast('Composition saved!');
           }}
         />
       )}
-      {showMyPatterns && (
-        <MyPatterns
-          onClose={() => setShowMyPatterns(false)}
-          onLoadPattern={handleLoadPattern}
+      {showMyCompositions && (
+        <MyCompositions
+          onClose={() => setShowMyCompositions(false)}
+          onLoadComposition={handleLoadComposition}
         />
       )}
-      {showMyFiles && (
-        <MyFiles
-          onClose={() => setShowMyFiles(false)}
+      {showMyAssets && (
+        <MyAssets
+          onClose={() => setShowMyAssets(false)}
           onUseAsLayer={(file) => handleImageImport(file)}
         />
       )}
       {showUserPage && (
         <UserPage
           onClose={() => setShowUserPage(false)}
-          onLoadPattern={handleLoadPattern}
+          onLoadComposition={handleLoadComposition}
           onUseAsLayer={(file) => handleImageImport(file)}
         />
       )}

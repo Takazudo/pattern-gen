@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api, fetchBlob } from '../lib/api-client.js';
-import type { FileEntry, FilesResponse } from '../lib/api-types.js';
+import type { AssetEntry, AssetsResponse } from '../lib/api-types.js';
 
 interface MediaBrowserDialogProps {
   onClose: () => void;
@@ -10,7 +10,7 @@ interface MediaBrowserDialogProps {
 const PAGE_SIZE = 20;
 
 export function MediaBrowserDialog({ onClose, onSelect }: MediaBrowserDialogProps) {
-  const [files, setFiles] = useState<FileEntry[]>([]);
+  const [assets, setAssets] = useState<AssetEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,35 +18,35 @@ export function MediaBrowserDialog({ onClose, onSelect }: MediaBrowserDialogProp
   const [filter, setFilter] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchFiles = useCallback(async (offset = 0, append = false) => {
+  const fetchAssets = useCallback(async (offset = 0, append = false) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.get<FilesResponse>(
-        `/api/files?limit=${PAGE_SIZE}&offset=${offset}`,
+      const data = await api.get<AssetsResponse>(
+        `/api/assets?limit=${PAGE_SIZE}&offset=${offset}`,
       );
-      setFiles((prev) => (append ? [...prev, ...data.items] : data.items));
+      setAssets((prev) => (append ? [...prev, ...data.items] : data.items));
       setTotal(data.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load files');
+      setError(err instanceof Error ? err.message : 'Failed to load assets');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+    fetchAssets();
+  }, [fetchAssets]);
 
   const handleSelect = useCallback(
-    async (entry: FileEntry) => {
+    async (entry: AssetEntry) => {
       try {
-        const blob = await fetchBlob(`/api/files/${entry.id}/download`);
+        const blob = await fetchBlob(`/api/assets/${entry.id}/download`);
         const file = new File([blob], entry.filename, { type: entry.contentType });
         onSelect(file);
         onClose();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to download file');
+        setError(err instanceof Error ? err.message : 'Failed to download asset');
       }
     },
     [onSelect, onClose],
@@ -57,8 +57,8 @@ export function MediaBrowserDialog({ onClose, onSelect }: MediaBrowserDialogProp
       setUploading(true);
       setError(null);
       try {
-        const entry = await api.upload<FileEntry>('/api/files', file);
-        setFiles((prev) => [entry, ...prev]);
+        const entry = await api.upload<AssetEntry>('/api/assets', file);
+        setAssets((prev) => [entry, ...prev]);
         setTotal((prev) => prev + 1);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Upload failed');
@@ -79,18 +79,18 @@ export function MediaBrowserDialog({ onClose, onSelect }: MediaBrowserDialogProp
   );
 
   const handleLoadMore = useCallback(() => {
-    fetchFiles(files.length, true);
-  }, [fetchFiles, files.length]);
+    fetchAssets(assets.length, true);
+  }, [fetchAssets, assets.length]);
 
-  const filteredFiles = filter
-    ? files.filter((f) => f.filename.toLowerCase().includes(filter.toLowerCase()))
-    : files;
+  const filteredAssets = filter
+    ? assets.filter((f) => f.filename.toLowerCase().includes(filter.toLowerCase()))
+    : assets;
 
   return (
     <div className="url-modal-overlay" onClick={onClose}>
       <div className="gallery-modal media-browser-modal" onClick={(e) => e.stopPropagation()}>
         <div className="gallery-header">
-          <div className="url-modal-title">My Files</div>
+          <div className="url-modal-title">My Assets</div>
           <div className="gallery-header-actions">
             <button
               className="btn"
@@ -123,19 +123,19 @@ export function MediaBrowserDialog({ onClose, onSelect }: MediaBrowserDialogProp
 
         {error && <div className="save-pattern-error">{error}</div>}
 
-        {loading && files.length === 0 ? (
+        {loading && assets.length === 0 ? (
           <div className="gallery-loading">
             <div className="processing-spinner" />
             <span>Loading...</span>
           </div>
-        ) : filteredFiles.length === 0 ? (
+        ) : filteredAssets.length === 0 ? (
           <div className="gallery-empty">
-            {files.length === 0 ? 'No uploaded images yet.' : 'No matching files.'}
+            {assets.length === 0 ? 'No uploaded images yet.' : 'No matching assets.'}
           </div>
         ) : (
           <>
             <div className="gallery-grid">
-              {filteredFiles.map((f) => (
+              {filteredAssets.map((f) => (
                 <div key={f.id} className="gallery-card">
                   <div
                     className="gallery-card-preview"
@@ -144,7 +144,7 @@ export function MediaBrowserDialog({ onClose, onSelect }: MediaBrowserDialogProp
                   >
                     {f.contentType.startsWith('image/') ? (
                       <img
-                        src={`/api/files/${f.id}/download`}
+                        src={`/api/assets/${f.id}/download`}
                         alt={f.filename}
                         className="gallery-card-img"
                       />
@@ -162,7 +162,7 @@ export function MediaBrowserDialog({ onClose, onSelect }: MediaBrowserDialogProp
                 </div>
               ))}
             </div>
-            {files.length < total && (
+            {assets.length < total && (
               <button
                 className="btn gallery-load-more"
                 onClick={handleLoadMore}
