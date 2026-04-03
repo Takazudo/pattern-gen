@@ -118,7 +118,7 @@ export function ViewTransformPanel({
           max={100}
           step={1}
           value={translateX}
-          disabled={!useTranslate}
+
           onChange={(e) => onChange(zoomSlider, parseInt(e.target.value), translateY)}
           aria-label="Translate X"
         />
@@ -133,7 +133,7 @@ export function ViewTransformPanel({
           max={100}
           step={1}
           value={translateY}
-          disabled={!useTranslate}
+
           onChange={(e) => onChange(zoomSlider, translateX, parseInt(e.target.value))}
           aria-label="Translate Y"
         />
@@ -148,7 +148,7 @@ export function ViewTransformPanel({
           max={180}
           step={1}
           value={rotate}
-          disabled={!useTranslate}
+
           onChange={(e) => onRotateChange(parseInt(e.target.value))}
           aria-label="Rotate"
         />
@@ -163,7 +163,7 @@ export function ViewTransformPanel({
           max={45}
           step={1}
           value={skewX}
-          disabled={!useTranslate}
+
           onChange={(e) => onSkewChange(parseInt(e.target.value), skewY)}
           aria-label="Skew X"
         />
@@ -178,7 +178,7 @@ export function ViewTransformPanel({
           max={45}
           step={1}
           value={skewY}
-          disabled={!useTranslate}
+
           onChange={(e) => onSkewChange(skewX, parseInt(e.target.value))}
           aria-label="Skew Y"
         />

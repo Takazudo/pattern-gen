@@ -181,6 +181,9 @@ function generateOnCanvas(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  const hasTransforms = rotate !== 0 || skewX !== 0 || skewY !== 0 ||
+    translateX !== 0 || translateY !== 0;
+
   if (useTranslate) {
     // Render pattern on a larger offscreen canvas so panning reveals
     // continuous content at any translate position (±100% range).
@@ -237,8 +240,25 @@ function generateOnCanvas(
     ctx.translate(baseOffset + tx, baseOffset + ty);
     ctx.drawImage(offscreen, 0, 0);
     ctx.restore();
+  } else if (hasTransforms) {
+    // No big canvas — apply transforms directly to the main canvas.
+    // Black edges may appear at extreme values (no extra canvas buffer).
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate((rotate * Math.PI) / 180);
+    if (skewX !== 0 || skewY !== 0) {
+      const tanX = Math.tan((skewX * Math.PI) / 180);
+      const tanY = Math.tan((skewY * Math.PI) / 180);
+      ctx.transform(1, tanY, tanX, 1, 0, 0);
+    }
+    ctx.translate(-cx, -cy);
+    ctx.translate(translateX * canvas.width, translateY * canvas.height);
+    pattern.generate(ctx, options);
+    ctx.restore();
   } else {
-    // Direct render — no offscreen canvas, much faster
+    // Direct render — no transforms, fastest path
     pattern.generate(ctx, options);
   }
 }
