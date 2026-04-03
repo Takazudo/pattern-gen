@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { api } from '../lib/api-client.js';
+import { api, fetchBlob } from '../lib/api-client.js';
 import type { FileEntry, FilesResponse } from '../lib/api-types.js';
 
 interface MyFilesProps {
@@ -77,8 +77,8 @@ export function MyFiles({ onClose, onUseAsLayer }: MyFilesProps) {
       await api.delete(`/api/files/${id}`);
       setFiles((prev) => prev.filter((f) => f.id !== id));
       setTotal((prev) => prev - 1);
-    } catch {
-      // silent
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete file');
     } finally {
       setDeletingId(null);
     }
@@ -87,15 +87,12 @@ export function MyFiles({ onClose, onUseAsLayer }: MyFilesProps) {
   const handleUseFile = useCallback(
     async (entry: FileEntry) => {
       try {
-        const res = await fetch(`/api/files/${entry.id}/download`, {
-          credentials: 'same-origin',
-        });
-        const blob = await res.blob();
+        const blob = await fetchBlob(`/api/files/${entry.id}/download`);
         const file = new File([blob], entry.filename, { type: entry.content_type });
         onUseAsLayer(file);
         onClose();
-      } catch {
-        // silent
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to download file');
       }
     },
     [onUseAsLayer, onClose],

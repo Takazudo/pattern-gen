@@ -20,6 +20,14 @@ async function refreshToken(): Promise<boolean> {
   }
 }
 
+function parseBody<T>(res: Response): Promise<T> {
+  const ct = res.headers.get('content-type') ?? '';
+  if (res.status === 204 || !ct.includes('application/json')) {
+    return Promise.resolve({} as T);
+  }
+  return res.json() as Promise<T>;
+}
+
 async function request<T>(
   url: string,
   options: RequestInit = {},
@@ -39,7 +47,7 @@ async function request<T>(
       if (!retry.ok) {
         throw new ApiError(retry.status, `API error: ${retry.status}`);
       }
-      return retry.json() as Promise<T>;
+      return parseBody<T>(retry);
     }
     throw new ApiError(401, 'Unauthorized');
   }
@@ -48,7 +56,21 @@ async function request<T>(
     throw new ApiError(res.status, `API error: ${res.status}`);
   }
 
-  return res.json() as Promise<T>;
+  return parseBody<T>(res);
+}
+
+/** Fetch a binary response with same-origin credentials and 401 auto-refresh. */
+export async function fetchBlob(url: string): Promise<Blob> {
+  let res = await fetch(url, { credentials: 'same-origin' });
+  if (res.status === 401) {
+    const refreshed = await refreshToken();
+    if (refreshed) {
+      res = await fetch(url, { credentials: 'same-origin' });
+    }
+    if (!res.ok) throw new ApiError(res.status, `Fetch error: ${res.status}`);
+  }
+  if (!res.ok) throw new ApiError(res.status, `Fetch error: ${res.status}`);
+  return res.blob();
 }
 
 export const api = {

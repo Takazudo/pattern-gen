@@ -6,6 +6,7 @@ import {
   applyHslAdjust,
   getEffectiveParams,
   centerDetentToZoom,
+  zoomToCenterDetent,
   serializeOgpConfig,
   OGP_WIDTH,
   OGP_HEIGHT,
@@ -310,6 +311,7 @@ export function App() {
   const [urlCopied, setUrlCopied] = useState(false);
   // Auth-related UI state
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModalData, setSaveModalData] = useState<{ configJson: string; previewDataUrl?: string } | null>(null);
   const [showMyPatterns, setShowMyPatterns] = useState(false);
   const [showMyFiles, setShowMyFiles] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -1087,14 +1089,9 @@ export function App() {
     setTimeout(() => setToast(null), 2000);
   }, []);
 
-  const handleSavePattern = useCallback(() => {
-    setShowSaveModal(true);
-  }, []);
-
   const getSaveConfigJson = useCallback((): string => {
     const canvas = canvasRef.current;
     if (!canvas) return '{}';
-    // Use a full-canvas viewport rect to serialize the entire pattern state
     const rect = canvas.getBoundingClientRect();
     const config = buildBackgroundConfig(
       { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
@@ -1121,7 +1118,6 @@ export function App() {
   const getSavePreviewDataUrl = useCallback((): string | undefined => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
-    // Generate a small preview
     const preview = document.createElement('canvas');
     preview.width = 300;
     preview.height = 300;
@@ -1130,6 +1126,14 @@ export function App() {
     pCtx.drawImage(canvas, 0, 0, 300, 300);
     return preview.toDataURL('image/png');
   }, []);
+
+  const handleSavePattern = useCallback(() => {
+    setSaveModalData({
+      configJson: getSaveConfigJson(),
+      previewDataUrl: getSavePreviewDataUrl(),
+    });
+    setShowSaveModal(true);
+  }, [getSaveConfigJson, getSavePreviewDataUrl]);
 
   const handleLoadPattern = useCallback((configJson: string, _patternType: string) => {
     try {
@@ -1144,14 +1148,13 @@ export function App() {
         if (idx >= 0) setColorSchemeIndex(idx);
       }
       if (config.zoom != null) {
-        // Convert zoom back to slider value (rough inverse of centerDetentToZoom)
-        // centerDetentToZoom maps 50 -> 1.0, so approximate
-        setZoomSlider(50);
+        setZoomSlider(Math.round(zoomToCenterDetent(config.zoom)));
       }
       if (config.useTranslate) {
         setUseTranslate(true);
-        if (config.translateX != null) setTranslateX(Math.round(config.translateX * 100));
-        if (config.translateY != null) setTranslateY(Math.round(config.translateY * 100));
+        // Config stores translateX/Y as -1..1 fractions; state uses -100..100
+        if (config.translateX != null) setTranslateX(config.translateX * 100);
+        if (config.translateY != null) setTranslateY(config.translateY * 100);
       }
       if (config.rotate) setRotate(config.rotate);
       if (config.skewX) setSkewX(config.skewX);
@@ -1439,14 +1442,18 @@ export function App() {
           </div>
         </div>
       )}
-      {showSaveModal && (
+      {showSaveModal && saveModalData && (
         <SavePatternModal
           patternType={patternType}
-          configJson={getSaveConfigJson()}
-          previewDataUrl={getSavePreviewDataUrl()}
-          onClose={() => setShowSaveModal(false)}
+          configJson={saveModalData.configJson}
+          previewDataUrl={saveModalData.previewDataUrl}
+          onClose={() => {
+            setShowSaveModal(false);
+            setSaveModalData(null);
+          }}
           onSaved={() => {
             setShowSaveModal(false);
+            setSaveModalData(null);
             showToast('Pattern saved!');
           }}
         />

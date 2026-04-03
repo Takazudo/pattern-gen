@@ -44,8 +44,8 @@ export function MyPatterns({ onClose, onLoadPattern }: MyPatternsProps) {
         await api.delete(`/api/patterns/${id}`);
         setPatterns((prev) => prev.filter((p) => p.id !== id));
         setTotal((prev) => prev - 1);
-      } catch {
-        // silent
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete pattern');
       } finally {
         setDeletingId(null);
       }
