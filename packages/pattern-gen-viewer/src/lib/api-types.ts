@@ -9,7 +9,7 @@ export interface AuthUser {
   createdAt: number;
 }
 
-export interface Pattern {
+export interface Composition {
   id: string;
   name: string;
   configJson: string;
@@ -20,14 +20,14 @@ export interface Pattern {
   deletedAt: number | null;
 }
 
-export interface PatternsResponse {
-  items: Pattern[];
+export interface CompositionsResponse {
+  items: Composition[];
   total: number;
   limit: number;
   offset: number;
 }
 
-export interface FileEntry {
+export interface AssetEntry {
   id: string;
   filename: string;
   contentType: string;
@@ -41,8 +41,8 @@ export interface TrashResponse<T> {
   total: number;
 }
 
-export interface FilesResponse {
-  items: FileEntry[];
+export interface AssetsResponse {
+  items: AssetEntry[];
   total: number;
   limit: number;
   offset: number;

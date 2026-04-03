@@ -158,8 +158,8 @@ export function ImageLayerPanel({
               {onBrowseFiles && (
                 <button
                   className="image-layer-browse"
-                  aria-label={`Browse files for ${layer.name}`}
-                  title="Browse My Files"
+                  aria-label={`Browse assets for ${layer.name}`}
+                  title="Browse My Assets"
                   onClick={(e) => {
                     e.stopPropagation();
                     onBrowseFiles(layer.id);

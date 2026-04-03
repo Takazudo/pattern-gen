@@ -5,31 +5,31 @@
 import { http, HttpResponse } from 'msw';
 import {
   mockUser,
-  initialPatterns,
-  initialTrashedPatterns,
-  initialFiles,
-  initialTrashedFiles,
-  type MockPattern,
-  type MockFile,
+  initialCompositions,
+  initialTrashedCompositions,
+  initialAssets,
+  initialTrashedAssets,
+  type MockComposition,
+  type MockAsset,
   type MockUser,
 } from './data.js';
 
 // ─── In-memory stores ──────────────────────────────────────
 
 let user: MockUser = { ...mockUser };
-let patterns: MockPattern[] = [...initialPatterns];
-let trashedPatterns: MockPattern[] = [...initialTrashedPatterns];
-let files: MockFile[] = [...initialFiles];
-let trashedFiles: MockFile[] = [...initialTrashedFiles];
+let compositions: MockComposition[] = [...initialCompositions];
+let trashedCompositions: MockComposition[] = [...initialTrashedCompositions];
+let assets: MockAsset[] = [...initialAssets];
+let trashedAssets: MockAsset[] = [...initialTrashedAssets];
 let userPhotoData: Uint8Array | null = null;
 
 /** Reset all stores (useful for test isolation) */
 export function resetStores() {
   user = { ...mockUser };
-  patterns = initialPatterns.map((p) => ({ ...p }));
-  trashedPatterns = initialTrashedPatterns.map((p) => ({ ...p }));
-  files = initialFiles.map((f) => ({ ...f }));
-  trashedFiles = initialTrashedFiles.map((f) => ({ ...f }));
+  compositions = initialCompositions.map((p) => ({ ...p }));
+  trashedCompositions = initialTrashedCompositions.map((p) => ({ ...p }));
+  assets = initialAssets.map((f) => ({ ...f }));
+  trashedAssets = initialTrashedAssets.map((f) => ({ ...f }));
   userPhotoData = null;
 }
 
@@ -48,7 +48,7 @@ const PLACEHOLDER_PNG = new Uint8Array([
   68, 174, 66, 96, 130,
 ]);
 
-function patternToResponse(p: MockPattern) {
+function compositionToResponse(p: MockComposition) {
   return {
     id: p.id,
     name: p.name,
@@ -60,7 +60,7 @@ function patternToResponse(p: MockPattern) {
   };
 }
 
-function fileToResponse(f: MockFile) {
+function assetToResponse(f: MockAsset) {
   return {
     id: f.id,
     filename: f.filename,
@@ -135,16 +135,16 @@ export const handlers = [
     return HttpResponse.json({ ok: true });
   }),
 
-  // ─── Patterns ────────────────────────────────────────────
+  // ─── Compositions ───────────────────────────────────────
 
-  http.get('/api/patterns', ({ request }) => {
+  http.get('/api/compositions', ({ request }) => {
     const url = new URL(request.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10), 100);
     const offset = parseInt(url.searchParams.get('offset') || '0', 10);
 
-    const active = patterns.filter((p) => p.deletedAt === null);
+    const active = compositions.filter((p) => p.deletedAt === null);
     const sorted = active.sort((a, b) => b.createdAt - a.createdAt);
-    const items = sorted.slice(offset, offset + limit).map(patternToResponse);
+    const items = sorted.slice(offset, offset + limit).map(compositionToResponse);
 
     return HttpResponse.json({
       items,
@@ -154,7 +154,7 @@ export const handlers = [
     });
   }),
 
-  http.post('/api/patterns', async ({ request }) => {
+  http.post('/api/compositions', async ({ request }) => {
     const body = (await request.json()) as {
       name: string;
       configJson: string;
@@ -170,7 +170,7 @@ export const handlers = [
     }
 
     const now = Date.now();
-    const pattern: MockPattern = {
+    const composition: MockComposition = {
       id: nextId('pat'),
       name: body.name,
       configJson: body.configJson,
@@ -182,28 +182,28 @@ export const handlers = [
       updatedAt: now,
       deletedAt: null,
     };
-    patterns.push(pattern);
-    return HttpResponse.json(patternToResponse(pattern), { status: 201 });
+    compositions.push(composition);
+    return HttpResponse.json(compositionToResponse(composition), { status: 201 });
   }),
 
-  http.get('/api/patterns/trash', () => {
-    const items = trashedPatterns
+  http.get('/api/compositions/trash', () => {
+    const items = trashedCompositions
       .sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0))
-      .map(patternToResponse);
+      .map(compositionToResponse);
     return HttpResponse.json({ items, total: items.length });
   }),
 
-  http.get('/api/patterns/:id', ({ params }) => {
-    const pattern = patterns.find((p) => p.id === params.id && p.deletedAt === null);
-    if (!pattern) {
-      return HttpResponse.json({ error: 'Pattern not found' }, { status: 404 });
+  http.get('/api/compositions/:id', ({ params }) => {
+    const composition = compositions.find((p) => p.id === params.id && p.deletedAt === null);
+    if (!composition) {
+      return HttpResponse.json({ error: 'Composition not found' }, { status: 404 });
     }
-    return HttpResponse.json(patternToResponse(pattern));
+    return HttpResponse.json(compositionToResponse(composition));
   }),
 
-  http.get('/api/patterns/:id/preview', ({ params }) => {
-    const pattern = patterns.find((p) => p.id === params.id);
-    if (!pattern?.previewR2Key) {
+  http.get('/api/compositions/:id/preview', ({ params }) => {
+    const composition = compositions.find((p) => p.id === params.id);
+    if (!composition?.previewR2Key) {
       return HttpResponse.json({ error: 'Preview not found' }, { status: 404 });
     }
     return new HttpResponse(PLACEHOLDER_PNG, {
@@ -214,10 +214,10 @@ export const handlers = [
     });
   }),
 
-  http.put('/api/patterns/:id', async ({ params, request }) => {
-    const pattern = patterns.find((p) => p.id === params.id && p.deletedAt === null);
-    if (!pattern) {
-      return HttpResponse.json({ error: 'Pattern not found' }, { status: 404 });
+  http.put('/api/compositions/:id', async ({ params, request }) => {
+    const composition = compositions.find((p) => p.id === params.id && p.deletedAt === null);
+    if (!composition) {
+      return HttpResponse.json({ error: 'Composition not found' }, { status: 404 });
     }
 
     const body = (await request.json()) as {
@@ -227,58 +227,58 @@ export const handlers = [
       previewDataUrl?: string;
     };
 
-    if (body.name !== undefined) pattern.name = body.name;
-    if (body.configJson !== undefined) pattern.configJson = body.configJson;
-    if (body.patternType !== undefined) pattern.patternType = body.patternType;
+    if (body.name !== undefined) composition.name = body.name;
+    if (body.configJson !== undefined) composition.configJson = body.configJson;
+    if (body.patternType !== undefined) composition.patternType = body.patternType;
     if (body.previewDataUrl) {
-      pattern.previewR2Key = `users/${user.id}/previews/${pattern.id}.png`;
+      composition.previewR2Key = `users/${user.id}/previews/${composition.id}.png`;
     }
-    pattern.updatedAt = Date.now();
+    composition.updatedAt = Date.now();
 
-    return HttpResponse.json(patternToResponse(pattern));
+    return HttpResponse.json(compositionToResponse(composition));
   }),
 
-  http.delete('/api/patterns/:id', ({ params }) => {
-    const idx = patterns.findIndex((p) => p.id === params.id && p.deletedAt === null);
+  http.delete('/api/compositions/:id', ({ params }) => {
+    const idx = compositions.findIndex((p) => p.id === params.id && p.deletedAt === null);
     if (idx === -1) {
-      return HttpResponse.json({ error: 'Pattern not found' }, { status: 404 });
+      return HttpResponse.json({ error: 'Composition not found' }, { status: 404 });
     }
-    const [pattern] = patterns.splice(idx, 1);
-    pattern.deletedAt = Date.now();
-    trashedPatterns.push(pattern);
+    const [composition] = compositions.splice(idx, 1);
+    composition.deletedAt = Date.now();
+    trashedCompositions.push(composition);
     return HttpResponse.json({ ok: true });
   }),
 
-  http.post('/api/patterns/:id/restore', ({ params }) => {
-    const idx = trashedPatterns.findIndex((p) => p.id === params.id);
+  http.post('/api/compositions/:id/restore', ({ params }) => {
+    const idx = trashedCompositions.findIndex((p) => p.id === params.id);
     if (idx === -1) {
-      return HttpResponse.json({ error: 'Pattern not found in trash' }, { status: 404 });
+      return HttpResponse.json({ error: 'Composition not found in trash' }, { status: 404 });
     }
-    const [pattern] = trashedPatterns.splice(idx, 1);
-    pattern.deletedAt = null;
-    patterns.push(pattern);
-    return HttpResponse.json(patternToResponse(pattern));
+    const [composition] = trashedCompositions.splice(idx, 1);
+    composition.deletedAt = null;
+    compositions.push(composition);
+    return HttpResponse.json(compositionToResponse(composition));
   }),
 
-  http.delete('/api/patterns/:id/permanent', ({ params }) => {
-    const idx = trashedPatterns.findIndex((p) => p.id === params.id);
+  http.delete('/api/compositions/:id/permanent', ({ params }) => {
+    const idx = trashedCompositions.findIndex((p) => p.id === params.id);
     if (idx === -1) {
-      return HttpResponse.json({ error: 'Pattern not found in trash' }, { status: 404 });
+      return HttpResponse.json({ error: 'Composition not found in trash' }, { status: 404 });
     }
-    trashedPatterns.splice(idx, 1);
+    trashedCompositions.splice(idx, 1);
     return HttpResponse.json({ ok: true });
   }),
 
-  // ─── Files ───────────────────────────────────────────────
+  // ─── Assets ─────────────────────────────────────────────
 
-  http.get('/api/files', ({ request }) => {
+  http.get('/api/assets', ({ request }) => {
     const url = new URL(request.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10), 100);
     const offset = parseInt(url.searchParams.get('offset') || '0', 10);
 
-    const active = files.filter((f) => f.deletedAt === null);
+    const active = assets.filter((f) => f.deletedAt === null);
     const sorted = active.sort((a, b) => b.createdAt - a.createdAt);
-    const items = sorted.slice(offset, offset + limit).map(fileToResponse);
+    const items = sorted.slice(offset, offset + limit).map(assetToResponse);
 
     return HttpResponse.json({
       items,
@@ -288,13 +288,13 @@ export const handlers = [
     });
   }),
 
-  http.post('/api/files', async ({ request }) => {
+  http.post('/api/assets', async ({ request }) => {
     const contentType = request.headers.get('Content-Type') || 'application/octet-stream';
     const buffer = await request.arrayBuffer();
     const filename = request.headers.get('X-Filename') || `upload-${Date.now()}`;
 
     const now = Date.now();
-    const file: MockFile = {
+    const asset: MockAsset = {
       id: nextId('file'),
       filename,
       contentType,
@@ -302,67 +302,67 @@ export const handlers = [
       createdAt: now,
       deletedAt: null,
     };
-    files.push(file);
-    return HttpResponse.json(fileToResponse(file), { status: 201 });
+    assets.push(asset);
+    return HttpResponse.json(assetToResponse(asset), { status: 201 });
   }),
 
-  http.get('/api/files/trash', () => {
-    const items = trashedFiles
+  http.get('/api/assets/trash', () => {
+    const items = trashedAssets
       .sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0))
-      .map(fileToResponse);
+      .map(assetToResponse);
     return HttpResponse.json({ items, total: items.length });
   }),
 
-  http.get('/api/files/:id', ({ params }) => {
-    const file = files.find((f) => f.id === params.id && f.deletedAt === null);
-    if (!file) {
-      return HttpResponse.json({ error: 'File not found' }, { status: 404 });
+  http.get('/api/assets/:id', ({ params }) => {
+    const asset = assets.find((f) => f.id === params.id && f.deletedAt === null);
+    if (!asset) {
+      return HttpResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
-    return HttpResponse.json(fileToResponse(file));
+    return HttpResponse.json(assetToResponse(asset));
   }),
 
-  http.get('/api/files/:id/download', ({ params }) => {
-    const file = files.find((f) => f.id === params.id && f.deletedAt === null);
-    if (!file) {
-      return HttpResponse.json({ error: 'File not found' }, { status: 404 });
+  http.get('/api/assets/:id/download', ({ params }) => {
+    const asset = assets.find((f) => f.id === params.id && f.deletedAt === null);
+    if (!asset) {
+      return HttpResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
     return new HttpResponse(PLACEHOLDER_PNG, {
       headers: {
-        'Content-Type': file.contentType,
-        'Content-Disposition': `attachment; filename="${file.filename}"`,
-        'Content-Length': String(file.sizeBytes),
+        'Content-Type': asset.contentType,
+        'Content-Disposition': `attachment; filename="${asset.filename}"`,
+        'Content-Length': String(asset.sizeBytes),
       },
     });
   }),
 
-  http.delete('/api/files/:id', ({ params }) => {
-    const idx = files.findIndex((f) => f.id === params.id && f.deletedAt === null);
+  http.delete('/api/assets/:id', ({ params }) => {
+    const idx = assets.findIndex((f) => f.id === params.id && f.deletedAt === null);
     if (idx === -1) {
-      return HttpResponse.json({ error: 'File not found' }, { status: 404 });
+      return HttpResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
-    const [file] = files.splice(idx, 1);
-    file.deletedAt = Date.now();
-    trashedFiles.push(file);
+    const [asset] = assets.splice(idx, 1);
+    asset.deletedAt = Date.now();
+    trashedAssets.push(asset);
     return HttpResponse.json({ ok: true });
   }),
 
-  http.post('/api/files/:id/restore', ({ params }) => {
-    const idx = trashedFiles.findIndex((f) => f.id === params.id);
+  http.post('/api/assets/:id/restore', ({ params }) => {
+    const idx = trashedAssets.findIndex((f) => f.id === params.id);
     if (idx === -1) {
-      return HttpResponse.json({ error: 'File not found in trash' }, { status: 404 });
+      return HttpResponse.json({ error: 'Asset not found in trash' }, { status: 404 });
     }
-    const [file] = trashedFiles.splice(idx, 1);
-    file.deletedAt = null;
-    files.push(file);
-    return HttpResponse.json(fileToResponse(file));
+    const [asset] = trashedAssets.splice(idx, 1);
+    asset.deletedAt = null;
+    assets.push(asset);
+    return HttpResponse.json(assetToResponse(asset));
   }),
 
-  http.delete('/api/files/:id/permanent', ({ params }) => {
-    const idx = trashedFiles.findIndex((f) => f.id === params.id);
+  http.delete('/api/assets/:id/permanent', ({ params }) => {
+    const idx = trashedAssets.findIndex((f) => f.id === params.id);
     if (idx === -1) {
-      return HttpResponse.json({ error: 'File not found in trash' }, { status: 404 });
+      return HttpResponse.json({ error: 'Asset not found in trash' }, { status: 404 });
     }
-    trashedFiles.splice(idx, 1);
+    trashedAssets.splice(idx, 1);
     return HttpResponse.json({ ok: true });
   }),
 

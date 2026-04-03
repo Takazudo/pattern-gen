@@ -3,21 +3,21 @@ import { useAuth } from '../contexts/auth-context.js';
 import { api, fetchBlob } from '../lib/api-client.js';
 import type {
   AuthUser,
-  Pattern,
-  PatternsResponse,
-  FileEntry,
-  FilesResponse,
+  Composition,
+  CompositionsResponse,
+  AssetEntry,
+  AssetsResponse,
   TrashResponse,
 } from '../lib/api-types.js';
 import { ImageEnlargeModal } from './image-enlarge-modal.js';
 
 interface UserPageProps {
   onClose: () => void;
-  onLoadPattern: (configJson: string, patternType: string) => void;
+  onLoadComposition: (configJson: string, patternType: string) => void;
   onUseAsLayer: (file: File) => void;
 }
 
-type Tab = 'patterns' | 'images';
+type Tab = 'compositions' | 'images';
 
 const PAGE_SIZE = 20;
 
@@ -27,9 +27,9 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps) {
+export function UserPage({ onClose, onLoadComposition, onUseAsLayer }: UserPageProps) {
   const { user, updateUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('patterns');
+  const [activeTab, setActiveTab] = useState<Tab>('compositions');
 
   // Profile editing — sync from user when it changes (e.g. after photo upload returns updated AuthUser)
   const [nickname, setNickname] = useState(user?.nickname ?? user?.name ?? '');
@@ -42,27 +42,27 @@ export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  // Patterns tab
-  const [patterns, setPatterns] = useState<Pattern[]>([]);
-  const [patternsTotal, setPatternsTotal] = useState(0);
-  const [patternsLoading, setPatternsLoading] = useState(true);
-  const [trashedPatterns, setTrashedPatterns] = useState<Pattern[]>([]);
-  const [showPatternTrash, setShowPatternTrash] = useState(false);
+  // Compositions tab
+  const [compositions, setCompositions] = useState<Composition[]>([]);
+  const [compositionsTotal, setCompositionsTotal] = useState(0);
+  const [compositionsLoading, setCompositionsLoading] = useState(true);
+  const [trashedCompositions, setTrashedCompositions] = useState<Composition[]>([]);
+  const [showCompositionTrash, setShowCompositionTrash] = useState(false);
 
-  // Files tab
-  const [files, setFiles] = useState<FileEntry[]>([]);
-  const [filesTotal, setFilesTotal] = useState(0);
-  const [filesLoading, setFilesLoading] = useState(true);
-  const [trashedFiles, setTrashedFiles] = useState<FileEntry[]>([]);
-  const [showFileTrash, setShowFileTrash] = useState(false);
+  // Assets tab
+  const [assets, setAssets] = useState<AssetEntry[]>([]);
+  const [assetsTotal, setAssetsTotal] = useState(0);
+  const [assetsLoading, setAssetsLoading] = useState(true);
+  const [trashedAssets, setTrashedAssets] = useState<AssetEntry[]>([]);
+  const [showAssetTrash, setShowAssetTrash] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Shared
   const [error, setError] = useState<string | null>(null);
   // Separate action IDs per tab to avoid cross-tab state bleed
-  const [patternActionId, setPatternActionId] = useState<string | null>(null);
-  const [fileActionId, setFileActionId] = useState<string | null>(null);
+  const [compositionActionId, setCompositionActionId] = useState<string | null>(null);
+  const [assetActionId, setAssetActionId] = useState<string | null>(null);
 
   // Image enlarge
   const [enlargeImages, setEnlargeImages] = useState<{ src: string; label: string }[] | null>(null);
@@ -109,143 +109,143 @@ export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps
     }
   }, [user, updateUser]);
 
-  // --- Patterns ---
-  const fetchPatterns = useCallback(async (offset = 0, append = false) => {
-    setPatternsLoading(true);
+  // --- Compositions ---
+  const fetchCompositions = useCallback(async (offset = 0, append = false) => {
+    setCompositionsLoading(true);
     try {
-      const data = await api.get<PatternsResponse>(
-        `/api/patterns?limit=${PAGE_SIZE}&offset=${offset}`,
+      const data = await api.get<CompositionsResponse>(
+        `/api/compositions?limit=${PAGE_SIZE}&offset=${offset}`,
       );
-      setPatterns((prev) => (append ? [...prev, ...data.items] : data.items));
-      setPatternsTotal(data.total);
+      setCompositions((prev) => (append ? [...prev, ...data.items] : data.items));
+      setCompositionsTotal(data.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load patterns');
+      setError(err instanceof Error ? err.message : 'Failed to load compositions');
     } finally {
-      setPatternsLoading(false);
+      setCompositionsLoading(false);
     }
   }, []);
 
-  const fetchTrashedPatterns = useCallback(async () => {
+  const fetchTrashedCompositions = useCallback(async () => {
     try {
-      const data = await api.get<TrashResponse<Pattern>>('/api/patterns/trash');
-      setTrashedPatterns(data.items);
+      const data = await api.get<TrashResponse<Composition>>('/api/compositions/trash');
+      setTrashedCompositions(data.items);
     } catch {
       // silent
     }
   }, []);
 
-  const handleDeletePattern = useCallback(async (id: string) => {
-    setPatternActionId(id);
+  const handleDeleteComposition = useCallback(async (id: string) => {
+    setCompositionActionId(id);
     try {
-      await api.delete(`/api/patterns/${id}`);
-      setPatterns((prev) => prev.filter((p) => p.id !== id));
-      setPatternsTotal((prev) => prev - 1);
-      if (showPatternTrash) fetchTrashedPatterns();
+      await api.delete(`/api/compositions/${id}`);
+      setCompositions((prev) => prev.filter((p) => p.id !== id));
+      setCompositionsTotal((prev) => prev - 1);
+      if (showCompositionTrash) fetchTrashedCompositions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
-      setPatternActionId(null);
+      setCompositionActionId(null);
     }
-  }, [showPatternTrash, fetchTrashedPatterns]);
+  }, [showCompositionTrash, fetchTrashedCompositions]);
 
-  const handleRestorePattern = useCallback(async (id: string) => {
-    setPatternActionId(id);
+  const handleRestoreComposition = useCallback(async (id: string) => {
+    setCompositionActionId(id);
     try {
-      await api.post(`/api/patterns/${id}/restore`);
-      setTrashedPatterns((prev) => prev.filter((p) => p.id !== id));
-      fetchPatterns();
+      await api.post(`/api/compositions/${id}/restore`);
+      setTrashedCompositions((prev) => prev.filter((p) => p.id !== id));
+      fetchCompositions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to restore');
     } finally {
-      setPatternActionId(null);
+      setCompositionActionId(null);
     }
-  }, [fetchPatterns]);
+  }, [fetchCompositions]);
 
-  const handlePermanentDeletePattern = useCallback(async (id: string) => {
-    if (!confirm('Permanently delete this pattern? This cannot be undone.')) return;
-    setPatternActionId(id);
+  const handlePermanentDeleteComposition = useCallback(async (id: string) => {
+    if (!confirm('Permanently delete this composition? This cannot be undone.')) return;
+    setCompositionActionId(id);
     try {
-      await api.delete(`/api/patterns/${id}/permanent`);
-      setTrashedPatterns((prev) => prev.filter((p) => p.id !== id));
+      await api.delete(`/api/compositions/${id}/permanent`);
+      setTrashedCompositions((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to permanently delete');
     } finally {
-      setPatternActionId(null);
+      setCompositionActionId(null);
     }
   }, []);
 
-  // --- Files ---
-  const fetchFiles = useCallback(async (offset = 0, append = false) => {
-    setFilesLoading(true);
+  // --- Assets ---
+  const fetchAssets = useCallback(async (offset = 0, append = false) => {
+    setAssetsLoading(true);
     try {
-      const data = await api.get<FilesResponse>(
-        `/api/files?limit=${PAGE_SIZE}&offset=${offset}`,
+      const data = await api.get<AssetsResponse>(
+        `/api/assets?limit=${PAGE_SIZE}&offset=${offset}`,
       );
-      setFiles((prev) => (append ? [...prev, ...data.items] : data.items));
-      setFilesTotal(data.total);
+      setAssets((prev) => (append ? [...prev, ...data.items] : data.items));
+      setAssetsTotal(data.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load files');
+      setError(err instanceof Error ? err.message : 'Failed to load assets');
     } finally {
-      setFilesLoading(false);
+      setAssetsLoading(false);
     }
   }, []);
 
-  const fetchTrashedFiles = useCallback(async () => {
+  const fetchTrashedAssets = useCallback(async () => {
     try {
-      const data = await api.get<TrashResponse<FileEntry>>('/api/files/trash');
-      setTrashedFiles(data.items);
+      const data = await api.get<TrashResponse<AssetEntry>>('/api/assets/trash');
+      setTrashedAssets(data.items);
     } catch {
       // silent
     }
   }, []);
 
-  const handleDeleteFile = useCallback(async (id: string) => {
-    setFileActionId(id);
+  const handleDeleteAsset = useCallback(async (id: string) => {
+    setAssetActionId(id);
     try {
-      await api.delete(`/api/files/${id}`);
-      setFiles((prev) => prev.filter((f) => f.id !== id));
-      setFilesTotal((prev) => prev - 1);
-      if (showFileTrash) fetchTrashedFiles();
+      await api.delete(`/api/assets/${id}`);
+      setAssets((prev) => prev.filter((f) => f.id !== id));
+      setAssetsTotal((prev) => prev - 1);
+      if (showAssetTrash) fetchTrashedAssets();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
-      setFileActionId(null);
+      setAssetActionId(null);
     }
-  }, [showFileTrash, fetchTrashedFiles]);
+  }, [showAssetTrash, fetchTrashedAssets]);
 
-  const handleRestoreFile = useCallback(async (id: string) => {
-    setFileActionId(id);
+  const handleRestoreAsset = useCallback(async (id: string) => {
+    setAssetActionId(id);
     try {
-      await api.post(`/api/files/${id}/restore`);
-      setTrashedFiles((prev) => prev.filter((f) => f.id !== id));
-      fetchFiles();
+      await api.post(`/api/assets/${id}/restore`);
+      setTrashedAssets((prev) => prev.filter((f) => f.id !== id));
+      fetchAssets();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to restore');
     } finally {
-      setFileActionId(null);
+      setAssetActionId(null);
     }
-  }, [fetchFiles]);
+  }, [fetchAssets]);
 
-  const handlePermanentDeleteFile = useCallback(async (id: string) => {
-    if (!confirm('Permanently delete this file? This cannot be undone.')) return;
-    setFileActionId(id);
+  const handlePermanentDeleteAsset = useCallback(async (id: string) => {
+    if (!confirm('Permanently delete this asset? This cannot be undone.')) return;
+    setAssetActionId(id);
     try {
-      await api.delete(`/api/files/${id}/permanent`);
-      setTrashedFiles((prev) => prev.filter((f) => f.id !== id));
+      await api.delete(`/api/assets/${id}/permanent`);
+      setTrashedAssets((prev) => prev.filter((f) => f.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to permanently delete');
     } finally {
-      setFileActionId(null);
+      setAssetActionId(null);
     }
   }, []);
 
-  const handleUploadFile = useCallback(async (file: File) => {
+  const handleUploadAsset = useCallback(async (file: File) => {
     setUploading(true);
     setError(null);
     try {
-      const entry = await api.upload<FileEntry>('/api/files', file);
-      setFiles((prev) => [entry, ...prev]);
-      setFilesTotal((prev) => prev + 1);
+      const entry = await api.upload<AssetEntry>('/api/assets', file);
+      setAssets((prev) => [entry, ...prev]);
+      setAssetsTotal((prev) => prev + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
@@ -256,21 +256,21 @@ export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps
   const handleFileInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) handleUploadFile(file);
+      if (file) handleUploadAsset(file);
       e.target.value = '';
     },
-    [handleUploadFile],
+    [handleUploadAsset],
   );
 
-  const handleUseFile = useCallback(
-    async (entry: FileEntry) => {
+  const handleUseAsset = useCallback(
+    async (entry: AssetEntry) => {
       try {
-        const blob = await fetchBlob(`/api/files/${entry.id}/download`);
+        const blob = await fetchBlob(`/api/assets/${entry.id}/download`);
         const file = new File([blob], entry.filename, { type: entry.contentType });
         onUseAsLayer(file);
         onClose();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to download file');
+        setError(err instanceof Error ? err.message : 'Failed to download asset');
       }
     },
     [onUseAsLayer, onClose],
@@ -278,20 +278,20 @@ export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps
 
   // --- Load data on tab switch ---
   useEffect(() => {
-    if (activeTab === 'patterns') {
-      fetchPatterns();
+    if (activeTab === 'compositions') {
+      fetchCompositions();
     } else {
-      fetchFiles();
+      fetchAssets();
     }
-  }, [activeTab, fetchPatterns, fetchFiles]);
+  }, [activeTab, fetchCompositions, fetchAssets]);
 
   useEffect(() => {
-    if (showPatternTrash) fetchTrashedPatterns();
-  }, [showPatternTrash, fetchTrashedPatterns]);
+    if (showCompositionTrash) fetchTrashedCompositions();
+  }, [showCompositionTrash, fetchTrashedCompositions]);
 
   useEffect(() => {
-    if (showFileTrash) fetchTrashedFiles();
-  }, [showFileTrash, fetchTrashedFiles]);
+    if (showAssetTrash) fetchTrashedAssets();
+  }, [showAssetTrash, fetchTrashedAssets]);
 
   // Close on Escape
   useEffect(() => {
@@ -376,10 +376,10 @@ export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps
         {/* Tab bar */}
         <div className="user-page-tabs">
           <button
-            className={`user-page-tab${activeTab === 'patterns' ? ' active' : ''}`}
-            onClick={() => setActiveTab('patterns')}
+            className={`user-page-tab${activeTab === 'compositions' ? ' active' : ''}`}
+            onClick={() => setActiveTab('compositions')}
           >
-            Patterns
+            Compositions
           </button>
           <button
             className={`user-page-tab${activeTab === 'images' ? ' active' : ''}`}
@@ -391,23 +391,23 @@ export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps
 
         {/* Tab content */}
         <div className="user-page-content">
-          {activeTab === 'patterns' && (
-            <PatternsTabContent
-              patterns={patterns}
-              total={patternsTotal}
-              loading={patternsLoading}
-              trashedPatterns={trashedPatterns}
-              showTrash={showPatternTrash}
-              actionId={patternActionId}
-              onLoadMore={() => fetchPatterns(patterns.length, true)}
-              onLoadPattern={(p) => {
-                onLoadPattern(p.configJson, p.patternType);
+          {activeTab === 'compositions' && (
+            <CompositionsTabContent
+              compositions={compositions}
+              total={compositionsTotal}
+              loading={compositionsLoading}
+              trashedCompositions={trashedCompositions}
+              showTrash={showCompositionTrash}
+              actionId={compositionActionId}
+              onLoadMore={() => fetchCompositions(compositions.length, true)}
+              onLoadComposition={(p) => {
+                onLoadComposition(p.configJson, p.patternType);
                 onClose();
               }}
-              onDelete={handleDeletePattern}
-              onToggleTrash={() => setShowPatternTrash((v) => !v)}
-              onRestore={handleRestorePattern}
-              onPermanentDelete={handlePermanentDeletePattern}
+              onDelete={handleDeleteComposition}
+              onToggleTrash={() => setShowCompositionTrash((v) => !v)}
+              onRestore={handleRestoreComposition}
+              onPermanentDelete={handlePermanentDeleteComposition}
               onEnlarge={(images, index) => {
                 setEnlargeImages(images);
                 setEnlargeIndex(index);
@@ -415,21 +415,21 @@ export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps
             />
           )}
           {activeTab === 'images' && (
-            <FilesTabContent
-              files={files}
-              total={filesTotal}
-              loading={filesLoading}
-              trashedFiles={trashedFiles}
-              showTrash={showFileTrash}
+            <AssetsTabContent
+              assets={assets}
+              total={assetsTotal}
+              loading={assetsLoading}
+              trashedAssets={trashedAssets}
+              showTrash={showAssetTrash}
               uploading={uploading}
-              actionId={fileActionId}
-              onLoadMore={() => fetchFiles(files.length, true)}
+              actionId={assetActionId}
+              onLoadMore={() => fetchAssets(assets.length, true)}
               onUpload={() => fileInputRef.current?.click()}
-              onUseFile={handleUseFile}
-              onDelete={handleDeleteFile}
-              onToggleTrash={() => setShowFileTrash((v) => !v)}
-              onRestore={handleRestoreFile}
-              onPermanentDelete={handlePermanentDeleteFile}
+              onUseAsset={handleUseAsset}
+              onDelete={handleDeleteAsset}
+              onToggleTrash={() => setShowAssetTrash((v) => !v)}
+              onRestore={handleRestoreAsset}
+              onPermanentDelete={handlePermanentDeleteAsset}
               onEnlarge={(images, index) => {
                 setEnlargeImages(images);
                 setEnlargeIndex(index);
@@ -459,17 +459,17 @@ export function UserPage({ onClose, onLoadPattern, onUseAsLayer }: UserPageProps
   );
 }
 
-// --- Patterns Tab ---
+// --- Compositions Tab ---
 
-interface PatternsTabContentProps {
-  patterns: Pattern[];
+interface CompositionsTabContentProps {
+  compositions: Composition[];
   total: number;
   loading: boolean;
-  trashedPatterns: Pattern[];
+  trashedCompositions: Composition[];
   showTrash: boolean;
   actionId: string | null;
   onLoadMore: () => void;
-  onLoadPattern: (p: Pattern) => void;
+  onLoadComposition: (p: Composition) => void;
   onDelete: (id: string) => void;
   onToggleTrash: () => void;
   onRestore: (id: string) => void;
@@ -477,47 +477,47 @@ interface PatternsTabContentProps {
   onEnlarge: (images: { src: string; label: string }[], index: number) => void;
 }
 
-function PatternsTabContent({
-  patterns,
+function CompositionsTabContent({
+  compositions,
   total,
   loading,
-  trashedPatterns,
+  trashedCompositions,
   showTrash,
   actionId,
   onLoadMore,
-  onLoadPattern,
+  onLoadComposition,
   onDelete,
   onToggleTrash,
   onRestore,
   onPermanentDelete,
   onEnlarge,
-}: PatternsTabContentProps) {
-  const enlargeableImages = patterns
+}: CompositionsTabContentProps) {
+  const enlargeableImages = compositions
     .filter((p) => p.previewR2Key)
-    .map((p) => ({ src: `/api/patterns/${p.id}/preview`, label: p.name }));
+    .map((p) => ({ src: `/api/compositions/${p.id}/preview`, label: p.name }));
 
   return (
     <>
-      {loading && patterns.length === 0 ? (
+      {loading && compositions.length === 0 ? (
         <div className="gallery-loading">
           <div className="processing-spinner" />
           <span>Loading...</span>
         </div>
-      ) : patterns.length === 0 ? (
-        <div className="gallery-empty">No saved patterns yet.</div>
+      ) : compositions.length === 0 ? (
+        <div className="gallery-empty">No saved compositions yet.</div>
       ) : (
         <>
           <div className="gallery-grid">
-            {patterns.map((p) => {
+            {compositions.map((p) => {
               const imgIndex = enlargeableImages.findIndex(
-                (img) => img.src === `/api/patterns/${p.id}/preview`,
+                (img) => img.src === `/api/compositions/${p.id}/preview`,
               );
               return (
                 <div key={p.id} className="gallery-card">
                   <div className="gallery-card-preview">
                     {p.previewR2Key ? (
                       <img
-                        src={`/api/patterns/${p.id}/preview`}
+                        src={`/api/compositions/${p.id}/preview`}
                         alt={p.name}
                         className="gallery-card-img"
                         onClick={() => {
@@ -538,7 +538,7 @@ function PatternsTabContent({
                   <div className="gallery-card-actions">
                     <button
                       className="btn gallery-card-action-btn"
-                      onClick={() => onLoadPattern(p)}
+                      onClick={() => onLoadComposition(p)}
                       title="Load in editor"
                     >
                       Edit
@@ -557,7 +557,7 @@ function PatternsTabContent({
               );
             })}
           </div>
-          {patterns.length < total && (
+          {compositions.length < total && (
             <button className="btn gallery-load-more" onClick={onLoadMore} disabled={loading}>
               {loading ? 'Loading...' : 'Load More'}
             </button>
@@ -571,15 +571,15 @@ function PatternsTabContent({
           className="user-page-dustbox-toggle"
           onClick={onToggleTrash}
         >
-          Trash ({trashedPatterns.length}) {showTrash ? '\u25B2' : '\u25BC'}
+          Trash ({trashedCompositions.length}) {showTrash ? '\u25B2' : '\u25BC'}
         </button>
         {showTrash && (
           <div className="user-page-dustbox-content">
-            {trashedPatterns.length === 0 ? (
+            {trashedCompositions.length === 0 ? (
               <div className="gallery-empty">Trash is empty.</div>
             ) : (
               <div className="user-page-dustbox-list">
-                {trashedPatterns.map((p) => (
+                {trashedCompositions.map((p) => (
                   <div key={p.id} className="user-page-dustbox-item">
                     <span className="user-page-dustbox-item-name">{p.name}</span>
                     <span className="user-page-dustbox-item-meta">{p.patternType}</span>
@@ -608,19 +608,19 @@ function PatternsTabContent({
   );
 }
 
-// --- Files Tab ---
+// --- Assets Tab ---
 
-interface FilesTabContentProps {
-  files: FileEntry[];
+interface AssetsTabContentProps {
+  assets: AssetEntry[];
   total: number;
   loading: boolean;
-  trashedFiles: FileEntry[];
+  trashedAssets: AssetEntry[];
   showTrash: boolean;
   uploading: boolean;
   actionId: string | null;
   onLoadMore: () => void;
   onUpload: () => void;
-  onUseFile: (entry: FileEntry) => void;
+  onUseAsset: (entry: AssetEntry) => void;
   onDelete: (id: string) => void;
   onToggleTrash: () => void;
   onRestore: (id: string) => void;
@@ -628,26 +628,26 @@ interface FilesTabContentProps {
   onEnlarge: (images: { src: string; label: string }[], index: number) => void;
 }
 
-function FilesTabContent({
-  files,
+function AssetsTabContent({
+  assets,
   total,
   loading,
-  trashedFiles,
+  trashedAssets,
   showTrash,
   uploading,
   actionId,
   onLoadMore,
   onUpload,
-  onUseFile,
+  onUseAsset,
   onDelete,
   onToggleTrash,
   onRestore,
   onPermanentDelete,
   onEnlarge,
-}: FilesTabContentProps) {
-  const enlargeableImages = files
+}: AssetsTabContentProps) {
+  const enlargeableImages = assets
     .filter((f) => f.contentType.startsWith('image/'))
-    .map((f) => ({ src: `/api/files/${f.id}/download`, label: f.filename }));
+    .map((f) => ({ src: `/api/assets/${f.id}/download`, label: f.filename }));
 
   return (
     <>
@@ -657,26 +657,26 @@ function FilesTabContent({
         </button>
       </div>
 
-      {loading && files.length === 0 ? (
+      {loading && assets.length === 0 ? (
         <div className="gallery-loading">
           <div className="processing-spinner" />
           <span>Loading...</span>
         </div>
-      ) : files.length === 0 ? (
-        <div className="gallery-empty">No uploaded files yet.</div>
+      ) : assets.length === 0 ? (
+        <div className="gallery-empty">No uploaded assets yet.</div>
       ) : (
         <>
           <div className="gallery-grid">
-            {files.map((f) => {
+            {assets.map((f) => {
               const imgIndex = enlargeableImages.findIndex(
-                (img) => img.src === `/api/files/${f.id}/download`,
+                (img) => img.src === `/api/assets/${f.id}/download`,
               );
               return (
                 <div key={f.id} className="gallery-card">
                   <div className="gallery-card-preview">
                     {f.contentType.startsWith('image/') ? (
                       <img
-                        src={`/api/files/${f.id}/download`}
+                        src={`/api/assets/${f.id}/download`}
                         alt={f.filename}
                         className="gallery-card-img"
                         onClick={() => {
@@ -699,7 +699,7 @@ function FilesTabContent({
                   <div className="gallery-card-actions">
                     <button
                       className="btn gallery-card-action-btn"
-                      onClick={() => onUseFile(f)}
+                      onClick={() => onUseAsset(f)}
                       title="Use in Composer"
                     >
                       Use
@@ -718,7 +718,7 @@ function FilesTabContent({
               );
             })}
           </div>
-          {files.length < total && (
+          {assets.length < total && (
             <button className="btn gallery-load-more" onClick={onLoadMore} disabled={loading}>
               {loading ? 'Loading...' : 'Load More'}
             </button>
@@ -732,15 +732,15 @@ function FilesTabContent({
           className="user-page-dustbox-toggle"
           onClick={onToggleTrash}
         >
-          Trash ({trashedFiles.length}) {showTrash ? '\u25B2' : '\u25BC'}
+          Trash ({trashedAssets.length}) {showTrash ? '\u25B2' : '\u25BC'}
         </button>
         {showTrash && (
           <div className="user-page-dustbox-content">
-            {trashedFiles.length === 0 ? (
+            {trashedAssets.length === 0 ? (
               <div className="gallery-empty">Trash is empty.</div>
             ) : (
               <div className="user-page-dustbox-list">
-                {trashedFiles.map((f) => (
+                {trashedAssets.map((f) => (
                   <div key={f.id} className="user-page-dustbox-item">
                     <span className="user-page-dustbox-item-name">{f.filename}</span>
                     <span className="user-page-dustbox-item-meta">{formatSize(f.sizeBytes)}</span>
