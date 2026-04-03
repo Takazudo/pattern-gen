@@ -195,18 +195,14 @@ function generateOnCanvas(
       scale--;
     }
 
-    if (scale <= 1) {
-      // Cannot create a useful offscreen canvas — render directly
-      pattern.generate(ctx, options);
-      return;
-    }
-
+    // scale is at least 1 — at scale=1 the offscreen is same-size as
+    // the main canvas; translate may show edges but rotate/skew still work.
     const ow = canvas.width * scale;
     const oh = canvas.height * scale;
     const offscreen = new OffscreenCanvas(ow, oh);
     const offCtx = offscreen.getContext('2d');
     if (!offCtx) {
-      // Fallback: render directly without offscreen canvas
+      // Last-resort fallback: render directly (no transforms)
       pattern.generate(ctx, options);
       return;
     }

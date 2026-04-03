@@ -154,43 +154,31 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
       scale--;
     }
 
-    if (scale <= 1) {
-      // Cannot create a useful offscreen canvas — render directly
-      patternCanvas = createCanvas(renderSize, renderSize);
-      const patCtx = patternCanvas.getContext('2d');
-      pattern.generate(patCtx as unknown as CanvasRenderingContext2D, {
-        width: renderSize,
-        height: renderSize,
-        rand,
-        colorScheme: scheme,
-        zoom: config.zoom,
-        params: Object.keys(config.params).length > 0 ? config.params : undefined,
-      });
-    } else {
-      const bigSize = renderSize * scale;
-      const offscreen = createCanvas(bigSize, bigSize);
-      const offCtx = offscreen.getContext('2d');
+    // scale is at least 1 — at scale=1 offscreen matches renderSize;
+    // translate may show edges but the offset math is preserved.
+    const bigSize = renderSize * scale;
+    const offscreen = createCanvas(bigSize, bigSize);
+    const offCtx = offscreen.getContext('2d');
 
-      pattern.generate(offCtx as unknown as CanvasRenderingContext2D, {
-        width: bigSize,
-        height: bigSize,
-        rand,
-        colorScheme: scheme,
-        zoom: config.zoom * scale,
-        params: Object.keys(config.params).length > 0 ? config.params : undefined,
-      });
+    pattern.generate(offCtx as unknown as CanvasRenderingContext2D, {
+      width: bigSize,
+      height: bigSize,
+      rand,
+      colorScheme: scheme,
+      zoom: config.zoom * scale,
+      params: Object.keys(config.params).length > 0 ? config.params : undefined,
+    });
 
-      // Extract the visible portion with translate offset
-      patternCanvas = createCanvas(renderSize, renderSize);
-      const patCtx = patternCanvas.getContext('2d');
-      const baseOffset = -renderSize * (scale - 1) / 2;
-      const tx = config.translateX * renderSize;
-      const ty = config.translateY * renderSize;
-      patCtx.save();
-      patCtx.translate(baseOffset + tx, baseOffset + ty);
-      patCtx.drawImage(offscreen, 0, 0);
-      patCtx.restore();
-    }
+    // Extract the visible portion with translate offset
+    patternCanvas = createCanvas(renderSize, renderSize);
+    const patCtx = patternCanvas.getContext('2d');
+    const baseOffset = -renderSize * (scale - 1) / 2;
+    const tx = config.translateX * renderSize;
+    const ty = config.translateY * renderSize;
+    patCtx.save();
+    patCtx.translate(baseOffset + tx, baseOffset + ty);
+    patCtx.drawImage(offscreen, 0, 0);
+    patCtx.restore();
   } else {
     // Simple render (no translate offscreen)
     patternCanvas = createCanvas(renderSize, renderSize);
