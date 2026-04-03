@@ -102,9 +102,10 @@ app.get("/login", async (c) => {
   const env = c.env;
   const state = randomToken(32);
   const nonce = randomToken(32);
+  const returnTo = c.req.query("returnTo") || "/pj/pattern-gen/";
 
-  // Store state + nonce in a signed transaction cookie
-  const txData = JSON.stringify({ state, nonce });
+  // Store state + nonce + returnTo in a signed transaction cookie
+  const txData = JSON.stringify({ state, nonce, returnTo });
   const signedTx = await signValue(txData, env.COOKIE_SECRET);
 
   setCookie(c, "__Host-auth0-tx", signedTx, {
@@ -158,9 +159,10 @@ app.get("/callback", async (c) => {
     return c.text("Invalid transaction cookie", 400);
   }
 
-  const { state: expectedState, nonce: expectedNonce } = JSON.parse(txData) as {
+  const { state: expectedState, nonce: expectedNonce, returnTo } = JSON.parse(txData) as {
     state: string;
     nonce: string;
+    returnTo?: string;
   };
 
   if (returnedState !== expectedState) {
@@ -297,13 +299,13 @@ app.get("/callback", async (c) => {
     maxAge: 30 * 24 * 60 * 60,
   });
 
-  // Redirect to app
-  return c.redirect("/pj/pattern-gen/");
+  // Redirect to original page (or default)
+  return c.redirect(returnTo || "/pj/pattern-gen/");
 });
 
 // ─── POST /auth/logout ──────────────────────────────────────
 
-app.post("/logout", async (c) => {
+app.all("/logout", async (c) => {
   const env = c.env;
   const now = Date.now();
   let sessionRevoked = false;
@@ -444,4 +446,5 @@ app.post("/refresh", async (c) => {
   return c.json({ ok: true });
 });
 
+export { app };
 export const onRequest = handle(app);

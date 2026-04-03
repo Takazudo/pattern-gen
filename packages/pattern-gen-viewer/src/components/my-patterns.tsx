@@ -23,7 +23,7 @@ export function MyPatterns({ onClose, onLoadPattern }: MyPatternsProps) {
       const data = await api.get<PatternsResponse>(
         `/api/patterns?limit=${PAGE_SIZE}&offset=${offset}`,
       );
-      setPatterns((prev) => (append ? [...prev, ...data.patterns] : data.patterns));
+      setPatterns((prev) => (append ? [...prev, ...data.items] : data.items));
       setTotal(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load patterns');
@@ -84,11 +84,11 @@ export function MyPatterns({ onClose, onLoadPattern }: MyPatternsProps) {
                   <div
                     className="gallery-card-preview"
                     onClick={() => {
-                      onLoadPattern(p.config_json, p.pattern_type);
+                      onLoadPattern(p.configJson, p.patternType);
                       onClose();
                     }}
                   >
-                    {p.preview_r2_key ? (
+                    {p.previewR2Key ? (
                       <img
                         src={`/api/patterns/${p.id}/preview`}
                         alt={p.name}
@@ -96,7 +96,7 @@ export function MyPatterns({ onClose, onLoadPattern }: MyPatternsProps) {
                       />
                     ) : (
                       <div className="gallery-card-placeholder">
-                        {p.pattern_type}
+                        {p.patternType}
                       </div>
                     )}
                   </div>
@@ -105,8 +105,8 @@ export function MyPatterns({ onClose, onLoadPattern }: MyPatternsProps) {
                       {p.name}
                     </div>
                     <div className="gallery-card-meta">
-                      <span>{p.pattern_type}</span>
-                      <span>{new Date(p.created_at).toLocaleDateString()}</span>
+                      <span>{p.patternType}</span>
+                      <span>{new Date(p.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <button

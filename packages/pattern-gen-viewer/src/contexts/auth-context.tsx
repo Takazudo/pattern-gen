@@ -51,13 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await api.post('/auth/logout');
-    } catch {
-      // best-effort
-    }
     setUser(null);
-    window.location.reload();
+    // Navigate to logout endpoint so browser follows the Auth0 redirect
+    window.location.href = '/auth/logout';
   }, []);
 
   return (

@@ -1,34 +1,39 @@
 export interface AuthUser {
   id: string;
-  email: string;
-  name: string;
-  picture_url?: string;
+  email: string | null;
+  emailVerified: boolean;
+  name: string | null;
+  pictureUrl: string | null;
 }
 
 export interface Pattern {
   id: string;
   name: string;
-  config_json: string;
-  pattern_type: string;
-  preview_r2_key?: string;
-  created_at: string;
-  updated_at: string;
+  configJson: string;
+  patternType: string;
+  previewR2Key: string | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface PatternsResponse {
-  patterns: Pattern[];
+  items: Pattern[];
   total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface FileEntry {
   id: string;
   filename: string;
-  content_type: string;
-  size_bytes: number;
-  created_at: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: number;
 }
 
 export interface FilesResponse {
-  files: FileEntry[];
+  items: FileEntry[];
   total: number;
+  limit: number;
+  offset: number;
 }

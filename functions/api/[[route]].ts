@@ -235,6 +235,33 @@ app.put("/patterns/:id", async (c) => {
   return c.json(toPatternResponse(updated!));
 });
 
+app.get("/patterns/:id/preview", async (c) => {
+  const auth = c.get("auth");
+  const id = c.req.param("id");
+
+  const pattern = await c.env.DB.prepare(
+    "SELECT preview_r2_key FROM patterns WHERE id = ?1 AND user_id = ?2"
+  )
+    .bind(id, auth.userId)
+    .first<{ preview_r2_key: string | null }>();
+
+  if (!pattern?.preview_r2_key) {
+    return c.json({ error: "Preview not found" }, 404);
+  }
+
+  const r2Object = await c.env.FILES.get(pattern.preview_r2_key);
+  if (!r2Object) {
+    return c.json({ error: "Preview not found in storage" }, 404);
+  }
+
+  return new Response(r2Object.body, {
+    headers: {
+      "Content-Type": r2Object.httpMetadata?.contentType || "image/png",
+      "Cache-Control": "private, max-age=3600",
+    },
+  });
+});
+
 app.delete("/patterns/:id", async (c) => {
   const auth = c.get("auth");
   const id = c.req.param("id");
@@ -413,4 +440,5 @@ app.delete("/files/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+export { app };
 export const onRequest = handle(app);

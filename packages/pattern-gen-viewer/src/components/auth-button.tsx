@@ -37,8 +37,8 @@ export function AuthButton({ onOpenMyPatterns, onOpenMyFiles }: AuthButtonProps)
   return (
     <div className="auth-button-wrapper" ref={menuRef}>
       <button className="auth-button auth-user-btn" onClick={() => setOpen((v) => !v)}>
-        {user?.picture_url ? (
-          <img src={user.picture_url} alt="" className="auth-avatar" />
+        {user?.pictureUrl ? (
+          <img src={user.pictureUrl} alt="" className="auth-avatar" />
         ) : (
           <span className="auth-avatar-placeholder">
             {user?.name?.charAt(0).toUpperCase() ?? '?'}

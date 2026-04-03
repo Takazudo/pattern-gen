@@ -28,7 +28,7 @@ export function MyFiles({ onClose, onUseAsLayer }: MyFilesProps) {
     setError(null);
     try {
       const data = await api.get<FilesResponse>('/api/files');
-      setFiles(data.files);
+      setFiles(data.items);
       setTotal(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load files');
@@ -88,7 +88,7 @@ export function MyFiles({ onClose, onUseAsLayer }: MyFilesProps) {
     async (entry: FileEntry) => {
       try {
         const blob = await fetchBlob(`/api/files/${entry.id}/download`);
-        const file = new File([blob], entry.filename, { type: entry.content_type });
+        const file = new File([blob], entry.filename, { type: entry.contentType });
         onUseAsLayer(file);
         onClose();
       } catch (err) {
@@ -145,7 +145,7 @@ export function MyFiles({ onClose, onUseAsLayer }: MyFilesProps) {
                   onClick={() => handleUseFile(f)}
                   title="Use as image layer"
                 >
-                  {f.content_type.startsWith('image/') ? (
+                  {f.contentType.startsWith('image/') ? (
                     <img
                       src={`/api/files/${f.id}/download`}
                       alt={f.filename}
@@ -153,7 +153,7 @@ export function MyFiles({ onClose, onUseAsLayer }: MyFilesProps) {
                     />
                   ) : (
                     <div className="gallery-card-placeholder">
-                      {f.content_type.split('/')[1] ?? 'file'}
+                      {f.contentType.split('/')[1] ?? 'file'}
                     </div>
                   )}
                 </div>
@@ -162,8 +162,8 @@ export function MyFiles({ onClose, onUseAsLayer }: MyFilesProps) {
                     {f.filename}
                   </div>
                   <div className="gallery-card-meta">
-                    <span>{formatSize(f.size_bytes)}</span>
-                    <span>{new Date(f.created_at).toLocaleDateString()}</span>
+                    <span>{formatSize(f.sizeBytes)}</span>
+                    <span>{new Date(f.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
                 <button
