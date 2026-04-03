@@ -1,0 +1,193 @@
+---
+title: Composer Config
+sidebar_position: 2
+---
+
+# Composer Config
+
+The Composer config JSON format describes a composite image with a background pattern, text/image layers, and an optional decorative frame. It extends the OGP config with layer-based composition.
+
+## Schema
+
+```typescript
+interface ComposerConfig {
+  version: 1;
+  background: OgpConfig;      // Background pattern (same as OGP config)
+  layers: EditorLayer[];       // Image and text layers
+  frame?: FrameConfig;         // Optional decorative frame
+}
+
+type EditorLayer = ImageLayerData | TextLayerData;
+
+interface FrameConfig {
+  type: string;                            // Frame generator name (slug)
+  params: Record<string, number | string>; // Frame-specific parameters
+}
+```
+
+## Layer Types
+
+### Image Layer
+
+```typescript
+interface ImageLayerData {
+  type: 'image';
+  name: string;            // Layer name (non-empty)
+  src: string;             // Image source (URL, data URI, or relative file path)
+  transform: LayerTransform;
+  opacity: number;         // 0 to 1
+}
+
+interface LayerTransform {
+  x: number;       // X position in 1200x630 space (px)
+  y: number;       // Y position (px)
+  width: number;   // Width (px, must be > 0)
+  height: number;  // Height (px, must be > 0)
+}
+```
+
+### Text Layer
+
+```typescript
+interface TextLayerData {
+  type: 'text';
+  name: string;
+  content: string;
+  fontFamily: string;                      // Google Font name or system font
+  fontSize: number;                        // Font size (px, must be > 0)
+  fontWeight: 'normal' | 'bold';
+  fontStyle: 'normal' | 'italic';
+  color: string;                           // Hex color (#RRGGBB or #RRGGBBAA)
+  opacity: number;                         // 0 to 1
+  textAlign: 'left' | 'center' | 'right';
+  textVAlign: 'top' | 'middle' | 'bottom';
+  letterSpacing: number;                   // Letter spacing (px)
+  lineHeight: number;                      // Line height multiplier (must be > 0)
+  shadow: {
+    enabled: boolean;
+    offsetX: number;
+    offsetY: number;
+    blur: number;        // Must be >= 0
+    color: string;       // Hex color
+  };
+  stroke: {
+    enabled: boolean;
+    color: string;       // Hex color
+    width: number;       // Must be >= 0
+  };
+  transform: LayerTransform;
+}
+```
+
+## Example
+
+```json
+{
+  "version": 1,
+  "background": {
+    "version": 1,
+    "slug": "blog-post-header",
+    "type": "flow-field",
+    "colorScheme": "dracula",
+    "zoom": 1.2,
+    "translateX": 0,
+    "translateY": 0,
+    "useTranslate": false,
+    "params": {},
+    "hsl": { "h": 0, "s": 0, "l": 0 },
+    "contrastBrightness": { "contrast": 10, "brightness": 0 },
+    "crop": { "x": 0, "y": 0, "width": 1, "height": 1 }
+  },
+  "layers": [
+    {
+      "type": "text",
+      "name": "Title",
+      "content": "Hello World",
+      "fontFamily": "Inter",
+      "fontSize": 72,
+      "fontWeight": "bold",
+      "fontStyle": "normal",
+      "color": "#ffffff",
+      "opacity": 1,
+      "textAlign": "center",
+      "textVAlign": "middle",
+      "letterSpacing": 0,
+      "lineHeight": 1.2,
+      "shadow": {
+        "enabled": true,
+        "offsetX": 2,
+        "offsetY": 2,
+        "blur": 8,
+        "color": "#000000"
+      },
+      "stroke": {
+        "enabled": false,
+        "color": "#000000",
+        "width": 0
+      },
+      "transform": { "x": 100, "y": 200, "width": 1000, "height": 200 }
+    },
+    {
+      "type": "image",
+      "name": "Logo",
+      "src": "logo.png",
+      "transform": { "x": 50, "y": 50, "width": 120, "height": 120 },
+      "opacity": 0.9
+    }
+  ],
+  "frame": {
+    "type": "neon-glow",
+    "params": {
+      "glowColor": "#00ffff",
+      "glowRadius": 20,
+      "lineWidth": 3
+    }
+  }
+}
+```
+
+## Assets Directory
+
+When image layers use relative file paths (not URLs or data URIs), you can specify where to resolve them using the `--assets-dir` CLI flag:
+
+```bash
+pattern-gen --composer-config config.json --assets-dir ./images/ --out output.png
+```
+
+Without `--assets-dir`, relative paths are resolved from the current working directory.
+
+## API
+
+```typescript
+import {
+  parseComposerConfig,
+  serializeComposerConfig,
+  renderComposerFromConfig,
+} from '@takazudo/pattern-gen';
+
+// Parse and validate JSON
+const config = parseComposerConfig(jsonString);
+
+// Serialize to pretty-printed JSON
+const json = serializeComposerConfig(config);
+
+// Render to PNG buffer (Node.js only)
+const result = await renderComposerFromConfig(config);
+// result.buffer: Buffer (1200x630 PNG with background + layers + frame)
+// result.patternName: string
+// result.width: 1200
+// result.height: 630
+```
+
+## CLI Usage
+
+```bash
+# Basic
+pattern-gen --composer-config config.json --out output.png
+
+# With assets directory
+pattern-gen --composer-config config.json --assets-dir ./assets/ --out output.png
+
+# Output to directory
+pattern-gen --composer-config config.json --out-dir ./output/
+```

@@ -1,4 +1,5 @@
 import type { ColorScheme } from './color-schemes.js';
+import type { ContrastBrightness } from './contrast-brightness.js';
 import type { HslAdjust } from './hsl-adjust.js';
 
 /**
@@ -96,4 +97,6 @@ export interface GenerateOptions {
   params?: Record<string, number>;
   /** HSL color adjustment (post-processing) */
   hsl?: HslAdjust;
+  /** Contrast and brightness adjustment (post-processing) */
+  contrastBrightness?: ContrastBrightness;
 }

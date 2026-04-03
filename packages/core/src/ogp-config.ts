@@ -1,3 +1,5 @@
+import type { ContrastBrightness } from './contrast-brightness.js';
+
 export const OGP_WIDTH = 1200;
 export const OGP_HEIGHT = 630;
 
@@ -22,7 +24,7 @@ export interface OgpConfig {
   skewY?: number;
   params: Record<string, number>;
   hsl: { h: number; s: number; l: number };
-  contrastBrightness?: { contrast: number; brightness: number };
+  contrastBrightness?: ContrastBrightness;
   crop: OgpCropRegion;
 }
 
