@@ -33,7 +33,7 @@ export const settings = {
   siteUrl: "" as string,
   docsDir: "src/content/docs",
   locales: {} as Record<string, LocaleConfig>,
-  mermaid: true,
+  mermaid: false,
   d2: false,
   d2BuildMode: "wasm" as "wasm" | "cli",
   sitemap: false,

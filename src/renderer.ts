@@ -248,9 +248,8 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
     applyHslAdjust(patCtx as unknown as CanvasRenderingContext2D, renderSize, renderSize, config.hsl);
   }
 
-  // Apply contrast/brightness adjustments
-  if (config.contrastBrightness &&
-    (config.contrastBrightness.contrast !== 0 || config.contrastBrightness.brightness !== 0)) {
+  // Apply contrast/brightness adjustments (function handles zero no-op internally)
+  if (config.contrastBrightness) {
     applyContrastBrightness(
       patCtx as unknown as CanvasRenderingContext2D,
       renderSize,

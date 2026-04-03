@@ -40,12 +40,16 @@ if [ ! -d "$DOCS_DIR" ]; then
   exit 1
 fi
 
-# Helper: replace a symlink or file at the given path
+# Helper: replace a symlink at the given path (refuses to overwrite non-symlinks)
 ensure_symlink() {
   local link_path="$1"
   local target="$2"
-  if [ -L "$link_path" ] || [ -e "$link_path" ]; then
-    rm -rf "$link_path"
+  if [ -L "$link_path" ]; then
+    # Safe to replace an existing symlink
+    rm "$link_path"
+  elif [ -e "$link_path" ]; then
+    echo "Error: '$link_path' already exists and is not a symlink. Remove it manually or use --force."
+    exit 1
   fi
   ln -s "$target" "$link_path"
 }

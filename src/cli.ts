@@ -25,8 +25,8 @@ function requireFloat(flag: string, value: string | undefined): number {
   return n;
 }
 
-function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir?: string; assetsDir?: string } {
-  const options: GenerateOptions & { outPath?: string; outDir?: string; assetsDir?: string } = {
+function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir?: string } {
+  const options: GenerateOptions & { outPath?: string; outDir?: string } = {
     slug: '',
     type: 'wood-block',
   };
@@ -103,10 +103,7 @@ function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir
         if (options.contrastBrightness.brightness < -100 || options.contrastBrightness.brightness > 100)
           fail('--brightness must be between -100 and 100');
         break;
-      case '--assets-dir':
-        options.assetsDir = args[++i];
-        if (!options.assetsDir) fail('--assets-dir requires a directory path');
-        break;
+      // --assets-dir is only used in --composer-config mode (parsed separately there)
       case '--list-types':
         console.log('Available pattern types:');
         console.log(getPatternNames().join('\n'));
@@ -195,7 +192,11 @@ async function main() {
 
     // Extract --assets-dir from args
     const assetsDirIdx = args.indexOf('--assets-dir');
-    const assetsDirArg = assetsDirIdx !== -1 ? args[assetsDirIdx + 1] : undefined;
+    let assetsDirArg: string | undefined;
+    if (assetsDirIdx !== -1) {
+      assetsDirArg = args[assetsDirIdx + 1];
+      if (!assetsDirArg || assetsDirArg.startsWith('-')) fail('--assets-dir requires a directory path');
+    }
 
     const jsonStr = readFileSync(resolve(configPath), 'utf-8');
     const config = parseComposerConfig(jsonStr);
