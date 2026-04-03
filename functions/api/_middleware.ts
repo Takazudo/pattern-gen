@@ -15,7 +15,7 @@ export const onRequest = handleMiddleware<{
 
   // CSRF check on mutating methods
   const method = c.req.method;
-  if (method === "POST" || method === "PUT" || method === "DELETE") {
+  if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
     const origin = c.req.header("Origin");
     const requestUrl = new URL(c.req.url);
     const expectedOrigin = requestUrl.origin;
