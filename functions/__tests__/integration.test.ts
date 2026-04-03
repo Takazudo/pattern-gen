@@ -19,8 +19,8 @@ import {
   signTestAccessToken,
   makeAuthCookies,
   createTestAuthMiddleware,
-  samplePatternConfig,
-  sampleFileData,
+  sampleCompositionConfig,
+  sampleAssetData,
   type TestEnv,
   TEST_CONFIG,
 } from './helpers';
@@ -47,10 +47,10 @@ afterAll(async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Pattern lifecycle
+// Composition lifecycle
 // ---------------------------------------------------------------------------
 
-describe('Full pattern lifecycle', () => {
+describe('Full composition lifecycle', () => {
   it('create → list → load → update → delete', async () => {
     const user = await createTestUser(env.DB);
     const session = await createTestSession(env.DB, user.id);
@@ -69,7 +69,7 @@ describe('Full pattern lifecycle', () => {
 
     // 1. Verify empty list
     const listRes1 = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions`, {
         headers: headers(),
       }),
       {},
@@ -80,14 +80,14 @@ describe('Full pattern lifecycle', () => {
     expect(list1.items).toEqual([]);
     expect(list1.total).toBe(0);
 
-    // 2. Create pattern
-    const config = samplePatternConfig();
+    // 2. Create composition
+    const config = sampleCompositionConfig();
     const createRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions`, {
         method: 'POST',
         headers: headers('POST'),
         body: JSON.stringify({
-          name: 'Integration Pattern',
+          name: 'Integration Composition',
           configJson: JSON.stringify(config),
           patternType: config.type,
         }),
@@ -97,13 +97,13 @@ describe('Full pattern lifecycle', () => {
     );
     expect(createRes.status).toBe(201);
     const created = await createRes.json();
-    const patternId = created.id;
-    expect(patternId).toBeTruthy();
-    expect(created.name).toBe('Integration Pattern');
+    const compositionId = created.id;
+    expect(compositionId).toBeTruthy();
+    expect(created.name).toBe('Integration Composition');
 
-    // 3. List → should contain the pattern
+    // 3. List → should contain the composition
     const listRes2 = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions`, {
         headers: headers(),
       }),
       {},
@@ -111,11 +111,11 @@ describe('Full pattern lifecycle', () => {
     );
     const list2 = await listRes2.json();
     expect(list2.items.length).toBe(1);
-    expect(list2.items[0].id).toBe(patternId);
+    expect(list2.items[0].id).toBe(compositionId);
 
-    // 4. Load specific pattern
+    // 4. Load specific composition
     const loadRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns/${patternId}`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions/${compositionId}`, {
         headers: headers(),
       }),
       {},
@@ -123,26 +123,26 @@ describe('Full pattern lifecycle', () => {
     );
     expect(loadRes.status).toBe(200);
     const loaded = await loadRes.json();
-    expect(loaded.name).toBe('Integration Pattern');
+    expect(loaded.name).toBe('Integration Composition');
     expect(loaded.configJson).toBeTruthy();
 
-    // 5. Update pattern
+    // 5. Update composition
     const updateRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns/${patternId}`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions/${compositionId}`, {
         method: 'PUT',
         headers: headers('PUT'),
-        body: JSON.stringify({ name: 'Updated Integration Pattern' }),
+        body: JSON.stringify({ name: 'Updated Integration Composition' }),
       }),
       {},
       env,
     );
     expect(updateRes.status).toBe(200);
     const updated = await updateRes.json();
-    expect(updated.name).toBe('Updated Integration Pattern');
+    expect(updated.name).toBe('Updated Integration Composition');
 
-    // 6. Delete pattern
+    // 6. Delete composition
     const deleteRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns/${patternId}`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions/${compositionId}`, {
         method: 'DELETE',
         headers: headers(),
       }),
@@ -153,7 +153,7 @@ describe('Full pattern lifecycle', () => {
 
     // 7. Verify deleted
     const loadRes2 = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns/${patternId}`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions/${compositionId}`, {
         headers: headers(),
       }),
       {},
@@ -163,7 +163,7 @@ describe('Full pattern lifecycle', () => {
 
     // 8. List → should be empty again
     const listRes3 = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions`, {
         headers: headers(),
       }),
       {},
@@ -176,10 +176,10 @@ describe('Full pattern lifecycle', () => {
 });
 
 // ---------------------------------------------------------------------------
-// File lifecycle
+// Asset lifecycle
 // ---------------------------------------------------------------------------
 
-describe('Full file lifecycle', () => {
+describe('Full asset lifecycle', () => {
   it('upload → list → metadata → download → delete', async () => {
     const user = await createTestUser(env.DB);
     const session = await createTestSession(env.DB, user.id);
@@ -192,27 +192,27 @@ describe('Full file lifecycle', () => {
 
     // 1. Verify empty list
     const listRes1 = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
         headers: baseHeaders,
       }),
       {},
       env,
     );
     expect(listRes1.status).toBe(200);
-    const fileList1 = await listRes1.json();
-    expect(fileList1.items).toEqual([]);
+    const assetList1 = await listRes1.json();
+    expect(assetList1.items).toEqual([]);
 
-    // 2. Upload file
-    const fileData = sampleFileData();
+    // 2. Upload asset
+    const assetData = sampleAssetData();
     const formData = new FormData();
     formData.append(
       'file',
-      new Blob([fileData.content], { type: fileData.contentType }),
-      fileData.filename,
+      new Blob([assetData.content], { type: assetData.contentType }),
+      assetData.filename,
     );
 
     const uploadRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
         method: 'POST',
         headers: baseHeaders,
         body: formData,
@@ -222,25 +222,25 @@ describe('Full file lifecycle', () => {
     );
     expect(uploadRes.status).toBe(201);
     const uploaded = await uploadRes.json();
-    const fileId = uploaded.id;
-    expect(fileId).toBeTruthy();
-    expect(uploaded.filename).toBe(fileData.filename);
+    const assetId = uploaded.id;
+    expect(assetId).toBeTruthy();
+    expect(uploaded.filename).toBe(assetData.filename);
 
-    // 3. List → should contain the file
+    // 3. List → should contain the asset
     const listRes2 = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
         headers: baseHeaders,
       }),
       {},
       env,
     );
-    const fileList2 = await listRes2.json();
-    expect(fileList2.items.length).toBe(1);
-    expect(fileList2.items[0].id).toBe(fileId);
+    const assetList2 = await listRes2.json();
+    expect(assetList2.items.length).toBe(1);
+    expect(assetList2.items[0].id).toBe(assetId);
 
-    // 4. Get file metadata
+    // 4. Get asset metadata
     const metaRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files/${fileId}`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets/${assetId}`, {
         headers: baseHeaders,
       }),
       {},
@@ -248,14 +248,14 @@ describe('Full file lifecycle', () => {
     );
     expect(metaRes.status).toBe(200);
     const meta = await metaRes.json();
-    expect(meta.filename).toBe(fileData.filename);
-    expect(meta.contentType).toBe(fileData.contentType);
+    expect(meta.filename).toBe(assetData.filename);
+    expect(meta.contentType).toBe(assetData.contentType);
     expect(meta.sizeBytes).toBeGreaterThan(0);
 
-    // 5. Download file content
+    // 5. Download asset content
     const downloadRes = await app.request(
       new Request(
-        `${TEST_CONFIG.APP_BASE_URL}/api/files/${fileId}/download`,
+        `${TEST_CONFIG.APP_BASE_URL}/api/assets/${assetId}/download`,
         { headers: baseHeaders },
       ),
       {},
@@ -263,11 +263,11 @@ describe('Full file lifecycle', () => {
     );
     expect(downloadRes.status).toBe(200);
     const downloaded = new Uint8Array(await downloadRes.arrayBuffer());
-    expect(downloaded).toEqual(fileData.content);
+    expect(downloaded).toEqual(assetData.content);
 
-    // 6. Delete file
+    // 6. Delete asset
     const deleteRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files/${fileId}`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets/${assetId}`, {
         method: 'DELETE',
         headers: baseHeaders,
       }),
@@ -278,7 +278,7 @@ describe('Full file lifecycle', () => {
 
     // 7. Verify deleted
     const metaRes2 = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files/${fileId}`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets/${assetId}`, {
         headers: baseHeaders,
       }),
       {},
@@ -293,7 +293,7 @@ describe('Full file lifecycle', () => {
 // ---------------------------------------------------------------------------
 
 describe('Cross-user isolation', () => {
-  it('user A cannot see user B patterns', async () => {
+  it('user A cannot see user B compositions', async () => {
     const userA = await createTestUser(env.DB);
     const sessionA = await createTestSession(env.DB, userA.id);
     const tokenA = await signTestAccessToken(userA.id, sessionA.id);
@@ -302,9 +302,9 @@ describe('Cross-user isolation', () => {
     const sessionB = await createTestSession(env.DB, userB.id);
     const tokenB = await signTestAccessToken(userB.id, sessionB.id);
 
-    // User A creates a pattern
+    // User A creates a composition
     const createRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions`, {
         method: 'POST',
         headers: {
           Cookie: makeAuthCookies(tokenA),
@@ -312,8 +312,8 @@ describe('Cross-user isolation', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: 'A-Only Pattern',
-          configJson: JSON.stringify(samplePatternConfig()),
+          name: 'A-Only Composition',
+          configJson: JSON.stringify(sampleCompositionConfig()),
           patternType: 'wood-block',
         }),
       }),
@@ -321,12 +321,12 @@ describe('Cross-user isolation', () => {
       env,
     );
     const created = await createRes.json();
-    const patternId = created.id;
+    const compositionId = created.id;
 
     // User B tries to access it
     const getRes = await app.request(
       new Request(
-        `${TEST_CONFIG.APP_BASE_URL}/api/patterns/${patternId}`,
+        `${TEST_CONFIG.APP_BASE_URL}/api/compositions/${compositionId}`,
         {
           headers: {
             Cookie: makeAuthCookies(tokenB),
@@ -339,9 +339,9 @@ describe('Cross-user isolation', () => {
     );
     expect(getRes.status).toBe(404);
 
-    // User B's pattern list should be empty
+    // User B's composition list should be empty
     const listRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/patterns`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/compositions`, {
         headers: {
           Cookie: makeAuthCookies(tokenB),
           Origin: TEST_CONFIG.APP_BASE_URL,
@@ -354,7 +354,7 @@ describe('Cross-user isolation', () => {
     expect(list.items).toEqual([]);
   });
 
-  it('user A cannot see user B files', async () => {
+  it('user A cannot see user B assets', async () => {
     const userA = await createTestUser(env.DB);
     const sessionA = await createTestSession(env.DB, userA.id);
     const tokenA = await signTestAccessToken(userA.id, sessionA.id);
@@ -363,7 +363,7 @@ describe('Cross-user isolation', () => {
     const sessionB = await createTestSession(env.DB, userB.id);
     const tokenB = await signTestAccessToken(userB.id, sessionB.id);
 
-    // User A uploads a file
+    // User A uploads an asset
     const formData = new FormData();
     formData.append(
       'file',
@@ -372,7 +372,7 @@ describe('Cross-user isolation', () => {
     );
 
     const uploadRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
         method: 'POST',
         headers: {
           Cookie: makeAuthCookies(tokenA),
@@ -384,11 +384,11 @@ describe('Cross-user isolation', () => {
       env,
     );
     const uploaded = await uploadRes.json();
-    const fileId = uploaded.id;
+    const assetId = uploaded.id;
 
     // User B tries to access it
     const getRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files/${fileId}`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets/${assetId}`, {
         headers: {
           Cookie: makeAuthCookies(tokenB),
           Origin: TEST_CONFIG.APP_BASE_URL,
@@ -399,9 +399,9 @@ describe('Cross-user isolation', () => {
     );
     expect(getRes.status).toBe(404);
 
-    // User B's file list should be empty
+    // User B's asset list should be empty
     const listRes = await app.request(
-      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+      new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
         headers: {
           Cookie: makeAuthCookies(tokenB),
           Origin: TEST_CONFIG.APP_BASE_URL,

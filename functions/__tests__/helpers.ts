@@ -20,8 +20,8 @@ import * as jose from 'jose';
 const MIGRATION_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, auth0_sub TEXT UNIQUE NOT NULL, email TEXT NOT NULL, email_verified INTEGER NOT NULL DEFAULT 0, name TEXT, nickname TEXT, picture_url TEXT, photo_r2_key TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), refresh_token_hash TEXT NOT NULL, expires_at TEXT NOT NULL, revoked_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), last_seen_at TEXT NOT NULL DEFAULT (datetime('now')))`,
-  `CREATE TABLE IF NOT EXISTS patterns (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, config_json TEXT NOT NULL, pattern_type TEXT, preview_r2_key TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), deleted_at INTEGER)`,
-  `CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), r2_key TEXT NOT NULL, filename TEXT NOT NULL, content_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), deleted_at INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS compositions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, config_json TEXT NOT NULL, pattern_type TEXT, preview_r2_key TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), deleted_at INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS assets (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), r2_key TEXT NOT NULL, filename TEXT NOT NULL, content_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), deleted_at INTEGER)`,
 ];
 
 // ---------------------------------------------------------------------------
@@ -385,20 +385,20 @@ export function buildTestApiApp(apiApp: Hono): Hono {
 }
 
 // ---------------------------------------------------------------------------
-// Pattern / File factories
+// Composition / Asset factories
 // ---------------------------------------------------------------------------
 
-export function samplePatternConfig() {
+export function sampleCompositionConfig() {
   return {
     type: 'wood-block',
     size: 800,
     zoom: 1,
     colorScheme: 'warm-sunset',
-    slug: 'test-pattern',
+    slug: 'test-composition',
   };
 }
 
-export function sampleFileData() {
+export function sampleAssetData() {
   return {
     filename: 'test-image.png',
     contentType: 'image/png',
@@ -407,15 +407,15 @@ export function sampleFileData() {
 }
 
 // ---------------------------------------------------------------------------
-// Pattern / File CRUD factories
+// Composition / Asset CRUD factories
 // ---------------------------------------------------------------------------
 
-let patternCounter = 0;
+let compositionCounter = 0;
 
 /**
- * Insert a test pattern into D1 and optionally store a preview in R2.
+ * Insert a test composition into D1 and optionally store a preview in R2.
  */
-export async function createTestPattern(
+export async function createTestComposition(
   env: TestEnv,
   userId: string,
   overrides: {
@@ -427,16 +427,16 @@ export async function createTestPattern(
     deletedAt?: number | null;
   } = {},
 ) {
-  patternCounter++;
+  compositionCounter++;
   const now = Date.now();
   const id = overrides.id ?? crypto.randomUUID();
-  const pattern = {
+  const composition = {
     id,
     user_id: userId,
-    name: overrides.name ?? `Test Pattern ${patternCounter}`,
+    name: overrides.name ?? `Test Composition ${compositionCounter}`,
     config_json:
       overrides.configJson ??
-      JSON.stringify(samplePatternConfig()),
+      JSON.stringify(sampleCompositionConfig()),
     pattern_type: overrides.patternType ?? 'wood-block',
     preview_r2_key: overrides.previewR2Key ?? null,
     created_at: now,
@@ -445,31 +445,31 @@ export async function createTestPattern(
   };
 
   await env.DB.prepare(
-    `INSERT INTO patterns (id, user_id, name, config_json, pattern_type, preview_r2_key, created_at, updated_at, deleted_at)
+    `INSERT INTO compositions (id, user_id, name, config_json, pattern_type, preview_r2_key, created_at, updated_at, deleted_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
-      pattern.id,
-      pattern.user_id,
-      pattern.name,
-      pattern.config_json,
-      pattern.pattern_type,
-      pattern.preview_r2_key,
-      pattern.created_at,
-      pattern.updated_at,
-      pattern.deleted_at,
+      composition.id,
+      composition.user_id,
+      composition.name,
+      composition.config_json,
+      composition.pattern_type,
+      composition.preview_r2_key,
+      composition.created_at,
+      composition.updated_at,
+      composition.deleted_at,
     )
     .run();
 
-  return pattern;
+  return composition;
 }
 
-let fileCounter = 0;
+let assetCounter = 0;
 
 /**
- * Insert a test file into D1 and store corresponding data in R2.
+ * Insert a test asset into D1 and store corresponding data in R2.
  */
-export async function createTestFile(
+export async function createTestAsset(
   env: TestEnv,
   userId: string,
   overrides: {
@@ -480,11 +480,11 @@ export async function createTestFile(
     deletedAt?: number | null;
   } = {},
 ) {
-  fileCounter++;
+  assetCounter++;
   const id = overrides.id ?? crypto.randomUUID();
-  const filename = overrides.filename ?? `test-file-${fileCounter}.png`;
+  const filename = overrides.filename ?? `test-asset-${assetCounter}.png`;
   const contentType = overrides.contentType ?? 'image/png';
-  const content = overrides.content ?? sampleFileData().content;
+  const content = overrides.content ?? sampleAssetData().content;
   const r2Key = `users/${userId}/${id}-${filename}`;
   const now = Date.now();
 
@@ -493,7 +493,7 @@ export async function createTestFile(
     httpMetadata: { contentType },
   });
 
-  const file = {
+  const asset = {
     id,
     user_id: userId,
     r2_key: r2Key,
@@ -505,22 +505,22 @@ export async function createTestFile(
   };
 
   await env.DB.prepare(
-    `INSERT INTO files (id, user_id, r2_key, filename, content_type, size_bytes, created_at, deleted_at)
+    `INSERT INTO assets (id, user_id, r2_key, filename, content_type, size_bytes, created_at, deleted_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
-      file.id,
-      file.user_id,
-      file.r2_key,
-      file.filename,
-      file.content_type,
-      file.size_bytes,
-      file.created_at,
-      file.deleted_at,
+      asset.id,
+      asset.user_id,
+      asset.r2_key,
+      asset.filename,
+      asset.content_type,
+      asset.size_bytes,
+      asset.created_at,
+      asset.deleted_at,
     )
     .run();
 
-  return file;
+  return asset;
 }
 
 /**
@@ -528,7 +528,7 @@ export async function createTestFile(
  */
 async function softDeleteRow(
   env: TestEnv,
-  table: 'patterns' | 'files',
+  table: 'compositions' | 'assets',
   id: string,
 ): Promise<void> {
   const now = Date.now();
@@ -537,10 +537,10 @@ async function softDeleteRow(
     .run();
 }
 
-export function softDeletePattern(env: TestEnv, patternId: string): Promise<void> {
-  return softDeleteRow(env, 'patterns', patternId);
+export function softDeleteComposition(env: TestEnv, compositionId: string): Promise<void> {
+  return softDeleteRow(env, 'compositions', compositionId);
 }
 
-export function softDeleteFile(env: TestEnv, fileId: string): Promise<void> {
-  return softDeleteRow(env, 'files', fileId);
+export function softDeleteAsset(env: TestEnv, assetId: string): Promise<void> {
+  return softDeleteRow(env, 'assets', assetId);
 }

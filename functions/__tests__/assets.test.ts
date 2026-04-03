@@ -1,8 +1,8 @@
 /**
- * Files API tests — upload, list, download, delete via /api/files.
+ * Assets API tests — upload, list, download, delete via /api/assets.
  *
  * All endpoints are protected by JWT auth middleware.
- * File content is stored in R2, metadata in D1.
+ * Asset content is stored in R2, metadata in D1.
  * Responses use camelCase fields: contentType, sizeBytes, createdAt.
  *
  * NOTE: Import from the backend resolves after the backend branch is merged.
@@ -20,7 +20,7 @@ import {
   signTestAccessToken,
   makeAuthCookies,
   createTestAuthMiddleware,
-  sampleFileData,
+  sampleAssetData,
   type TestEnv,
   TEST_CONFIG,
 } from './helpers';
@@ -73,20 +73,20 @@ function authedRequest(
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/files — upload
+// POST /api/assets — upload
 // ---------------------------------------------------------------------------
 
-describe('POST /api/files', () => {
-  it('uploads a file and creates D1 record', async () => {
-    const file = sampleFileData();
+describe('POST /api/assets', () => {
+  it('uploads an asset and creates D1 record', async () => {
+    const assetData = sampleAssetData();
     const formData = new FormData();
     formData.append(
       'file',
-      new Blob([file.content], { type: file.contentType }),
-      file.filename,
+      new Blob([assetData.content], { type: assetData.contentType }),
+      assetData.filename,
     );
 
-    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
       method: 'POST',
       headers: {
         Cookie: makeAuthCookies(token),
@@ -100,18 +100,18 @@ describe('POST /api/files', () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.id).toBeTruthy();
-    expect(body.filename).toBe(file.filename);
-    expect(body.contentType).toBe(file.contentType);
+    expect(body.filename).toBe(assetData.filename);
+    expect(body.contentType).toBe(assetData.contentType);
   });
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/files — list
+// GET /api/assets — list
 // ---------------------------------------------------------------------------
 
-describe('GET /api/files', () => {
-  it('lists files for the authenticated user', async () => {
-    const req = authedRequest('/api/files');
+describe('GET /api/assets', () => {
+  it('lists assets for the authenticated user', async () => {
+    const req = authedRequest('/api/assets');
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(200);
@@ -121,7 +121,7 @@ describe('GET /api/files', () => {
     expect(body.total).toBeGreaterThanOrEqual(1);
   });
 
-  it('returns empty list for a new user with no files', async () => {
+  it('returns empty list for a new user with no assets', async () => {
     const freshUser = await createTestUser(env.DB);
     const freshSession = await createTestSession(env.DB, freshUser.id);
     const freshToken = await signTestAccessToken(
@@ -129,7 +129,7 @@ describe('GET /api/files', () => {
       freshSession.id,
     );
 
-    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
       headers: {
         Cookie: makeAuthCookies(freshToken),
         Origin: TEST_CONFIG.APP_BASE_URL,
@@ -146,22 +146,22 @@ describe('GET /api/files', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/files/:id — metadata
+// GET /api/assets/:id — metadata
 // ---------------------------------------------------------------------------
 
-describe('GET /api/files/:id', () => {
-  let fileId: string;
+describe('GET /api/assets/:id', () => {
+  let assetId: string;
 
   beforeAll(async () => {
-    const file = sampleFileData();
+    const assetData = sampleAssetData();
     const formData = new FormData();
     formData.append(
       'file',
-      new Blob([file.content], { type: file.contentType }),
-      file.filename,
+      new Blob([assetData.content], { type: assetData.contentType }),
+      assetData.filename,
     );
 
-    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
       method: 'POST',
       headers: {
         Cookie: makeAuthCookies(token),
@@ -172,23 +172,23 @@ describe('GET /api/files/:id', () => {
 
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    fileId = body.id;
+    assetId = body.id;
   });
 
-  it('returns file metadata', async () => {
-    const req = authedRequest(`/api/files/${fileId}`);
+  it('returns asset metadata', async () => {
+    const req = authedRequest(`/api/assets/${assetId}`);
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.id).toBe(fileId);
+    expect(body.id).toBe(assetId);
     expect(body.filename).toBeTruthy();
     expect(body.contentType).toBeTruthy();
     expect(body.sizeBytes).toBeGreaterThan(0);
   });
 
-  it('returns 404 for non-existent file', async () => {
-    const req = authedRequest('/api/files/non-existent-id');
+  it('returns 404 for non-existent asset', async () => {
+    const req = authedRequest('/api/assets/non-existent-id');
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(404);
@@ -196,11 +196,11 @@ describe('GET /api/files/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/files/:id/download — stream content
+// GET /api/assets/:id/download — stream content
 // ---------------------------------------------------------------------------
 
-describe('GET /api/files/:id/download', () => {
-  let fileId: string;
+describe('GET /api/assets/:id/download', () => {
+  let assetId: string;
   const testContent = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
 
   beforeAll(async () => {
@@ -211,7 +211,7 @@ describe('GET /api/files/:id/download', () => {
       'download-test.bin',
     );
 
-    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
       method: 'POST',
       headers: {
         Cookie: makeAuthCookies(token),
@@ -222,11 +222,11 @@ describe('GET /api/files/:id/download', () => {
 
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    fileId = body.id;
+    assetId = body.id;
   });
 
-  it('streams file content from R2', async () => {
-    const req = authedRequest(`/api/files/${fileId}/download`);
+  it('streams asset content from R2', async () => {
+    const req = authedRequest(`/api/assets/${assetId}/download`);
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(200);
@@ -237,7 +237,7 @@ describe('GET /api/files/:id/download', () => {
   });
 
   it('sets Content-Type and Content-Disposition headers', async () => {
-    const req = authedRequest(`/api/files/${fileId}/download`);
+    const req = authedRequest(`/api/assets/${assetId}/download`);
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(200);
@@ -247,11 +247,11 @@ describe('GET /api/files/:id/download', () => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/files/:id
+// DELETE /api/assets/:id
 // ---------------------------------------------------------------------------
 
-describe('DELETE /api/files/:id', () => {
-  let fileId: string;
+describe('DELETE /api/assets/:id', () => {
+  let assetId: string;
 
   beforeAll(async () => {
     const formData = new FormData();
@@ -263,7 +263,7 @@ describe('DELETE /api/files/:id', () => {
       'delete-test.bin',
     );
 
-    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
       method: 'POST',
       headers: {
         Cookie: makeAuthCookies(token),
@@ -274,17 +274,17 @@ describe('DELETE /api/files/:id', () => {
 
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    fileId = body.id;
+    assetId = body.id;
   });
 
-  it('deletes file from R2 and D1', async () => {
-    const req = authedRequest(`/api/files/${fileId}`, { method: 'DELETE' });
+  it('deletes asset from R2 and D1', async () => {
+    const req = authedRequest(`/api/assets/${assetId}`, { method: 'DELETE' });
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(200);
 
     // Verify it's gone from D1
-    const getReq = authedRequest(`/api/files/${fileId}`);
+    const getReq = authedRequest(`/api/assets/${assetId}`);
     const getRes = await app.request(getReq, {}, env);
     expect(getRes.status).toBe(404);
   });
@@ -294,18 +294,18 @@ describe('DELETE /api/files/:id', () => {
 // Ownership isolation
 // ---------------------------------------------------------------------------
 
-describe('File ownership', () => {
-  let fileId: string;
+describe('Asset ownership', () => {
+  let assetId: string;
 
   beforeAll(async () => {
     const formData = new FormData();
     formData.append(
       'file',
       new Blob([new Uint8Array([99])], { type: 'image/png' }),
-      'owned-file.png',
+      'owned-asset.png',
     );
 
-    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/files`, {
+    const req = new Request(`${TEST_CONFIG.APP_BASE_URL}/api/assets`, {
       method: 'POST',
       headers: {
         Cookie: makeAuthCookies(token),
@@ -316,10 +316,10 @@ describe('File ownership', () => {
 
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    fileId = body.id;
+    assetId = body.id;
   });
 
-  it("cannot access another user's file metadata", async () => {
+  it("cannot access another user's asset metadata", async () => {
     const otherUser = await createTestUser(env.DB);
     const otherSession = await createTestSession(env.DB, otherUser.id);
     const otherToken = await signTestAccessToken(
@@ -328,7 +328,7 @@ describe('File ownership', () => {
     );
 
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/files/${fileId}`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/assets/${assetId}`,
       {
         headers: {
           Cookie: makeAuthCookies(otherToken),
@@ -341,7 +341,7 @@ describe('File ownership', () => {
     expect(res.status).toBe(404);
   });
 
-  it("cannot download another user's file", async () => {
+  it("cannot download another user's asset", async () => {
     const otherUser = await createTestUser(env.DB);
     const otherSession = await createTestSession(env.DB, otherUser.id);
     const otherToken = await signTestAccessToken(
@@ -350,7 +350,7 @@ describe('File ownership', () => {
     );
 
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/files/${fileId}/download`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/assets/${assetId}/download`,
       {
         headers: {
           Cookie: makeAuthCookies(otherToken),
@@ -363,7 +363,7 @@ describe('File ownership', () => {
     expect(res.status).toBe(404);
   });
 
-  it("cannot delete another user's file", async () => {
+  it("cannot delete another user's asset", async () => {
     const otherUser = await createTestUser(env.DB);
     const otherSession = await createTestSession(env.DB, otherUser.id);
     const otherToken = await signTestAccessToken(
@@ -372,7 +372,7 @@ describe('File ownership', () => {
     );
 
     const req = new Request(
-      `${TEST_CONFIG.APP_BASE_URL}/api/files/${fileId}`,
+      `${TEST_CONFIG.APP_BASE_URL}/api/assets/${assetId}`,
       {
         method: 'DELETE',
         headers: {

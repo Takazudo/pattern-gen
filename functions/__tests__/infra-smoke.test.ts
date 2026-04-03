@@ -42,8 +42,8 @@ describe('D1 database', () => {
     const tableNames = result.results.map((r: any) => r.name);
     expect(tableNames).toContain('users');
     expect(tableNames).toContain('sessions');
-    expect(tableNames).toContain('patterns');
-    expect(tableNames).toContain('files');
+    expect(tableNames).toContain('compositions');
+    expect(tableNames).toContain('assets');
   });
 
   it('supports CRUD operations', async () => {

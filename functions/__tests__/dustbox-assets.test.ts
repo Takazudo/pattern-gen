@@ -1,10 +1,10 @@
 /**
- * Tests for file dustbox (soft-delete) endpoints:
- * - DELETE /api/files/:id — soft-delete (set deleted_at)
- * - GET /api/files — excludes soft-deleted
- * - GET /api/files/trash — returns only soft-deleted
- * - POST /api/files/:id/restore — restore from trash
- * - DELETE /api/files/:id/permanent — permanently delete from D1 + R2
+ * Tests for asset dustbox (soft-delete) endpoints:
+ * - DELETE /api/assets/:id — soft-delete (set deleted_at)
+ * - GET /api/assets — excludes soft-deleted
+ * - GET /api/assets/trash — returns only soft-deleted
+ * - POST /api/assets/:id/restore — restore from trash
+ * - DELETE /api/assets/:id/permanent — permanently delete from D1 + R2
  * - Ownership checks on all operations
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -17,8 +17,8 @@ import {
   createTestSession,
   createAuthenticatedRequest,
   buildTestApiApp,
-  createTestFile,
-  softDeleteFile,
+  createTestAsset,
+  softDeleteAsset,
   type TestEnv,
 } from './helpers.js';
 import { app as apiApp } from '../api/[[route]].js';
@@ -40,12 +40,12 @@ beforeAll(async () => {
   await setupDb(env.DB);
   app = buildTestApiApp(apiApp);
 
-  const user = await createTestUser(env.DB, { name: 'File Dustbox User' });
+  const user = await createTestUser(env.DB, { name: 'Asset Dustbox User' });
   userId = user.id;
   const session = await createTestSession(env.DB, userId);
   sessionId = session.id;
 
-  const otherUser = await createTestUser(env.DB, { name: 'Other File User' });
+  const otherUser = await createTestUser(env.DB, { name: 'Other Asset User' });
   otherUserId = otherUser.id;
   const otherSession = await createTestSession(env.DB, otherUserId);
   otherSessionId = otherSession.id;
@@ -56,14 +56,14 @@ afterAll(async () => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/files/:id — soft-delete
+// DELETE /api/assets/:id — soft-delete
 // ---------------------------------------------------------------------------
 
-describe('DELETE /api/files/:id (soft-delete)', () => {
-  it('should soft-delete a file (set deleted_at)', async () => {
-    const file = await createTestFile(env, userId, { filename: 'to-soft-delete.png' });
+describe('DELETE /api/assets/:id (soft-delete)', () => {
+  it('should soft-delete an asset (set deleted_at)', async () => {
+    const asset = await createTestAsset(env, userId, { filename: 'to-soft-delete.png' });
 
-    const req = await createAuthenticatedRequest(`/api/files/${file.id}`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${asset.id}`, {
       method: 'DELETE',
       userId,
       sessionId,
@@ -76,15 +76,15 @@ describe('DELETE /api/files/:id (soft-delete)', () => {
     expect(data.ok).toBe(true);
 
     // Verify soft-deleted
-    const row = await env.DB.prepare('SELECT deleted_at FROM files WHERE id = ?')
-      .bind(file.id)
+    const row = await env.DB.prepare('SELECT deleted_at FROM assets WHERE id = ?')
+      .bind(asset.id)
       .first<{ deleted_at: number | null }>();
     expect(row).toBeTruthy();
     expect(row!.deleted_at).toBeTruthy();
   });
 
-  it('should return 404 for non-existent file', async () => {
-    const req = await createAuthenticatedRequest('/api/files/nonexistent', {
+  it('should return 404 for non-existent asset', async () => {
+    const req = await createAuthenticatedRequest('/api/assets/nonexistent', {
       method: 'DELETE',
       userId,
       sessionId,
@@ -94,10 +94,10 @@ describe('DELETE /api/files/:id (soft-delete)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('should not allow deleting another user\'s file', async () => {
-    const otherFile = await createTestFile(env, otherUserId, { filename: 'other-file.png' });
+  it('should not allow deleting another user\'s asset', async () => {
+    const otherAsset = await createTestAsset(env, otherUserId, { filename: 'other-asset.png' });
 
-    const req = await createAuthenticatedRequest(`/api/files/${otherFile.id}`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${otherAsset.id}`, {
       method: 'DELETE',
       userId,
       sessionId,
@@ -108,10 +108,10 @@ describe('DELETE /api/files/:id (soft-delete)', () => {
   });
 
   it('should keep R2 object intact after soft-delete', async () => {
-    const file = await createTestFile(env, userId, { filename: 'keep-r2.png' });
-    const r2Key = file.r2_key;
+    const asset = await createTestAsset(env, userId, { filename: 'keep-r2.png' });
+    const r2Key = asset.r2_key;
 
-    const req = await createAuthenticatedRequest(`/api/files/${file.id}`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${asset.id}`, {
       method: 'DELETE',
       userId,
       sessionId,
@@ -125,16 +125,16 @@ describe('DELETE /api/files/:id (soft-delete)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/files — excludes soft-deleted
+// GET /api/assets — excludes soft-deleted
 // ---------------------------------------------------------------------------
 
-describe('GET /api/files (excludes soft-deleted)', () => {
-  it('should not include soft-deleted files in listing', async () => {
-    const active = await createTestFile(env, userId, { filename: 'active-file.png' });
-    const toDelete = await createTestFile(env, userId, { filename: 'will-delete.png' });
-    await softDeleteFile(env, toDelete.id);
+describe('GET /api/assets (excludes soft-deleted)', () => {
+  it('should not include soft-deleted assets in listing', async () => {
+    const active = await createTestAsset(env, userId, { filename: 'active-asset.png' });
+    const toDelete = await createTestAsset(env, userId, { filename: 'will-delete.png' });
+    await softDeleteAsset(env, toDelete.id);
 
-    const req = await createAuthenticatedRequest('/api/files', {
+    const req = await createAuthenticatedRequest('/api/assets', {
       userId,
       sessionId,
     });
@@ -150,16 +150,16 @@ describe('GET /api/files (excludes soft-deleted)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/files/trash — trashed files only
+// GET /api/assets/trash — trashed assets only
 // ---------------------------------------------------------------------------
 
-describe('GET /api/files/trash', () => {
-  it('should return only soft-deleted files', async () => {
-    const active = await createTestFile(env, userId, { filename: 'still-active.png' });
-    const trashed = await createTestFile(env, userId, { filename: 'in-trash.png' });
-    await softDeleteFile(env, trashed.id);
+describe('GET /api/assets/trash', () => {
+  it('should return only soft-deleted assets', async () => {
+    const active = await createTestAsset(env, userId, { filename: 'still-active.png' });
+    const trashed = await createTestAsset(env, userId, { filename: 'in-trash.png' });
+    await softDeleteAsset(env, trashed.id);
 
-    const req = await createAuthenticatedRequest('/api/files/trash', {
+    const req = await createAuthenticatedRequest('/api/assets/trash', {
       userId,
       sessionId,
     });
@@ -173,11 +173,11 @@ describe('GET /api/files/trash', () => {
     expect(ids).not.toContain(active.id);
   });
 
-  it('should not show other user\'s trashed files', async () => {
-    const otherTrashed = await createTestFile(env, otherUserId, { filename: 'other-trashed.png' });
-    await softDeleteFile(env, otherTrashed.id);
+  it('should not show other user\'s trashed assets', async () => {
+    const otherTrashed = await createTestAsset(env, otherUserId, { filename: 'other-trashed.png' });
+    await softDeleteAsset(env, otherTrashed.id);
 
-    const req = await createAuthenticatedRequest('/api/files/trash', {
+    const req = await createAuthenticatedRequest('/api/assets/trash', {
       userId,
       sessionId,
     });
@@ -192,15 +192,15 @@ describe('GET /api/files/trash', () => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/files/:id/restore — restore from trash
+// POST /api/assets/:id/restore — restore from trash
 // ---------------------------------------------------------------------------
 
-describe('POST /api/files/:id/restore', () => {
-  it('should restore a soft-deleted file', async () => {
-    const file = await createTestFile(env, userId, { filename: 'to-restore.png' });
-    await softDeleteFile(env, file.id);
+describe('POST /api/assets/:id/restore', () => {
+  it('should restore a soft-deleted asset', async () => {
+    const asset = await createTestAsset(env, userId, { filename: 'to-restore.png' });
+    await softDeleteAsset(env, asset.id);
 
-    const req = await createAuthenticatedRequest(`/api/files/${file.id}/restore`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${asset.id}/restore`, {
       method: 'POST',
       userId,
       sessionId,
@@ -210,16 +210,16 @@ describe('POST /api/files/:id/restore', () => {
     expect(res.status).toBe(200);
 
     // Verify deleted_at is cleared
-    const row = await env.DB.prepare('SELECT deleted_at FROM files WHERE id = ?')
-      .bind(file.id)
+    const row = await env.DB.prepare('SELECT deleted_at FROM assets WHERE id = ?')
+      .bind(asset.id)
       .first<{ deleted_at: number | null }>();
     expect(row!.deleted_at).toBeNull();
   });
 
-  it('should return 404 for non-trashed file', async () => {
-    const active = await createTestFile(env, userId, { filename: 'not-trashed.png' });
+  it('should return 404 for non-trashed asset', async () => {
+    const active = await createTestAsset(env, userId, { filename: 'not-trashed.png' });
 
-    const req = await createAuthenticatedRequest(`/api/files/${active.id}/restore`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${active.id}/restore`, {
       method: 'POST',
       userId,
       sessionId,
@@ -229,11 +229,11 @@ describe('POST /api/files/:id/restore', () => {
     expect(res.status).toBe(404);
   });
 
-  it('should not allow restoring another user\'s trashed file', async () => {
-    const otherFile = await createTestFile(env, otherUserId, { filename: 'other-restore.png' });
-    await softDeleteFile(env, otherFile.id);
+  it('should not allow restoring another user\'s trashed asset', async () => {
+    const otherAsset = await createTestAsset(env, otherUserId, { filename: 'other-restore.png' });
+    await softDeleteAsset(env, otherAsset.id);
 
-    const req = await createAuthenticatedRequest(`/api/files/${otherFile.id}/restore`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${otherAsset.id}/restore`, {
       method: 'POST',
       userId,
       sessionId,
@@ -245,16 +245,16 @@ describe('POST /api/files/:id/restore', () => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/files/:id/permanent — permanent delete
+// DELETE /api/assets/:id/permanent — permanent delete
 // ---------------------------------------------------------------------------
 
-describe('DELETE /api/files/:id/permanent', () => {
-  it('should permanently delete a trashed file from D1 and R2', async () => {
-    const file = await createTestFile(env, userId, { filename: 'perm-delete.png' });
-    const r2Key = file.r2_key;
-    await softDeleteFile(env, file.id);
+describe('DELETE /api/assets/:id/permanent', () => {
+  it('should permanently delete a trashed asset from D1 and R2', async () => {
+    const asset = await createTestAsset(env, userId, { filename: 'perm-delete.png' });
+    const r2Key = asset.r2_key;
+    await softDeleteAsset(env, asset.id);
 
-    const req = await createAuthenticatedRequest(`/api/files/${file.id}/permanent`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${asset.id}/permanent`, {
       method: 'DELETE',
       userId,
       sessionId,
@@ -267,8 +267,8 @@ describe('DELETE /api/files/:id/permanent', () => {
     expect(data.ok).toBe(true);
 
     // Verify it's gone from D1
-    const row = await env.DB.prepare('SELECT id FROM files WHERE id = ?')
-      .bind(file.id)
+    const row = await env.DB.prepare('SELECT id FROM assets WHERE id = ?')
+      .bind(asset.id)
       .first();
     expect(row).toBeNull();
 
@@ -277,10 +277,10 @@ describe('DELETE /api/files/:id/permanent', () => {
     expect(r2Obj).toBeNull();
   });
 
-  it('should return 404 for non-trashed file', async () => {
-    const active = await createTestFile(env, userId, { filename: 'active-no-perm.png' });
+  it('should return 404 for non-trashed asset', async () => {
+    const active = await createTestAsset(env, userId, { filename: 'active-no-perm.png' });
 
-    const req = await createAuthenticatedRequest(`/api/files/${active.id}/permanent`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${active.id}/permanent`, {
       method: 'DELETE',
       userId,
       sessionId,
@@ -290,11 +290,11 @@ describe('DELETE /api/files/:id/permanent', () => {
     expect(res.status).toBe(404);
   });
 
-  it('should not allow permanently deleting another user\'s file', async () => {
-    const otherFile = await createTestFile(env, otherUserId, { filename: 'other-perm.png' });
-    await softDeleteFile(env, otherFile.id);
+  it('should not allow permanently deleting another user\'s asset', async () => {
+    const otherAsset = await createTestAsset(env, otherUserId, { filename: 'other-perm.png' });
+    await softDeleteAsset(env, otherAsset.id);
 
-    const req = await createAuthenticatedRequest(`/api/files/${otherFile.id}/permanent`, {
+    const req = await createAuthenticatedRequest(`/api/assets/${otherAsset.id}/permanent`, {
       method: 'DELETE',
       userId,
       sessionId,
