@@ -32,6 +32,9 @@ export type { ColorScheme, Palette } from './color-schemes.js';
 export { applyHslAdjust } from './hsl-adjust.js';
 export type { HslAdjust } from './hsl-adjust.js';
 
+// Contrast/brightness adjust
+export { applyContrastBrightness } from './contrast-brightness.js';
+
 // Center detent
 export { centerDetentToZoom, zoomToCenterDetent } from './center-detent.js';
 
