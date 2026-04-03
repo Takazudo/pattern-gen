@@ -3,7 +3,10 @@ export interface AuthUser {
   email: string | null;
   emailVerified: boolean;
   name: string | null;
+  nickname: string | null;
   pictureUrl: string | null;
+  photoUrl: string | null;
+  createdAt: number;
 }
 
 export interface Pattern {
@@ -14,6 +17,7 @@ export interface Pattern {
   previewR2Key: string | null;
   createdAt: number;
   updatedAt: number;
+  deletedAt: number | null;
 }
 
 export interface PatternsResponse {
@@ -29,6 +33,12 @@ export interface FileEntry {
   contentType: string;
   sizeBytes: number;
   createdAt: number;
+  deletedAt: number | null;
+}
+
+export interface TrashResponse<T> {
+  items: T[];
+  total: number;
 }
 
 export interface FilesResponse {

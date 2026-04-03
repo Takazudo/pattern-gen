@@ -94,6 +94,14 @@ export const api = {
     });
   },
 
+  patch<T>(url: string, body?: unknown): Promise<T> {
+    return request<T>(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: body != null ? JSON.stringify(body) : undefined,
+    });
+  },
+
   delete<T>(url: string): Promise<T> {
     return request<T>(url, { method: 'DELETE' });
   },

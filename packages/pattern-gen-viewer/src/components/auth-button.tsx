@@ -2,11 +2,10 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/auth-context.js';
 
 interface AuthButtonProps {
-  onOpenMyPatterns: () => void;
-  onOpenMyFiles: () => void;
+  onOpenUserPage: () => void;
 }
 
-export function AuthButton({ onOpenMyPatterns, onOpenMyFiles }: AuthButtonProps) {
+export function AuthButton({ onOpenUserPage }: AuthButtonProps) {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,7 +43,7 @@ export function AuthButton({ onOpenMyPatterns, onOpenMyFiles }: AuthButtonProps)
             {user?.name?.charAt(0).toUpperCase() ?? '?'}
           </span>
         )}
-        <span className="auth-user-name">{user?.name ?? 'User'}</span>
+        <span className="auth-user-name">{user?.nickname ?? user?.name ?? 'User'}</span>
       </button>
       {open && (
         <div className="auth-dropdown">
@@ -52,19 +51,10 @@ export function AuthButton({ onOpenMyPatterns, onOpenMyFiles }: AuthButtonProps)
             className="auth-dropdown-item"
             onClick={() => {
               setOpen(false);
-              onOpenMyPatterns();
+              onOpenUserPage();
             }}
           >
-            My Patterns
-          </button>
-          <button
-            className="auth-dropdown-item"
-            onClick={() => {
-              setOpen(false);
-              onOpenMyFiles();
-            }}
-          >
-            My Files
+            My Page
           </button>
           <div className="auth-dropdown-divider" />
           <button
