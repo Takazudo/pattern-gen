@@ -5,6 +5,7 @@ import {
   colorSchemesByKey,
   normalizeSchemeKey,
   applyHslAdjust,
+  applyContrastBrightness,
   OGP_WIDTH,
   OGP_HEIGHT,
 } from '@takazudo/pattern-gen-core';
@@ -100,6 +101,15 @@ export async function renderPattern(options: GenerateOptions): Promise<RenderRes
 
   if (options.hsl) {
     applyHslAdjust(ctx as unknown as CanvasRenderingContext2D, size, size, options.hsl);
+  }
+
+  if (options.contrastBrightness) {
+    applyContrastBrightness(
+      ctx as unknown as CanvasRenderingContext2D,
+      size,
+      size,
+      options.contrastBrightness,
+    );
   }
 
   const buffer = canvas.toBuffer('image/png');
@@ -236,6 +246,17 @@ export async function renderOgpFromConfig(config: OgpConfig): Promise<RenderResu
   const patCtx = patternCanvas.getContext('2d');
   if (config.hsl.h !== 0 || config.hsl.s !== 0 || config.hsl.l !== 0) {
     applyHslAdjust(patCtx as unknown as CanvasRenderingContext2D, renderSize, renderSize, config.hsl);
+  }
+
+  // Apply contrast/brightness adjustments
+  if (config.contrastBrightness &&
+    (config.contrastBrightness.contrast !== 0 || config.contrastBrightness.brightness !== 0)) {
+    applyContrastBrightness(
+      patCtx as unknown as CanvasRenderingContext2D,
+      renderSize,
+      renderSize,
+      config.contrastBrightness,
+    );
   }
 
   // Crop to OGP region and scale to 1200x630

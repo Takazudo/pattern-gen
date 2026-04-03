@@ -96,4 +96,6 @@ export interface GenerateOptions {
   params?: Record<string, number>;
   /** HSL color adjustment (post-processing) */
   hsl?: HslAdjust;
+  /** Contrast and brightness adjustment (post-processing) */
+  contrastBrightness?: { contrast: number; brightness: number };
 }

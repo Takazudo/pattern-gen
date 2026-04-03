@@ -25,8 +25,8 @@ function requireFloat(flag: string, value: string | undefined): number {
   return n;
 }
 
-function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir?: string } {
-  const options: GenerateOptions & { outPath?: string; outDir?: string } = {
+function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir?: string; assetsDir?: string } {
+  const options: GenerateOptions & { outPath?: string; outDir?: string; assetsDir?: string } = {
     slug: '',
     type: 'wood-block',
   };
@@ -91,6 +91,22 @@ function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir
         options.hsl.l = requireFloat('--lightness', args[++i]);
         if (options.hsl.l < -100 || options.hsl.l > 100) fail('--lightness must be between -100 and 100');
         break;
+      case '--contrast':
+        options.contrastBrightness = options.contrastBrightness ?? { contrast: 0, brightness: 0 };
+        options.contrastBrightness.contrast = requireFloat('--contrast', args[++i]);
+        if (options.contrastBrightness.contrast < -100 || options.contrastBrightness.contrast > 100)
+          fail('--contrast must be between -100 and 100');
+        break;
+      case '--brightness':
+        options.contrastBrightness = options.contrastBrightness ?? { contrast: 0, brightness: 0 };
+        options.contrastBrightness.brightness = requireFloat('--brightness', args[++i]);
+        if (options.contrastBrightness.brightness < -100 || options.contrastBrightness.brightness > 100)
+          fail('--brightness must be between -100 and 100');
+        break;
+      case '--assets-dir':
+        options.assetsDir = args[++i];
+        if (!options.assetsDir) fail('--assets-dir requires a directory path');
+        break;
       case '--list-types':
         console.log('Available pattern types:');
         console.log(getPatternNames().join('\n'));
@@ -112,10 +128,13 @@ Options:
   --hue <number>              Hue shift (-180 to 180)
   --saturation <number>       Saturation shift (-100 to 100)
   --lightness <number>        Lightness shift (-100 to 100)
+  --contrast <number>         Contrast adjustment (-100 to 100)
+  --brightness <number>       Brightness adjustment (-100 to 100)
   --out, -o <path>            Output file path
   --out-dir <dir>             Output directory
   --ogp-config <path>         Render OGP image from config JSON file
   --composer-config <path>    Render Composer config JSON file
+  --assets-dir <dir>          Base directory for resolving relative image paths in composer config
   --list-types                List available pattern types
   --list-color-schemes        List available color schemes
   --help, -h                  Show this help`);
@@ -174,8 +193,29 @@ async function main() {
     const configPath = args[editorConfigIdx + 1];
     if (!configPath || configPath.startsWith('-')) fail('--composer-config requires a file path');
 
+    // Extract --assets-dir from args
+    const assetsDirIdx = args.indexOf('--assets-dir');
+    const assetsDirArg = assetsDirIdx !== -1 ? args[assetsDirIdx + 1] : undefined;
+
     const jsonStr = readFileSync(resolve(configPath), 'utf-8');
     const config = parseComposerConfig(jsonStr);
+
+    // Resolve relative image paths
+    const configDir = dirname(resolve(configPath));
+    const assetsDir = assetsDirArg ? resolve(assetsDirArg) : configDir;
+
+    for (const layer of config.layers) {
+      if (layer.type === 'image') {
+        const src = layer.src;
+        // Skip absolute paths, URLs, and data URIs
+        if (src.startsWith('/') || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+          continue;
+        }
+        // Resolve relative path against assets dir
+        layer.src = resolve(assetsDir, src);
+      }
+    }
+
     const result = await renderComposerFromConfig(config);
 
     const { outPath, outDir } = extractOutputFlags(args, editorConfigIdx);
