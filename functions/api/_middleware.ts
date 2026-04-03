@@ -49,6 +49,17 @@ export const onRequest = handleMiddleware<{
       return c.json({ error: "Invalid token claims" }, 401);
     }
 
+    // Verify session is still valid (not revoked or expired)
+    const session = await env.DB.prepare(
+      "SELECT revoked_at, expires_at FROM sessions WHERE id = ?1 AND user_id = ?2"
+    )
+      .bind(sessionId, userId)
+      .first<{ revoked_at: number | null; expires_at: number }>();
+
+    if (!session || session.revoked_at || session.expires_at < Date.now()) {
+      return c.json({ error: "Session revoked or expired" }, 401);
+    }
+
     c.set("auth", { userId, sessionId });
   } catch {
     return c.json({ error: "Invalid or expired token" }, 401);

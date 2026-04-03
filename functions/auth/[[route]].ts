@@ -305,8 +305,10 @@ app.get("/callback", async (c) => {
 
 app.post("/logout", async (c) => {
   const env = c.env;
+  const now = Date.now();
+  let sessionRevoked = false;
 
-  // Revoke session in D1 if we have a valid access token
+  // Try to revoke session via access token first
   const accessCookie = getCookie(c, "__Host-access");
   if (accessCookie) {
     try {
@@ -318,11 +320,25 @@ app.post("/logout", async (c) => {
         await env.DB.prepare(
           "UPDATE sessions SET revoked_at = ?1 WHERE id = ?2"
         )
-          .bind(Date.now(), payload.sid as string)
+          .bind(now, payload.sid as string)
           .run();
+        sessionRevoked = true;
       }
     } catch {
-      // Token invalid — session cleanup best effort
+      // Token expired or invalid — fall through to refresh token
+    }
+  }
+
+  // If access token was expired/invalid, revoke via refresh token
+  if (!sessionRevoked) {
+    const refreshCookie = getCookie(c, "__Host-refresh");
+    if (refreshCookie) {
+      const refreshHash = await sha256(refreshCookie);
+      await env.DB.prepare(
+        "UPDATE sessions SET revoked_at = ?1 WHERE refresh_token_hash = ?2 AND revoked_at IS NULL"
+      )
+        .bind(now, refreshHash)
+        .run();
     }
   }
 
@@ -380,17 +396,23 @@ app.post("/refresh", async (c) => {
     return c.json({ error: "Session expired or revoked" }, 401);
   }
 
-  // Rotate refresh token
+  // Rotate refresh token atomically (old hash in WHERE prevents race conditions)
   const newRefreshToken = randomToken(48);
   const newRefreshHash = await sha256(newRefreshToken);
 
-  await env.DB.prepare(
+  const rotateResult = await env.DB.prepare(
     `UPDATE sessions
      SET refresh_token_hash = ?1, last_seen_at = ?2
-     WHERE id = ?3`
+     WHERE id = ?3 AND refresh_token_hash = ?4`
   )
-    .bind(newRefreshHash, now, session.id)
+    .bind(newRefreshHash, now, session.id, refreshHash)
     .run();
+
+  if (!rotateResult.meta.changes) {
+    // Another concurrent request already rotated the token
+    deleteCookie(c, "__Host-refresh", { path: "/" });
+    return c.json({ error: "Refresh token already used" }, 401);
+  }
 
   // Issue new access JWT
   const accessToken = await new SignJWT({
