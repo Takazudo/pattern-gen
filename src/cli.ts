@@ -25,6 +25,12 @@ function requireFloat(flag: string, value: string | undefined): number {
   return n;
 }
 
+function requireBoundedFloat(flag: string, value: string | undefined, min: number, max: number): number {
+  const n = requireFloat(flag, value);
+  if (n < min || n > max) fail(`${flag} must be between ${min} and ${max}`);
+  return n;
+}
+
 function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir?: string } {
   const options: GenerateOptions & { outPath?: string; outDir?: string } = {
     slug: '',
@@ -78,32 +84,24 @@ function parseArgs(args: string[]): GenerateOptions & { outPath?: string; outDir
         break;
       case '--hue':
         options.hsl = options.hsl ?? {};
-        options.hsl.h = requireFloat('--hue', args[++i]);
-        if (options.hsl.h < -180 || options.hsl.h > 180) fail('--hue must be between -180 and 180');
+        options.hsl.h = requireBoundedFloat('--hue', args[++i], -180, 180);
         break;
       case '--saturation':
         options.hsl = options.hsl ?? {};
-        options.hsl.s = requireFloat('--saturation', args[++i]);
-        if (options.hsl.s < -100 || options.hsl.s > 100) fail('--saturation must be between -100 and 100');
+        options.hsl.s = requireBoundedFloat('--saturation', args[++i], -100, 100);
         break;
       case '--lightness':
         options.hsl = options.hsl ?? {};
-        options.hsl.l = requireFloat('--lightness', args[++i]);
-        if (options.hsl.l < -100 || options.hsl.l > 100) fail('--lightness must be between -100 and 100');
+        options.hsl.l = requireBoundedFloat('--lightness', args[++i], -100, 100);
         break;
       case '--contrast':
         options.contrastBrightness = options.contrastBrightness ?? { contrast: 0, brightness: 0 };
-        options.contrastBrightness.contrast = requireFloat('--contrast', args[++i]);
-        if (options.contrastBrightness.contrast < -100 || options.contrastBrightness.contrast > 100)
-          fail('--contrast must be between -100 and 100');
+        options.contrastBrightness.contrast = requireBoundedFloat('--contrast', args[++i], -100, 100);
         break;
       case '--brightness':
         options.contrastBrightness = options.contrastBrightness ?? { contrast: 0, brightness: 0 };
-        options.contrastBrightness.brightness = requireFloat('--brightness', args[++i]);
-        if (options.contrastBrightness.brightness < -100 || options.contrastBrightness.brightness > 100)
-          fail('--brightness must be between -100 and 100');
+        options.contrastBrightness.brightness = requireBoundedFloat('--brightness', args[++i], -100, 100);
         break;
-      // --assets-dir is only used in --composer-config mode (parsed separately there)
       case '--list-types':
         console.log('Available pattern types:');
         console.log(getPatternNames().join('\n'));
