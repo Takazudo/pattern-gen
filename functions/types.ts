@@ -17,6 +17,8 @@ export interface UserRow {
   email_verified: number;
   name: string | null;
   picture_url: string | null;
+  nickname: string | null;
+  photo_r2_key: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -40,6 +42,7 @@ export interface PatternRow {
   config_json: string;
   pattern_type: string;
   preview_r2_key: string | null;
+  deleted_at: number | null;
   created_at: number;
   updated_at: number;
 }
@@ -52,6 +55,7 @@ export interface FileRow {
   filename: string;
   content_type: string;
   size_bytes: number;
+  deleted_at: number | null;
   created_at: number;
 }
 
@@ -68,7 +72,14 @@ export interface UserResponse {
   emailVerified: boolean;
   name: string | null;
   pictureUrl: string | null;
+  nickname: string | null;
+  photoUrl: string | null;
   createdAt: number;
+}
+
+/** API request: update user profile */
+export interface UpdateProfileRequest {
+  nickname?: string;
 }
 
 /** API response: pattern */

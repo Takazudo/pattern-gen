@@ -36,6 +36,10 @@ import { SavePatternModal } from './components/save-pattern-modal.js';
 import { MyPatterns } from './components/my-patterns.js';
 import { MyFiles } from './components/my-files.js';
 import { ImageUpload } from './components/image-upload.js';
+import { UserPage } from './components/user-page.js';
+import { MediaBrowserDialog } from './components/media-browser-dialog.js';
+import { api } from './lib/api-client.js';
+import type { FileEntry } from './lib/api-types.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -279,6 +283,7 @@ function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
 }
 
 export function App() {
+  const { isAuthenticated } = useAuth();
   const [slug, setSlug] = useState(randomSlug);
   const [patternType, setPatternType] = useState(patternRegistry[0].name);
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
@@ -314,6 +319,8 @@ export function App() {
   const [saveModalData, setSaveModalData] = useState<{ configJson: string; previewDataUrl?: string } | null>(null);
   const [showMyPatterns, setShowMyPatterns] = useState(false);
   const [showMyFiles, setShowMyFiles] = useState(false);
+  const [showUserPage, setShowUserPage] = useState(false);
+  const [mediaBrowserLayerId, setMediaBrowserLayerId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const skipResetRef = useRef(0);
   // Image layers state (multi-image)
@@ -623,6 +630,11 @@ export function App() {
     setShowUrlModal(true);
   }, [slug, patternType, colorSchemeIndex, zoomSlider, useTranslate, translateX, translateY, rotate, skewX, skewY, userOverrides, hslAdjust, contrastBrightness]);
 
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2000);
+  }, []);
+
   // Layer counter for unique naming
   const layerCounterRef = useRef(0);
 
@@ -694,7 +706,15 @@ export function App() {
 
     setImageLayers((prev) => [newLayer, ...prev]);
     setSelectedLayerId(newId);
-  }, []);
+
+    // Auto-save for authenticated users (non-blocking)
+    if (isAuthenticated) {
+      api.upload<FileEntry>('/api/files', file).then(
+        () => showToast('Image saved to My Files'),
+        () => { /* silent failure for auto-save */ },
+      );
+    }
+  }, [isAuthenticated, showToast]);
 
   const handleDeleteLayer = useCallback((id: string) => {
     setImageLayers((prev) => prev.filter((l) => l.id !== id));
@@ -837,6 +857,53 @@ export function App() {
       prev.map((l) => (l.id === id ? { ...l, transform } : l)),
     );
   }, []);
+
+  // Replace a specific layer's image from media browser
+  const handleMediaBrowserSelect = useCallback(async (file: File) => {
+    const layerId = mediaBrowserLayerId;
+    if (!layerId) return;
+    setMediaBrowserLayerId(null);
+
+    let img: ImageBitmap;
+    try {
+      img = await createImageBitmap(file);
+    } catch {
+      return;
+    }
+
+    const rawCanvas = new OffscreenCanvas(img.width, img.height);
+    const rawCtx = rawCanvas.getContext('2d');
+    if (!rawCtx) return;
+    rawCtx.drawImage(img, 0, 0);
+    const imageData = rawCtx.getImageData(0, 0, img.width, img.height);
+
+    const processed: ProcessedImage = {
+      original: imageData,
+      alphaMask: new Uint8ClampedArray(img.width * img.height).fill(255),
+      width: img.width,
+      height: img.height,
+    };
+
+    setImageLayers((prev) =>
+      prev.map((l) => {
+        if (l.id !== layerId) return l;
+        const updated: ViewerImageLayer = {
+          ...l,
+          processed,
+          originalFile: file,
+          name: file.name,
+          bgRemovalEnabled: false,
+          hasBgRemovalData: false,
+          bgThreshold: 0,
+          isProcessing: false,
+          error: null,
+          thresholdedCache: null,
+        };
+        updated.thresholdedCache = computeThresholdedCache(updated);
+        return updated;
+      }),
+    );
+  }, [mediaBrowserLayerId]);
 
   // Randomize changes slug (seed) and color scheme
   const randomize = useCallback(() => {
@@ -1074,8 +1141,6 @@ export function App() {
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
-  const { isAuthenticated } = useAuth();
-
   const handleStepChange = useCallback((step: AppStep) => {
     setCurrentStep(step);
     setComposerActive(false);
@@ -1083,11 +1148,6 @@ export function App() {
 
   const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
   const handleExitComposer = useCallback(() => setComposerActive(false), []);
-
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2000);
-  }, []);
 
   const getSaveConfigJson = useCallback((): string => {
     const canvas = canvasRef.current;
@@ -1189,8 +1249,7 @@ export function App() {
         <>
           {/* Auth button (top-right, before site link) */}
           <AuthButton
-            onOpenMyPatterns={() => setShowMyPatterns(true)}
-            onOpenMyFiles={() => setShowMyFiles(true)}
+            onOpenUserPage={() => setShowUserPage(true)}
           />
 
           {/* Site logo link (top-right) */}
@@ -1357,6 +1416,7 @@ export function App() {
               onThresholdChange={handleLayerThresholdChange}
               onBgRemovalToggle={handleLayerBgRemovalToggle}
               onKeepAspectRatioChange={handleLayerKeepAspectRatioChange}
+              onBrowseFiles={isAuthenticated ? (id) => setMediaBrowserLayerId(id) : undefined}
             />
             {selectedLayerId && (
               <ImageUpload
@@ -1468,6 +1528,19 @@ export function App() {
         <MyFiles
           onClose={() => setShowMyFiles(false)}
           onUseAsLayer={(file) => handleImageImport(file)}
+        />
+      )}
+      {showUserPage && (
+        <UserPage
+          onClose={() => setShowUserPage(false)}
+          onLoadPattern={handleLoadPattern}
+          onUseAsLayer={(file) => handleImageImport(file)}
+        />
+      )}
+      {mediaBrowserLayerId && (
+        <MediaBrowserDialog
+          onClose={() => setMediaBrowserLayerId(null)}
+          onSelect={handleMediaBrowserSelect}
         />
       )}
       {toast && <div className="toast">{toast}</div>}
