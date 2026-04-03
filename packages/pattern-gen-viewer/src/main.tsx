@@ -5,13 +5,11 @@ import { App } from './App.js';
 import './App.css';
 
 async function enableMocking() {
-  if (import.meta.env.DEV) {
-    const { worker } = await import('./mocks/browser.js');
-    return worker.start({
-      onUnhandledRequest: 'bypass',
-      serviceWorker: { url: '/pj/pattern-gen/mockServiceWorker.js' },
-    });
-  }
+  const { worker } = await import('./mocks/browser.js');
+  return worker.start({
+    onUnhandledRequest: 'bypass',
+    serviceWorker: { url: '/pj/pattern-gen/mockServiceWorker.js' },
+  });
 }
 
 enableMocking().then(() => {
