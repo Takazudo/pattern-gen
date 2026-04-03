@@ -257,6 +257,9 @@ export function App() {
   fixedParamsRef.current = fixedParams;
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
   const [fixedColorScheme, setFixedColorScheme] = useState(false);
+  const [fixedViewTransform, setFixedViewTransform] = useState(false);
+  const fixedViewTransformRef = useRef(fixedViewTransform);
+  fixedViewTransformRef.current = fixedViewTransform;
   const [contrastBrightness, setContrastBrightness] = useState({ contrast: 0, brightness: 0 });
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState('');
@@ -377,13 +380,15 @@ export function App() {
       }
       return kept;
     });
-    setZoomSlider(50);
-    setTranslateX(0);
-    setTranslateY(0);
-    setUseTranslate(false);
-    setRotate(0);
-    setSkewX(0);
-    setSkewY(0);
+    if (!fixedViewTransformRef.current) {
+      setZoomSlider(50);
+      setTranslateX(0);
+      setTranslateY(0);
+      setUseTranslate(false);
+      setRotate(0);
+      setSkewX(0);
+      setSkewY(0);
+    }
   }, [patternType, slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generate pattern (without HSL) and cache the result
@@ -1189,10 +1194,12 @@ export function App() {
               rotate={rotate}
               skewX={skewX}
               skewY={skewY}
+              fixedViewTransform={fixedViewTransform}
               onChange={handleTransformChange}
               onUseTranslateChange={handleUseTranslateChange}
               onRotateChange={handleRotateChange}
               onSkewChange={handleSkewChange}
+              onFixedViewTransformChange={setFixedViewTransform}
             />
           </CollapsibleSection>
 
