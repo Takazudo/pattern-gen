@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { NavNode } from "@/utils/docs";
+import type { LocaleLink } from "@/types/locale";
 import { INDENT, BASE_PAD, connectorLeft, ConnectorLines, CategoryLinkIcon } from "./tree-nav-shared";
+import ThemeToggle from "@/components/theme-toggle";
 
 function ToggleChevron({ isExpanded, className }: { isExpanded: boolean; className?: string }) {
   return (
@@ -96,6 +98,50 @@ function filterTree(nodes: NavNode[], query: string): NavNode[] {
 interface RootMenuItem {
   label: string;
   href: string;
+  children?: RootMenuItem[];
+}
+
+function RootMenuItemEntry({ item }: { item: RootMenuItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasChildren = item.children && item.children.length > 0;
+
+  return (
+    <div className="border-t border-muted">
+      <div className="flex items-center">
+        <a
+          href={item.href}
+          className="flex flex-1 items-center gap-hsp-xs px-hsp-sm py-vsp-xs text-small font-semibold text-fg hover:text-accent hover:underline"
+        >
+          <CategoryLinkIcon className="w-[14px]" />
+          {item.label}
+        </a>
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="flex items-center justify-center px-hsp-sm py-vsp-xs text-muted hover:text-fg"
+            aria-expanded={expanded}
+            aria-label={expanded ? `Collapse ${item.label}` : `Expand ${item.label}`}
+          >
+            <ToggleChevron isExpanded={expanded} className="text-muted" />
+          </button>
+        )}
+      </div>
+      {hasChildren && expanded && (
+        <div className="pb-vsp-xs">
+          {item.children!.map((child) => (
+            <a
+              key={child.href}
+              href={child.href}
+              className="block pl-hsp-xl pr-hsp-sm py-vsp-2xs text-small text-muted hover:text-accent hover:underline"
+            >
+              {child.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface SidebarTreeProps {
@@ -103,9 +149,33 @@ interface SidebarTreeProps {
   currentSlug?: string;
   rootMenuItems?: RootMenuItem[];
   backToMenuLabel?: string;
+  localeLinks?: LocaleLink[];
+  themeDefaultMode?: "light" | "dark";
 }
 
-export default function SidebarTree({ nodes, currentSlug, rootMenuItems, backToMenuLabel }: SidebarTreeProps) {
+function SidebarFooter({ links, themeDefaultMode }: { links?: LocaleLink[]; themeDefaultMode?: "light" | "dark" }) {
+  if (!links && !themeDefaultMode) return null;
+  return (
+    // pb-[50vh] provides scroll room so the footer doesn't sit at the very bottom of the viewport
+    <div className="lg:hidden flex items-center gap-hsp-md border-t border-muted px-hsp-sm py-vsp-xs pb-[50vh] text-small">
+      {themeDefaultMode && <ThemeToggle defaultMode={themeDefaultMode} />}
+      {links && links.map((link, i) => (
+        <span key={link.href} className="flex items-center gap-hsp-xs">
+          {i > 0 && <span className="text-muted">/</span>}
+          {link.active ? (
+            <span aria-current="true" className="font-medium text-fg">{link.label}</span>
+          ) : (
+            <a href={link.href} lang={link.code} className="text-muted hover:text-fg">
+              {link.label}
+            </a>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export default function SidebarTree({ nodes, currentSlug, rootMenuItems, backToMenuLabel, localeLinks, themeDefaultMode }: SidebarTreeProps) {
   const activeSlug = useActiveSlug(nodes, currentSlug);
   const [query, setQuery] = useState("");
   const [showingRootMenu, setShowingRootMenu] = useState(false);
@@ -140,6 +210,11 @@ export default function SidebarTree({ nodes, currentSlug, rootMenuItems, backToM
     [nodes, query],
   );
 
+  const footer = useMemo(
+    () => (localeLinks || themeDefaultMode) ? <SidebarFooter links={localeLinks} themeDefaultMode={themeDefaultMode} /> : null,
+    [localeLinks, themeDefaultMode],
+  );
+
   // Root menu view: show headerNav items as a simple list (Docusaurus-style)
   if (showingRootMenu && rootMenuItems) {
     return (
@@ -155,15 +230,9 @@ export default function SidebarTree({ nodes, currentSlug, rootMenuItems, backToM
           {backToMenuLabel ?? "Back to main menu"}
         </button>
         {rootMenuItems.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className="flex items-center gap-hsp-xs border-t border-muted px-hsp-sm py-vsp-xs text-small font-normal text-fg hover:text-accent hover:underline"
-          >
-            <CategoryLinkIcon className="w-[14px]" />
-            {item.label}
-          </a>
+          <RootMenuItemEntry key={item.href} item={item} />
         ))}
+        {footer}
       </nav>
     );
   }
@@ -174,15 +243,9 @@ export default function SidebarTree({ nodes, currentSlug, rootMenuItems, backToM
     return (
       <nav>
         {rootMenuItems.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className="flex items-center gap-hsp-xs border-t border-muted px-hsp-sm py-vsp-xs text-small font-normal text-fg hover:text-accent hover:underline"
-          >
-            <CategoryLinkIcon className="w-[14px]" />
-            {item.label}
-          </a>
+          <RootMenuItemEntry key={item.href} item={item} />
         ))}
+        {footer}
       </nav>
     );
   }
@@ -222,6 +285,7 @@ export default function SidebarTree({ nodes, currentSlug, rootMenuItems, backToM
         depth={0}
         forceOpen={!!query}
       />
+      {footer}
     </nav>
   );
 }
@@ -289,7 +353,7 @@ function CategoryNode({
 
   // Initial state must match server render (no sessionStorage access)
   // to avoid hydration mismatch. Stored state is restored in useEffect below.
-  const [open, setOpen] = useState(containsCurrent);
+  const [open, setOpen] = useState(containsCurrent ? true : !node.collapsed);
 
   // Restore open state from sessionStorage after hydration
   useEffect(() => {
@@ -353,7 +417,7 @@ function CategoryNode({
         <ConnectorLines depth={depth} isLast={isLast} />
         {node.href ? (
           <div
-            className={`flex w-full items-center text-small font-normal pt-[0.15rem] ${isActive ? "bg-fg text-bg" : "text-fg"}`}
+            className={`flex w-full items-center text-small font-semibold pt-[0.15rem] ${isActive ? "bg-fg text-bg" : "text-fg"}`}
           >
             <a
               href={node.href}
@@ -378,7 +442,7 @@ function CategoryNode({
           <button
             type="button"
             onClick={toggle}
-            className={`flex w-full items-center gap-hsp-md text-small font-normal py-vsp-xs text-fg hover:underline focus:underline`}
+            className={`flex w-full items-center gap-hsp-md text-small font-semibold py-vsp-xs text-fg hover:underline focus:underline`}
             style={{ paddingLeft }}
             aria-expanded={isExpanded}
             aria-label={isExpanded ? `Collapse ${node.label}` : `Expand ${node.label}`}
@@ -426,8 +490,9 @@ function LeafNode({
         <ConnectorLines depth={depth} isLast={isLast} />
         <a
           href={node.href}
+          aria-current={isActive ? "page" : undefined}
           className={isRoot
-            ? `flex items-center gap-hsp-xs py-[calc(var(--spacing-vsp-xs)+0.15rem)] pr-[4px] text-small font-normal ${
+            ? `flex items-center gap-hsp-xs py-[calc(var(--spacing-vsp-xs)+0.15rem)] pr-[4px] text-small font-semibold ${
                 isActive ? "bg-fg text-bg" : "text-fg hover:underline focus:underline"
               }`
             : `block py-vsp-2xs pr-[4px] ${isLast ? "pb-vsp-xs" : ""} text-small ${
