@@ -18,10 +18,10 @@ import * as jose from 'jose';
 // ---------------------------------------------------------------------------
 
 const MIGRATION_STATEMENTS = [
-  `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, auth0_sub TEXT UNIQUE NOT NULL, email TEXT NOT NULL, email_verified INTEGER NOT NULL DEFAULT 0, name TEXT, picture_url TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, auth0_sub TEXT UNIQUE NOT NULL, email TEXT NOT NULL, email_verified INTEGER NOT NULL DEFAULT 0, name TEXT, nickname TEXT, picture_url TEXT, photo_r2_key TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), refresh_token_hash TEXT NOT NULL, expires_at TEXT NOT NULL, revoked_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), last_seen_at TEXT NOT NULL DEFAULT (datetime('now')))`,
-  `CREATE TABLE IF NOT EXISTS patterns (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, config_json TEXT NOT NULL, pattern_type TEXT, preview_r2_key TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
-  `CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), r2_key TEXT NOT NULL, filename TEXT NOT NULL, content_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS patterns (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, config_json TEXT NOT NULL, pattern_type TEXT, preview_r2_key TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), deleted_at INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), r2_key TEXT NOT NULL, filename TEXT NOT NULL, content_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), deleted_at INTEGER)`,
 ];
 
 // ---------------------------------------------------------------------------
@@ -371,6 +371,19 @@ export function createProtectedApp(basePath = '/api'): Hono {
   return app;
 }
 
+/**
+ * Build a test app that wraps the API routes behind auth middleware.
+ * The API app must export `app` from functions/api/[[route]].ts.
+ *
+ * This is the standard test setup used across API test files.
+ */
+export function buildTestApiApp(apiApp: Hono): Hono {
+  const testApp = new Hono();
+  testApp.use('/api/*', createTestAuthMiddleware());
+  testApp.route('/', apiApp);
+  return testApp;
+}
+
 // ---------------------------------------------------------------------------
 // Pattern / File factories
 // ---------------------------------------------------------------------------
@@ -391,4 +404,143 @@ export function sampleFileData() {
     contentType: 'image/png',
     content: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), // PNG magic bytes
   };
+}
+
+// ---------------------------------------------------------------------------
+// Pattern / File CRUD factories
+// ---------------------------------------------------------------------------
+
+let patternCounter = 0;
+
+/**
+ * Insert a test pattern into D1 and optionally store a preview in R2.
+ */
+export async function createTestPattern(
+  env: TestEnv,
+  userId: string,
+  overrides: {
+    id?: string;
+    name?: string;
+    configJson?: string;
+    patternType?: string;
+    previewR2Key?: string | null;
+    deletedAt?: number | null;
+  } = {},
+) {
+  patternCounter++;
+  const now = Date.now();
+  const id = overrides.id ?? crypto.randomUUID();
+  const pattern = {
+    id,
+    user_id: userId,
+    name: overrides.name ?? `Test Pattern ${patternCounter}`,
+    config_json:
+      overrides.configJson ??
+      JSON.stringify(samplePatternConfig()),
+    pattern_type: overrides.patternType ?? 'wood-block',
+    preview_r2_key: overrides.previewR2Key ?? null,
+    created_at: now,
+    updated_at: now,
+    deleted_at: overrides.deletedAt ?? null,
+  };
+
+  await env.DB.prepare(
+    `INSERT INTO patterns (id, user_id, name, config_json, pattern_type, preview_r2_key, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      pattern.id,
+      pattern.user_id,
+      pattern.name,
+      pattern.config_json,
+      pattern.pattern_type,
+      pattern.preview_r2_key,
+      pattern.created_at,
+      pattern.updated_at,
+      pattern.deleted_at,
+    )
+    .run();
+
+  return pattern;
+}
+
+let fileCounter = 0;
+
+/**
+ * Insert a test file into D1 and store corresponding data in R2.
+ */
+export async function createTestFile(
+  env: TestEnv,
+  userId: string,
+  overrides: {
+    id?: string;
+    filename?: string;
+    contentType?: string;
+    content?: Uint8Array;
+    deletedAt?: number | null;
+  } = {},
+) {
+  fileCounter++;
+  const id = overrides.id ?? crypto.randomUUID();
+  const filename = overrides.filename ?? `test-file-${fileCounter}.png`;
+  const contentType = overrides.contentType ?? 'image/png';
+  const content = overrides.content ?? sampleFileData().content;
+  const r2Key = `users/${userId}/${id}-${filename}`;
+  const now = Date.now();
+
+  // Store in R2
+  await env.FILES.put(r2Key, content, {
+    httpMetadata: { contentType },
+  });
+
+  const file = {
+    id,
+    user_id: userId,
+    r2_key: r2Key,
+    filename,
+    content_type: contentType,
+    size_bytes: content.byteLength,
+    created_at: now,
+    deleted_at: overrides.deletedAt ?? null,
+  };
+
+  await env.DB.prepare(
+    `INSERT INTO files (id, user_id, r2_key, filename, content_type, size_bytes, created_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      file.id,
+      file.user_id,
+      file.r2_key,
+      file.filename,
+      file.content_type,
+      file.size_bytes,
+      file.created_at,
+      file.deleted_at,
+    )
+    .run();
+
+  return file;
+}
+
+/**
+ * Soft-delete a row in the given table by setting deleted_at.
+ */
+async function softDeleteRow(
+  env: TestEnv,
+  table: 'patterns' | 'files',
+  id: string,
+): Promise<void> {
+  const now = Date.now();
+  await env.DB.prepare(`UPDATE ${table} SET deleted_at = ? WHERE id = ?`)
+    .bind(now, id)
+    .run();
+}
+
+export function softDeletePattern(env: TestEnv, patternId: string): Promise<void> {
+  return softDeleteRow(env, 'patterns', patternId);
+}
+
+export function softDeleteFile(env: TestEnv, fileId: string): Promise<void> {
+  return softDeleteRow(env, 'files', fileId);
 }
