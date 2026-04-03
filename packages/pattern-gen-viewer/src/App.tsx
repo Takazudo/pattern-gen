@@ -29,6 +29,12 @@ import type { AppStep } from './components/step-indicator.js';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { downloadBlob, triggerDownload } from './utils/trigger-download.js';
+import { useAuth } from './contexts/auth-context.js';
+import { AuthButton } from './components/auth-button.js';
+import { SavePatternModal } from './components/save-pattern-modal.js';
+import { MyPatterns } from './components/my-patterns.js';
+import { MyFiles } from './components/my-files.js';
+import { ImageUpload } from './components/image-upload.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -302,6 +308,11 @@ export function App() {
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState('');
   const [urlCopied, setUrlCopied] = useState(false);
+  // Auth-related UI state
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showMyPatterns, setShowMyPatterns] = useState(false);
+  const [showMyFiles, setShowMyFiles] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const skipResetRef = useRef(0);
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
@@ -1061,6 +1072,8 @@ export function App() {
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
+  const { isAuthenticated } = useAuth();
+
   const handleStepChange = useCallback((step: AppStep) => {
     setCurrentStep(step);
     setComposerActive(false);
@@ -1068,6 +1081,89 @@ export function App() {
 
   const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
   const handleExitComposer = useCallback(() => setComposerActive(false), []);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2000);
+  }, []);
+
+  const handleSavePattern = useCallback(() => {
+    setShowSaveModal(true);
+  }, []);
+
+  const getSaveConfigJson = useCallback((): string => {
+    const canvas = canvasRef.current;
+    if (!canvas) return '{}';
+    // Use a full-canvas viewport rect to serialize the entire pattern state
+    const rect = canvas.getBoundingClientRect();
+    const config = buildBackgroundConfig(
+      { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+      canvas,
+      {
+        slug,
+        patternType,
+        colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
+        zoom,
+        txVal,
+        tyVal,
+        useTranslate,
+        rotate,
+        skewX,
+        skewY,
+        displayParams,
+        hslAdjust,
+        contrastBrightness,
+      },
+    );
+    return serializeOgpConfig(config);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, rotate, skewX, skewY, displayParams, hslAdjust, contrastBrightness]);
+
+  const getSavePreviewDataUrl = useCallback((): string | undefined => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    // Generate a small preview
+    const preview = document.createElement('canvas');
+    preview.width = 300;
+    preview.height = 300;
+    const pCtx = preview.getContext('2d');
+    if (!pCtx) return undefined;
+    pCtx.drawImage(canvas, 0, 0, 300, 300);
+    return preview.toDataURL('image/png');
+  }, []);
+
+  const handleLoadPattern = useCallback((configJson: string, _patternType: string) => {
+    try {
+      const config = JSON.parse(configJson) as OgpConfig;
+      if (config.slug) setSlug(config.slug);
+      if (config.type) {
+        // Find pattern type name
+        setPatternType(config.type);
+      }
+      if (config.colorScheme) {
+        const idx = COLOR_SCHEMES.findIndex((s) => s.name === config.colorScheme);
+        if (idx >= 0) setColorSchemeIndex(idx);
+      }
+      if (config.zoom != null) {
+        // Convert zoom back to slider value (rough inverse of centerDetentToZoom)
+        // centerDetentToZoom maps 50 -> 1.0, so approximate
+        setZoomSlider(50);
+      }
+      if (config.useTranslate) {
+        setUseTranslate(true);
+        if (config.translateX != null) setTranslateX(Math.round(config.translateX * 100));
+        if (config.translateY != null) setTranslateY(Math.round(config.translateY * 100));
+      }
+      if (config.rotate) setRotate(config.rotate);
+      if (config.skewX) setSkewX(config.skewX);
+      if (config.skewY) setSkewY(config.skewY);
+      if (config.params) setUserOverrides(config.params);
+      if (config.hsl) setHslAdjust(config.hsl);
+      if (config.contrastBrightness) setContrastBrightness(config.contrastBrightness);
+      showToast('Pattern loaded');
+    } catch {
+      showToast('Failed to load pattern config');
+    }
+  }, [showToast]);
 
   const showStepIndicator = !composerActive;
 
@@ -1088,6 +1184,12 @@ export function App() {
 
       {currentStep === 'background' && (
         <>
+          {/* Auth button (top-right, before site link) */}
+          <AuthButton
+            onOpenMyPatterns={() => setShowMyPatterns(true)}
+            onOpenMyFiles={() => setShowMyFiles(true)}
+          />
+
           {/* Site logo link (top-right) */}
           <a
             className="floating-link site-link"
@@ -1253,6 +1355,11 @@ export function App() {
               onBgRemovalToggle={handleLayerBgRemovalToggle}
               onKeepAspectRatioChange={handleLayerKeepAspectRatioChange}
             />
+            {selectedLayerId && (
+              <ImageUpload
+                file={imageLayers.find((l) => l.id === selectedLayerId)?.originalFile ?? null}
+              />
+            )}
           </CollapsibleSection>
 
           <CollapsibleSection title="Color Tweak">
@@ -1275,6 +1382,16 @@ export function App() {
               <button className="btn btn-generate-url" onClick={handleGenerateUrl}>
                 Generate URL
               </button>
+              {isAuthenticated && (
+                <>
+                  <button className="btn" onClick={handleSavePattern}>
+                    Save Pattern
+                  </button>
+                  <button className="btn" onClick={() => setShowMyPatterns(true)}>
+                    Load from My Patterns
+                  </button>
+                </>
+              )}
               <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
                 Compose &rarr;
               </button>
@@ -1322,6 +1439,31 @@ export function App() {
           </div>
         </div>
       )}
+      {showSaveModal && (
+        <SavePatternModal
+          patternType={patternType}
+          configJson={getSaveConfigJson()}
+          previewDataUrl={getSavePreviewDataUrl()}
+          onClose={() => setShowSaveModal(false)}
+          onSaved={() => {
+            setShowSaveModal(false);
+            showToast('Pattern saved!');
+          }}
+        />
+      )}
+      {showMyPatterns && (
+        <MyPatterns
+          onClose={() => setShowMyPatterns(false)}
+          onLoadPattern={handleLoadPattern}
+        />
+      )}
+      {showMyFiles && (
+        <MyFiles
+          onClose={() => setShowMyFiles(false)}
+          onUseAsLayer={(file) => handleImageImport(file)}
+        />
+      )}
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
