@@ -18,12 +18,7 @@ import { remarkResolveMarkdownLinks } from "./src/plugins/remark-resolve-markdow
 import { rehypeCodeTitle } from "./src/plugins/rehype-code-title";
 import { rehypeHeadingLinks } from "./src/plugins/rehype-heading-links";
 import { rehypeMermaid } from "./src/plugins/rehype-mermaid";
-import { rehypeD2 } from "./src/plugins/rehype-d2";
 import { rehypeStripMdExtension } from "./src/plugins/rehype-strip-md-extension";
-import { remarkD2Client } from "./src/plugins/remark-d2-client";
-import { remarkD2ThemeInject } from "./src/plugins/remark-d2-theme-inject";
-
-const isDev = import.meta.env?.DEV ?? process.argv.includes("dev");
 
 const activeScheme = colorSchemes[settings.colorScheme];
 const shikiTheme = activeScheme?.shikiTheme ?? "dracula";
@@ -50,21 +45,10 @@ const shikiConfig = settings.colorMode
       transformers: shikiTransformers,
     };
 
-const astroD2Integration = settings.d2 && !isDev
-  ? [(await import("astro-d2")).default({
-      theme: { default: "0", dark: "200" },
-      layout: "elk",
-      pad: 20,
-      skipGeneration: !!process.env.CI,
-      ...(settings.d2BuildMode === "wasm" ? { experimental: { useD2js: true } } : {}),
-    })]
-  : [];
-
 export default defineConfig({
   output: "static",
   base: settings.base,
   integrations: [
-    ...astroD2Integration,
     mdx(),
     preact({ compat: true }),
     searchIndexIntegration(),
@@ -79,8 +63,6 @@ export default defineConfig({
   markdown: {
     shikiConfig,
     remarkPlugins: [
-      ...(settings.d2 && isDev ? [remarkD2Client] : []),
-      ...(settings.d2 && !isDev ? [remarkD2ThemeInject] : []),
       remarkDirective,
       remarkAdmonitions,
       [remarkResolveMarkdownLinks, {
@@ -102,7 +84,6 @@ export default defineConfig({
       rehypeHeadingLinks,
       rehypeStripMdExtension,
       ...(settings.mermaid ? [rehypeMermaid] : []),
-      ...(settings.d2 ? [rehypeD2] : []),
     ],
   },
 });

@@ -49,15 +49,9 @@ importers:
       '@shikijs/transformers':
         specifier: ^4.0.0
         version: 4.0.2
-      '@terrastruct/d2':
-        specifier: ^0.1.33
-        version: 0.1.33
       astro:
         specifier: ^5.18.0
         version: 5.18.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.0)(typescript@5.9.3)(yaml@2.8.3)
-      astro-d2:
-        specifier: ^0.10.0
-        version: 0.10.0(astro@5.18.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.0)(typescript@5.9.3)(yaml@2.8.3))
       clsx:
         specifier: ^2.1.0
         version: 2.1.1
@@ -1706,9 +1700,6 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@terrastruct/d2@0.1.33':
-    resolution: {integrity: sha512-eK5hyfGIJFolC7sUsiKvWdY9xGFctTe3d+PSijo09IYDso8psztC+A4SammizXtlwYZpnnW0AtDjfBYauceSeA==}
-
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
 
@@ -1906,12 +1897,6 @@ packages:
   astring@1.9.0:
     resolution: {integrity: sha512-LElXdjswlqjWrPpJFg1Fx4wpkOCxj1TDHlSV4PlaRxHGWko024xICaa97ZkMfs6DRKlCguiAI+rbXv5GWwXIkg==}
     hasBin: true
-
-  astro-d2@0.10.0:
-    resolution: {integrity: sha512-KL2N3BcPvuk7orPJsXVeMVMYd70eimLdxslbwR6M80hXIDj6EWd0SAJlx961qepIvXMwh3FxKkb6S6sWYuRjBA==}
-    engines: {node: '>=22.12.0'}
-    peerDependencies:
-      astro: '>=6.0.0'
 
   astro@5.18.1:
     resolution: {integrity: sha512-m4VWilWZ+Xt6NPoYzC4CgGZim/zQUO7WFL0RHCH0AiEavF1153iC3+me2atDvXpf/yX4PyGUeD8wZLq1cirT3g==}
@@ -5213,8 +5198,6 @@ snapshots:
       tailwindcss: 4.2.2
       vite: 6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3)
 
-  '@terrastruct/d2@0.1.33': {}
-
   '@types/babel__core@7.20.5':
     dependencies:
       '@babel/parser': 7.29.2
@@ -5450,14 +5433,6 @@ snapshots:
   assertion-error@2.0.1: {}
 
   astring@1.9.0: {}
-
-  astro-d2@0.10.0(astro@5.18.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.0)(typescript@5.9.3)(yaml@2.8.3)):
-    dependencies:
-      '@terrastruct/d2': 0.1.33
-      astro: 5.18.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.0)(typescript@5.9.3)(yaml@2.8.3)
-      hast-util-from-html: 2.0.3
-      hast-util-to-html: 9.0.5
-      unist-util-visit: 5.1.0
 
   astro@5.18.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.0)(typescript@5.9.3)(yaml@2.8.3):
     dependencies:

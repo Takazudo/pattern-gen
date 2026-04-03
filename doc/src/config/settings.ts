@@ -34,8 +34,6 @@ export const settings = {
   docsDir: "src/content/docs",
   locales: {} as Record<string, LocaleConfig>,
   mermaid: false,
-  d2: false,
-  d2BuildMode: "wasm" as "wasm" | "cli",
   sitemap: false,
   docMetainfo: false,
   docTags: false,

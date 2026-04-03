@@ -21,9 +21,7 @@
     "github-slugger": "^2.0.0",
     "remark-directive": "^3.0.0",
     "unist-util-visit": "^5.1.0",
-    "minisearch": "^7.2.0",
-    "astro-d2": "^0.10.0",
-    "@terrastruct/d2": "^0.1.33"
+    "minisearch": "^7.2.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.0",
