@@ -211,7 +211,7 @@ app.get("/me/photo", async (c) => {
   return new Response(r2Object.body, {
     headers: {
       "Content-Type": r2Object.httpMetadata?.contentType || "image/png",
-      "Cache-Control": "private, max-age=3600",
+      "Cache-Control": "no-cache",
     },
   });
 });
@@ -296,7 +296,7 @@ app.get("/patterns/:id", async (c) => {
   const id = c.req.param("id");
 
   const pattern = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2"
+    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
     .first<PatternRow>();
@@ -359,7 +359,7 @@ app.put("/patterns/:id", async (c) => {
   const id = c.req.param("id");
 
   const existing = await c.env.DB.prepare(
-    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2"
+    "SELECT * FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
     .first<PatternRow>();
@@ -419,7 +419,7 @@ app.get("/patterns/:id/preview", async (c) => {
   const id = c.req.param("id");
 
   const pattern = await c.env.DB.prepare(
-    "SELECT preview_r2_key FROM patterns WHERE id = ?1 AND user_id = ?2"
+    "SELECT preview_r2_key FROM patterns WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
     .first<{ preview_r2_key: string | null }>();
@@ -626,7 +626,7 @@ app.get("/files/:id", async (c) => {
   const id = c.req.param("id");
 
   const file = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2"
+    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
     .first<FileRow>();
@@ -643,7 +643,7 @@ app.get("/files/:id/download", async (c) => {
   const id = c.req.param("id");
 
   const file = await c.env.DB.prepare(
-    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2"
+    "SELECT * FROM files WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL"
   )
     .bind(id, auth.userId)
     .first<FileRow>();
