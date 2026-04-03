@@ -3,11 +3,14 @@
  *
  * All endpoints are protected by JWT auth middleware.
  * File content is stored in R2, metadata in D1.
+ * Responses use camelCase fields: contentType, sizeBytes, createdAt.
  *
- * Imports from the backend will resolve after the backend branch is merged.
+ * NOTE: Import from the backend resolves after the backend branch is merged.
+ * The backend must export `app` from functions/api/[[route]].ts.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Hono } from 'hono';
 import type { Miniflare } from 'miniflare';
 import {
   createTestEnv,
@@ -16,6 +19,7 @@ import {
   createTestSession,
   signTestAccessToken,
   makeAuthCookies,
+  createTestAuthMiddleware,
   sampleFileData,
   type TestEnv,
   TEST_CONFIG,
@@ -23,16 +27,21 @@ import {
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error — backend not yet merged
-import { app } from '../api/[[route]]';
+import { app as apiRoutes } from '../api/[[route]]';
 
 let mf: Miniflare;
 let env: TestEnv;
 let user: Awaited<ReturnType<typeof createTestUser>>;
 let token: string;
+let app: Hono;
 
 beforeAll(async () => {
   ({ mf, env } = await createTestEnv());
   await setupDb(env.DB);
+
+  app = new Hono();
+  app.use('/api/*', createTestAuthMiddleware());
+  app.route('/', apiRoutes);
 
   user = await createTestUser(env.DB);
   const session = await createTestSession(env.DB, user.id);
@@ -88,12 +97,11 @@ describe('POST /api/files', () => {
 
     const res = await app.request(req, {}, env);
 
-    expect([200, 201]).toContain(res.status);
+    expect(res.status).toBe(201);
     const body = await res.json();
-    const fileRecord = body.file ?? body;
-    expect(fileRecord.id).toBeTruthy();
-    expect(fileRecord.filename).toBe(file.filename);
-    expect(fileRecord.content_type).toBe(file.contentType);
+    expect(body.id).toBeTruthy();
+    expect(body.filename).toBe(file.filename);
+    expect(body.contentType).toBe(file.contentType);
   });
 });
 
@@ -108,9 +116,9 @@ describe('GET /api/files', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const files = body.files ?? body.data ?? body;
-    expect(Array.isArray(files)).toBe(true);
-    expect(files.length).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.items.length).toBeGreaterThanOrEqual(1);
+    expect(body.total).toBeGreaterThanOrEqual(1);
   });
 
   it('returns empty list for a new user with no files', async () => {
@@ -132,8 +140,8 @@ describe('GET /api/files', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const files = body.files ?? body.data ?? body;
-    expect(files).toEqual([]);
+    expect(body.items).toEqual([]);
+    expect(body.total).toBe(0);
   });
 });
 
@@ -145,7 +153,6 @@ describe('GET /api/files/:id', () => {
   let fileId: string;
 
   beforeAll(async () => {
-    // Upload a file first
     const file = sampleFileData();
     const formData = new FormData();
     formData.append(
@@ -165,7 +172,7 @@ describe('GET /api/files/:id', () => {
 
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    fileId = (body.file ?? body).id;
+    fileId = body.id;
   });
 
   it('returns file metadata', async () => {
@@ -174,10 +181,10 @@ describe('GET /api/files/:id', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const file = body.file ?? body;
-    expect(file.id).toBe(fileId);
-    expect(file.filename).toBeTruthy();
-    expect(file.content_type).toBeTruthy();
+    expect(body.id).toBe(fileId);
+    expect(body.filename).toBeTruthy();
+    expect(body.contentType).toBeTruthy();
+    expect(body.sizeBytes).toBeGreaterThan(0);
   });
 
   it('returns 404 for non-existent file', async () => {
@@ -215,7 +222,7 @@ describe('GET /api/files/:id/download', () => {
 
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    fileId = (body.file ?? body).id;
+    fileId = body.id;
   });
 
   it('streams file content from R2', async () => {
@@ -229,13 +236,13 @@ describe('GET /api/files/:id/download', () => {
     expect(downloaded).toEqual(testContent);
   });
 
-  it('sets appropriate content-type header', async () => {
+  it('sets Content-Type and Content-Disposition headers', async () => {
     const req = authedRequest(`/api/files/${fileId}/download`);
     const res = await app.request(req, {}, env);
 
     expect(res.status).toBe(200);
-    const contentType = res.headers.get('Content-Type');
-    expect(contentType).toBeTruthy();
+    expect(res.headers.get('Content-Type')).toBeTruthy();
+    expect(res.headers.get('Content-Disposition')).toContain('attachment');
   });
 });
 
@@ -267,7 +274,7 @@ describe('DELETE /api/files/:id', () => {
 
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    fileId = (body.file ?? body).id;
+    fileId = body.id;
   });
 
   it('deletes file from R2 and D1', async () => {
@@ -309,10 +316,10 @@ describe('File ownership', () => {
 
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    fileId = (body.file ?? body).id;
+    fileId = body.id;
   });
 
-  it('cannot access another user\'s file metadata', async () => {
+  it("cannot access another user's file metadata", async () => {
     const otherUser = await createTestUser(env.DB);
     const otherSession = await createTestSession(env.DB, otherUser.id);
     const otherToken = await signTestAccessToken(
@@ -334,7 +341,7 @@ describe('File ownership', () => {
     expect(res.status).toBe(404);
   });
 
-  it('cannot download another user\'s file', async () => {
+  it("cannot download another user's file", async () => {
     const otherUser = await createTestUser(env.DB);
     const otherSession = await createTestSession(env.DB, otherUser.id);
     const otherToken = await signTestAccessToken(
@@ -356,7 +363,7 @@ describe('File ownership', () => {
     expect(res.status).toBe(404);
   });
 
-  it('cannot delete another user\'s file', async () => {
+  it("cannot delete another user's file", async () => {
     const otherUser = await createTestUser(env.DB);
     const otherSession = await createTestSession(env.DB, otherUser.id);
     const otherToken = await signTestAccessToken(

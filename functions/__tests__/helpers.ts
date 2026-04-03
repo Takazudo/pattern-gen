@@ -9,6 +9,8 @@
  */
 
 import { Miniflare, type D1Database, type R2Bucket } from 'miniflare';
+import { Hono } from 'hono';
+import { createMiddleware } from 'hono/factory';
 import * as jose from 'jose';
 
 // ---------------------------------------------------------------------------
@@ -140,11 +142,12 @@ export async function createTestSession(
   userId: string,
   overrides: {
     id?: string;
-    expiresAt?: string;
+    expiresAt?: number; // Unix timestamp in ms (matches backend)
   } = {},
 ) {
   const refreshToken = crypto.randomUUID();
   const refreshTokenHash = await hashToken(refreshToken);
+  const now = Date.now();
 
   const session = {
     id: overrides.id ?? crypto.randomUUID(),
@@ -152,15 +155,15 @@ export async function createTestSession(
     refresh_token_hash: refreshTokenHash,
     expires_at:
       overrides.expiresAt ??
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      now + 30 * 24 * 60 * 60 * 1000, // 30 days from now
   };
 
   await db
     .prepare(
-      `INSERT INTO sessions (id, user_id, refresh_token_hash, expires_at)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO sessions (id, user_id, refresh_token_hash, expires_at, created_at, last_seen_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .bind(session.id, session.user_id, session.refresh_token_hash, session.expires_at)
+    .bind(session.id, session.user_id, session.refresh_token_hash, session.expires_at, now, now)
     .run();
 
   return { ...session, refreshToken };
@@ -280,6 +283,92 @@ export async function hashToken(token: string): Promise<string> {
   return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+// ---------------------------------------------------------------------------
+// Test auth middleware — mirrors functions/api/_middleware.ts
+// ---------------------------------------------------------------------------
+
+/**
+ * Auth middleware for testing, matching the real _middleware.ts behavior.
+ * Handles CSRF origin check, JWT verification, and session validation.
+ *
+ * Use this to wrap the API Hono app in tests since Pages _middleware.ts
+ * doesn't run when calling app.request() directly.
+ */
+export function createTestAuthMiddleware() {
+  return createMiddleware(async (c, next) => {
+    const env = c.env as TestEnv;
+
+    // CSRF check on mutating methods
+    const method = c.req.method;
+    if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
+      const origin = c.req.header('Origin');
+      const expectedOrigin = new URL(c.req.url).origin;
+      if (!origin || origin !== expectedOrigin) {
+        return c.json({ error: 'CSRF origin mismatch' }, 403);
+      }
+    }
+
+    // Extract access JWT from cookie
+    const cookieHeader = c.req.header('Cookie') || '';
+    const cookies = Object.fromEntries(
+      cookieHeader.split(';').map((pair) => {
+        const [k, ...v] = pair.trim().split('=');
+        return [k, v.join('=')];
+      }),
+    );
+
+    const accessToken = cookies['__Host-access'];
+    if (!accessToken) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    try {
+      const signingKey = new TextEncoder().encode(env.APP_JWT_SECRET);
+      const { payload } = await jose.jwtVerify(accessToken, signingKey);
+
+      const userId = payload.sub;
+      const sessionId = payload.sid as string | undefined;
+
+      if (!userId || !sessionId) {
+        return c.json({ error: 'Invalid token claims' }, 401);
+      }
+
+      // Verify session is still valid
+      const session = await env.DB.prepare(
+        'SELECT revoked_at, expires_at FROM sessions WHERE id = ?1 AND user_id = ?2',
+      )
+        .bind(sessionId, userId)
+        .first<{ revoked_at: number | null; expires_at: number }>();
+
+      if (!session || session.revoked_at || session.expires_at < Date.now()) {
+        return c.json({ error: 'Session revoked or expired' }, 401);
+      }
+
+      c.set('auth', { userId, sessionId });
+    } catch {
+      return c.json({ error: 'Invalid or expired token' }, 401);
+    }
+
+    await next();
+  });
+}
+
+/**
+ * Create a Hono app with auth middleware applied, suitable for testing
+ * API routes that rely on the middleware setting auth context.
+ *
+ * Usage in test files:
+ * ```ts
+ * const app = createProtectedApp('/api');
+ * // Then register routes or mount the imported app's routes
+ * ```
+ */
+export function createProtectedApp(basePath = '/api'): Hono {
+  const app = new Hono().basePath(basePath);
+  app.use('*', createTestAuthMiddleware());
+  return app;
 }
 
 // ---------------------------------------------------------------------------

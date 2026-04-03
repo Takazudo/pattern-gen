@@ -2,7 +2,12 @@
  * Patterns API tests — CRUD operations on /api/patterns.
  *
  * All endpoints are protected by JWT auth middleware.
- * Imports from the backend will resolve after the backend branch is merged.
+ * The backend returns camelCase fields and paginated responses
+ * as { items, total, limit, offset }.
+ *
+ * NOTE: These tests import the Hono app from the backend.
+ * The import will resolve once the backend branch is merged.
+ * The backend must export `app` from functions/api/[[route]].ts.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -14,24 +19,39 @@ import {
   createTestSession,
   signTestAccessToken,
   makeAuthCookies,
-  createAuthenticatedRequest,
+  createTestAuthMiddleware,
   samplePatternConfig,
   type TestEnv,
   TEST_CONFIG,
 } from './helpers';
+import { Hono } from 'hono';
 
+// The backend API app handles /api/* routes.
+// This import will resolve once the backend branch is merged.
+// The backend needs to add: export { app };
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error — backend not yet merged
-import { app } from '../api/[[route]]';
+import { app as apiRoutes } from '../api/[[route]]';
 
 let mf: Miniflare;
 let env: TestEnv;
 let user: Awaited<ReturnType<typeof createTestUser>>;
 let token: string;
 
+// Compose middleware + API routes for testing.
+// In production, Pages _middleware.ts handles auth before [[route]].ts.
+// For tests, we apply the equivalent middleware to the Hono app.
+let app: Hono;
+
 beforeAll(async () => {
   ({ mf, env } = await createTestEnv());
   await setupDb(env.DB);
+
+  // Build combined app: auth middleware → API routes
+  // apiRoutes has basePath('/api'), so we mount it at root
+  app = new Hono();
+  app.use('/api/*', createTestAuthMiddleware());
+  app.route('/', apiRoutes);
 
   user = await createTestUser(env.DB);
   const session = await createTestSession(env.DB, user.id);
@@ -42,7 +62,6 @@ afterAll(async () => {
   await mf.dispose();
 });
 
-// Helper to build an authenticated request for this test suite
 function authedRequest(
   path: string,
   options: {
@@ -71,7 +90,6 @@ function authedRequest(
 
 describe('GET /api/patterns', () => {
   it('returns empty list for a new user', async () => {
-    // Use a fresh user with no patterns
     const freshUser = await createTestUser(env.DB);
     const freshSession = await createTestSession(env.DB, freshUser.id);
     const freshToken = await signTestAccessToken(freshUser.id, freshSession.id);
@@ -87,7 +105,8 @@ describe('GET /api/patterns', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.patterns ?? body.data ?? body).toEqual([]);
+    expect(body.items).toEqual([]);
+    expect(body.total).toBe(0);
   });
 });
 
@@ -102,19 +121,29 @@ describe('POST /api/patterns', () => {
       method: 'POST',
       body: {
         name: 'My Pattern',
-        config_json: JSON.stringify(config),
-        pattern_type: config.type,
+        configJson: JSON.stringify(config),
+        patternType: config.type,
       },
     });
 
     const res = await app.request(req, {}, env);
 
-    expect([200, 201]).toContain(res.status);
+    expect(res.status).toBe(201);
     const body = await res.json();
-    const pattern = body.pattern ?? body;
-    expect(pattern.name).toBe('My Pattern');
-    expect(pattern.pattern_type).toBe('wood-block');
-    expect(pattern.id).toBeTruthy();
+    expect(body.name).toBe('My Pattern');
+    expect(body.patternType).toBe('wood-block');
+    expect(body.id).toBeTruthy();
+  });
+
+  it('returns 400 when required fields are missing', async () => {
+    const req = authedRequest('/api/patterns', {
+      method: 'POST',
+      body: { name: 'No config' },
+    });
+
+    const res = await app.request(req, {}, env);
+
+    expect(res.status).toBe(400);
   });
 });
 
@@ -123,22 +152,17 @@ describe('POST /api/patterns', () => {
 // ---------------------------------------------------------------------------
 
 describe('GET /api/patterns — after creation', () => {
-  let patternId: string;
-
   beforeAll(async () => {
-    // Create a pattern first
     const config = samplePatternConfig();
     const req = authedRequest('/api/patterns', {
       method: 'POST',
       body: {
         name: 'Listed Pattern',
-        config_json: JSON.stringify(config),
-        pattern_type: config.type,
+        configJson: JSON.stringify(config),
+        patternType: config.type,
       },
     });
-    const res = await app.request(req, {}, env);
-    const body = await res.json();
-    patternId = (body.pattern ?? body).id;
+    await app.request(req, {}, env);
   });
 
   it('returns created patterns (most recent first)', async () => {
@@ -147,13 +171,14 @@ describe('GET /api/patterns — after creation', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const patterns = body.patterns ?? body.data ?? body;
-    expect(patterns.length).toBeGreaterThanOrEqual(1);
+    expect(body.items.length).toBeGreaterThanOrEqual(1);
+    expect(body.total).toBeGreaterThanOrEqual(1);
 
     // Most recent should be first
-    const first = patterns[0];
+    const first = body.items[0];
     expect(first.id).toBeTruthy();
     expect(first.name).toBeTruthy();
+    expect(first.createdAt).toBeTruthy();
   });
 });
 
@@ -169,13 +194,13 @@ describe('GET /api/patterns/:id', () => {
       method: 'POST',
       body: {
         name: 'Specific Pattern',
-        config_json: JSON.stringify(samplePatternConfig()),
-        pattern_type: 'wood-block',
+        configJson: JSON.stringify(samplePatternConfig()),
+        patternType: 'wood-block',
       },
     });
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    patternId = (body.pattern ?? body).id;
+    patternId = body.id;
   });
 
   it('returns the specific pattern', async () => {
@@ -184,9 +209,9 @@ describe('GET /api/patterns/:id', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const pattern = body.pattern ?? body;
-    expect(pattern.id).toBe(patternId);
-    expect(pattern.name).toBe('Specific Pattern');
+    expect(body.id).toBe(patternId);
+    expect(body.name).toBe('Specific Pattern');
+    expect(body.configJson).toBeTruthy();
   });
 
   it('returns 404 for another user accessing the pattern', async () => {
@@ -232,13 +257,13 @@ describe('PUT /api/patterns/:id', () => {
       method: 'POST',
       body: {
         name: 'Before Update',
-        config_json: JSON.stringify(samplePatternConfig()),
-        pattern_type: 'wood-block',
+        configJson: JSON.stringify(samplePatternConfig()),
+        patternType: 'wood-block',
       },
     });
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    patternId = (body.pattern ?? body).id;
+    patternId = body.id;
   });
 
   it('updates a pattern', async () => {
@@ -247,7 +272,7 @@ describe('PUT /api/patterns/:id', () => {
       method: 'PUT',
       body: {
         name: 'After Update',
-        config_json: JSON.stringify(updatedConfig),
+        configJson: JSON.stringify(updatedConfig),
       },
     });
 
@@ -255,8 +280,7 @@ describe('PUT /api/patterns/:id', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const pattern = body.pattern ?? body;
-    expect(pattern.name).toBe('After Update');
+    expect(body.name).toBe('After Update');
   });
 
   it('returns 404 when another user tries to update', async () => {
@@ -298,13 +322,13 @@ describe('DELETE /api/patterns/:id', () => {
       method: 'POST',
       body: {
         name: 'To Delete',
-        config_json: JSON.stringify(samplePatternConfig()),
-        pattern_type: 'wood-block',
+        configJson: JSON.stringify(samplePatternConfig()),
+        patternType: 'wood-block',
       },
     });
     const res = await app.request(req, {}, env);
     const body = await res.json();
-    patternId = (body.pattern ?? body).id;
+    patternId = body.id;
   });
 
   it('deletes a pattern', async () => {
@@ -328,13 +352,13 @@ describe('DELETE /api/patterns/:id', () => {
       method: 'POST',
       body: {
         name: 'Other Delete',
-        config_json: JSON.stringify(samplePatternConfig()),
-        pattern_type: 'wood-block',
+        configJson: JSON.stringify(samplePatternConfig()),
+        patternType: 'wood-block',
       },
     });
     const createRes = await app.request(createReq, {}, env);
-    const createBody = (await createRes.json()) as any;
-    const newId = createBody.pattern?.id ?? createBody.id;
+    const createBody = await createRes.json();
+    const newId = createBody.id;
 
     const otherUser = await createTestUser(env.DB);
     const otherSession = await createTestSession(env.DB, otherUser.id);
@@ -369,7 +393,6 @@ describe('GET /api/patterns — pagination', () => {
   let paginationToken: string;
 
   beforeAll(async () => {
-    // Create a user with multiple patterns
     paginationUser = await createTestUser(env.DB);
     const session = await createTestSession(env.DB, paginationUser.id);
     paginationToken = await signTestAccessToken(
@@ -388,8 +411,8 @@ describe('GET /api/patterns — pagination', () => {
         },
         body: JSON.stringify({
           name: `Pagination Pattern ${i}`,
-          config_json: JSON.stringify(samplePatternConfig()),
-          pattern_type: 'wood-block',
+          configJson: JSON.stringify(samplePatternConfig()),
+          patternType: 'wood-block',
         }),
       });
       await app.request(req, {}, env);
@@ -411,8 +434,9 @@ describe('GET /api/patterns — pagination', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const patterns = body.patterns ?? body.data ?? body;
-    expect(patterns.length).toBe(2);
+    expect(body.items.length).toBe(2);
+    expect(body.total).toBe(5);
+    expect(body.limit).toBe(2);
   });
 
   it('supports offset parameter', async () => {
@@ -430,8 +454,8 @@ describe('GET /api/patterns — pagination', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const patterns = body.patterns ?? body.data ?? body;
-    expect(patterns.length).toBe(2);
+    expect(body.items.length).toBe(2);
+    expect(body.offset).toBe(2);
   });
 
   it('returns remaining items when offset + limit exceeds total', async () => {
@@ -449,7 +473,7 @@ describe('GET /api/patterns — pagination', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    const patterns = body.patterns ?? body.data ?? body;
-    expect(patterns.length).toBe(2); // 5 total - 3 offset = 2 remaining
+    expect(body.items.length).toBe(2); // 5 total - 3 offset = 2 remaining
+    expect(body.total).toBe(5);
   });
 });
