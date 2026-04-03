@@ -1,0 +1,145 @@
+---
+title: OGP Config
+sidebar_position: 1
+---
+
+# OGP Config
+
+The OGP config JSON format describes a full pattern rendering with transforms, color adjustments, and a crop region. It produces a 1200x630 PNG suitable for Open Graph images.
+
+## Schema
+
+```typescript
+interface OgpConfig {
+  version: 1;
+  slug: string;               // Text seed for deterministic generation
+  type: string;               // Pattern type name (e.g. "voronoi")
+  colorScheme: string;        // Color scheme name (e.g. "nord")
+  zoom: number;               // Zoom factor (must be > 0)
+  translateX: number;         // Horizontal offset (-1 to 1)
+  translateY: number;         // Vertical offset (-1 to 1)
+  useTranslate: boolean;      // Enable pan/translate mode
+  rotate?: number;            // Rotation in degrees (-180 to 180)
+  skewX?: number;             // Horizontal skew (-45 to 45)
+  skewY?: number;             // Vertical skew (-45 to 45)
+  params: Record<string, number>;  // Pattern-specific parameters
+  hsl: {
+    h: number;                // Hue shift (-180 to 180)
+    s: number;                // Saturation shift (-100 to 100)
+    l: number;                // Lightness shift (-100 to 100)
+  };
+  contrastBrightness?: {
+    contrast: number;         // Contrast adjustment (-100 to 100)
+    brightness: number;       // Brightness adjustment (-100 to 100)
+  };
+  crop: OgpCropRegion;
+}
+
+interface OgpCropRegion {
+  x: number;       // Left edge (0 to 1, fraction of canvas width)
+  y: number;       // Top edge (0 to 1, fraction of canvas height)
+  width: number;   // Width (0 to 1, fraction of canvas width)
+  height: number;  // Height (0 to 1, fraction of canvas height)
+}
+```
+
+## Example
+
+```json
+{
+  "version": 1,
+  "slug": "hello-world",
+  "type": "voronoi",
+  "colorScheme": "nord",
+  "zoom": 1.5,
+  "translateX": 0.1,
+  "translateY": -0.05,
+  "useTranslate": true,
+  "params": {
+    "seedCount": 60,
+    "borderWidth": 3
+  },
+  "hsl": { "h": 15, "s": 10, "l": -5 },
+  "contrastBrightness": {
+    "contrast": 20,
+    "brightness": -10
+  },
+  "crop": {
+    "x": 0.1,
+    "y": 0.15,
+    "width": 0.8,
+    "height": 0.7
+  }
+}
+```
+
+## Field Reference
+
+### Core Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `version` | `1` | Yes | Config version (must be `1`) |
+| `slug` | `string` | Yes | Text seed (non-empty) |
+| `type` | `string` | Yes | Pattern type name |
+| `colorScheme` | `string` | Yes | Color scheme name |
+| `zoom` | `number` | Yes | Zoom factor (> 0) |
+| `translateX` | `number` | Yes | Horizontal pan (-1 to 1) |
+| `translateY` | `number` | Yes | Vertical pan (-1 to 1) |
+| `useTranslate` | `boolean` | Yes | Enable translate mode |
+| `params` | `object` | Yes | Pattern-specific numeric params (defaults to `{}`) |
+
+### Transform Fields (Optional)
+
+| Field | Type | Range | Description |
+|-------|------|-------|-------------|
+| `rotate` | `number` | -180 to 180 | Rotation in degrees |
+| `skewX` | `number` | -45 to 45 | Horizontal skew in degrees |
+| `skewY` | `number` | -45 to 45 | Vertical skew in degrees |
+
+### Color Adjustment Fields
+
+| Field | Type | Range | Description |
+|-------|------|-------|-------------|
+| `hsl.h` | `number` | -180 to 180 | Hue shift |
+| `hsl.s` | `number` | -100 to 100 | Saturation shift |
+| `hsl.l` | `number` | -100 to 100 | Lightness shift |
+| `contrastBrightness.contrast` | `number` | -100 to 100 | Contrast adjustment |
+| `contrastBrightness.brightness` | `number` | -100 to 100 | Brightness adjustment |
+
+### Crop Region
+
+The crop region uses normalized coordinates (0 to 1) relative to the rendered canvas buffer.
+
+| Field | Type | Range | Constraint |
+|-------|------|-------|------------|
+| `crop.x` | `number` | 0 to 1 | `x + width <= 1` |
+| `crop.y` | `number` | 0 to 1 | `y + height <= 1` |
+| `crop.width` | `number` | > 0 to 1 | |
+| `crop.height` | `number` | > 0 to 1 | |
+
+## API
+
+```typescript
+import { parseOgpConfig, serializeOgpConfig, renderOgpFromConfig } from '@takazudo/pattern-gen';
+
+// Parse and validate JSON
+const config = parseOgpConfig(jsonString);
+
+// Serialize to pretty-printed JSON
+const json = serializeOgpConfig(config);
+
+// Render to PNG buffer (Node.js only)
+const result = await renderOgpFromConfig(config);
+// result.buffer: Buffer (1200x630 PNG)
+// result.patternName: string
+// result.colorSchemeName: string
+// result.width: 1200
+// result.height: 630
+```
+
+## CLI Usage
+
+```bash
+pattern-gen --ogp-config config.json --out ogp-image.png
+```

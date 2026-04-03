@@ -14,8 +14,8 @@ Generate deterministic visual patterns from text seeds. 30 algorithms spanning g
 - **20 decorative frames** — borders, shadows, neon glow, filmstrip, polaroid, and more
 - **Deterministic** — same seed always produces the same output
 - **36 color schemes** — terminal-inspired palettes (Dracula, Nord, Catppuccin, etc.)
-- **HSLA color picker** — full hue/saturation/lightness/alpha control in the Composer
-- **CLI tool** — generate PNGs from the command line
+- **HSL + contrast/brightness adjustments** — fine-tune hue, saturation, lightness, contrast, and brightness
+- **CLI tool** — generate PNGs from the command line with three modes (basic, OGP, Composer)
 - **Library** — use programmatically in Node.js or browser
 - **Interactive viewer** — browse and customize patterns with a step-based workflow
 - **Composer** — layer-based composition with text, images, and frames for OGP and custom-sized exports
@@ -34,13 +34,17 @@ pnpm add @takazudo/pattern-gen
 # Generate a pattern
 pattern-gen hello-world --type voronoi --out pattern.png
 
-# Specify color scheme
-pattern-gen my-seed --type flow-field --color-scheme dracula --size 1200
+# Specify color scheme and adjustments
+pattern-gen my-seed --type flow-field --color-scheme dracula --size 1200 --contrast 20 --brightness -10
 
-# List available types
+# Render from OGP config JSON
+pattern-gen --ogp-config ogp-config.json --out image.png
+
+# Render from Composer config JSON (layers + frames)
+pattern-gen --composer-config composer-config.json --out image.png
+
+# List available types and color schemes
 pattern-gen --list-types
-
-# List color schemes
 pattern-gen --list-color-schemes
 ```
 
@@ -74,23 +78,6 @@ renderPatternToCanvas(ctx, 'hello-world', 'voronoi', {
 });
 ```
 
-## CLI Options
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--type` | `-t` | Pattern type | `wood-block` |
-| `--size` | `-s` | Output size (px) | `800` |
-| `--zoom` | `-z` | Zoom factor | `1` |
-| `--bg` | | Background color | auto |
-| `--color-scheme` | `-c` | Color scheme name or `random` | auto |
-| `--out` | `-o` | Output file path | `{slug}.png` |
-| `--out-dir` | | Output directory | cwd |
-| `--ogp-config` | | OGP config JSON file path | |
-| `--composer-config` | | Composer config JSON file path (supports layers + frames) | |
-| `--hue` | | Hue shift (-180 to 180) | `0` |
-| `--saturation` | | Saturation shift (-100 to 100) | `0` |
-| `--lightness` | | Lightness shift (-100 to 100) | `0` |
-
 ## Viewer Workflow
 
 The interactive viewer uses a step-based workflow:
@@ -104,7 +91,7 @@ The interactive viewer uses a step-based workflow:
 ### Step 2: Compose
 
 1. Drag and resize the selection rectangle to crop the pattern
-2. Choose an aspect ratio (OGP 1200×630, Square, Free, Fixed)
+2. Choose an aspect ratio (OGP 1200x630, Square, Free, Fixed)
 3. Use the action bar:
    - **Generate** — download the selected area as a high-res PNG
    - **Download JSON** — save the full pattern config + crop region as a JSON file
@@ -135,22 +122,7 @@ Click **Edit** in the Compose step to open the Composer. Add image and text laye
 
 ### Frames
 
-The Composer includes 20 decorative frame patterns that render on top of the image. Select a frame from the dropdown and configure its parameters:
-
-| Category | Frames |
-|----------|--------|
-| Minimal | Simple Line, Rounded Corner, Drop Shadow, Double Line |
-| Gradient & Glow | Gradient Border, Neon Glow, Vignette |
-| Classical | Art Deco, Greek Key, Corner Ornament |
-| Patterned | Dotted, Scalloped, Zigzag, Halftone |
-| Photographic | Filmstrip, Polaroid, Stamp |
-| Textural | Torn Edge, Washi Tape, Brush Stroke |
-
-Each frame has configurable parameters (width, color with HSLA alpha support, style options). Frame configuration is included in the exported JSON and supported by the CLI:
-
-```bash
-pattern-gen --composer-config composer-config.json --out output-with-frame.png
-```
+The Composer includes 20 decorative frame patterns that render on top of the image. Select a frame from the dropdown and configure its parameters.
 
 ### HSLA Color Picker
 

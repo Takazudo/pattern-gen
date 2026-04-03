@@ -1,6 +1,6 @@
 ---
 title: API Reference
-sidebar_position: 1
+sidebar_position: 5
 ---
 
 # API Reference
@@ -50,7 +50,7 @@ const { colorSchemeName } = renderPatternToCanvas(
 
 ### `renderOgpFromConfig(config)`
 
-Render an OGP image (1200×630) from a serialized config (Node.js only).
+Render an OGP image (1200x630) from a serialized config (Node.js only).
 
 ```typescript
 import { renderOgpFromConfig, parseOgpConfig } from '@takazudo/pattern-gen';
@@ -59,80 +59,52 @@ const json = fs.readFileSync('ogp-config.json', 'utf-8');
 const config = parseOgpConfig(json);
 const result = await renderOgpFromConfig(config);
 
-// result.buffer: Buffer (1200×630 PNG)
+// result.buffer: Buffer (1200x630 PNG)
 fs.writeFileSync('ogp-image.png', result.buffer);
 ```
 
 ### `renderComposerFromConfig(config)`
 
-Render an OGP image from an editor config with layers and frames (Node.js only).
+Render a composite image from a Composer config with layers and frames (Node.js only).
 
 ```typescript
 import { renderComposerFromConfig, parseComposerConfig } from '@takazudo/pattern-gen';
 
-const json = fs.readFileSync('editor-config.json', 'utf-8');
+const json = fs.readFileSync('composer-config.json', 'utf-8');
 const config = parseComposerConfig(json);
 const result = await renderComposerFromConfig(config);
 
-// result.buffer: Buffer (1200×630 PNG with background + layers + frame)
-fs.writeFileSync('ogp-image.png', result.buffer);
+// result.buffer: Buffer (1200x630 PNG with background + layers + frame)
+fs.writeFileSync('output.png', result.buffer);
 ```
 
-## OGP Config
+## Config Parsing
 
-### `OgpConfig` Type
+### `parseOgpConfig(json)` / `serializeOgpConfig(config)`
 
-```typescript
-import type { OgpConfig, OgpCropRegion } from '@takazudo/pattern-gen';
-
-interface OgpConfig {
-  version: 1;
-  slug: string;              // Text seed
-  type: string;              // Pattern type name
-  colorScheme: string;       // Color scheme name
-  zoom: number;              // Zoom factor
-  translateX: number;        // Horizontal offset (-1 to 1)
-  translateY: number;        // Vertical offset (-1 to 1)
-  useTranslate: boolean;     // Enable panning mode
-  params: Record<string, number>;  // Pattern parameters
-  hsl: { h: number; s: number; l: number };  // HSL adjustments
-  crop: OgpCropRegion;       // Normalized crop region (0-1 fractions)
-}
-
-interface OgpCropRegion {
-  x: number;      // Left edge (0-1)
-  y: number;      // Top edge (0-1)
-  width: number;  // Width (0-1)
-  height: number; // Height (0-1)
-}
-```
-
-### `serializeOgpConfig(config)`
-
-Serialize an OgpConfig to pretty-printed JSON.
+Parse and validate / serialize OGP configs. See [OGP Config](/docs/config/ogp-config) for the schema.
 
 ```typescript
-import { serializeOgpConfig } from '@takazudo/pattern-gen';
-
-const json = serializeOgpConfig(config);
-// Pretty-printed JSON string
-```
-
-### `parseOgpConfig(json)`
-
-Parse and validate a JSON string into an OgpConfig. Throws on invalid input.
-
-```typescript
-import { parseOgpConfig } from '@takazudo/pattern-gen';
+import { parseOgpConfig, serializeOgpConfig } from '@takazudo/pattern-gen';
 
 const config = parseOgpConfig(jsonString);
-// Validates: version, types, ranges, crop bounds
-// Throws descriptive errors on invalid input
+const json = serializeOgpConfig(config);
+```
+
+### `parseComposerConfig(json)` / `serializeComposerConfig(config)`
+
+Parse and validate / serialize Composer configs. See [Composer Config](/docs/config/composer-config) for the schema.
+
+```typescript
+import { parseComposerConfig, serializeComposerConfig } from '@takazudo/pattern-gen';
+
+const config = parseComposerConfig(jsonString);
+const json = serializeComposerConfig(config);
 ```
 
 ### `OGP_WIDTH` / `OGP_HEIGHT`
 
-Standard OGP image dimensions (1200 × 630).
+Standard OGP image dimensions (1200 x 630).
 
 ```typescript
 import { OGP_WIDTH, OGP_HEIGHT } from '@takazudo/pattern-gen';
@@ -196,75 +168,13 @@ import {
 } from '@takazudo/pattern-gen';
 ```
 
-## Frame System
-
-### `FrameGenerator` Type
-
-```typescript
-import type { FrameGenerator, FrameParamDef, FrameRenderOptions } from '@takazudo/pattern-gen';
-
-interface FrameGenerator {
-  name: string;           // URL-safe slug (e.g., 'simple-line')
-  displayName: string;    // Human-readable name
-  description: string;
-  paramDefs: FrameParamDef[];
-  render(ctx: CanvasRenderingContext2D, options: FrameRenderOptions, params: Record<string, number | string>): void;
-}
-
-interface FrameRenderOptions {
-  width: number;          // Canvas width (1200 for OGP)
-  height: number;         // Canvas height (630 for OGP)
-  rand: () => number;     // Seeded PRNG for deterministic frames
-}
-```
-
-### Frame Parameter Types
-
-```typescript
-type FrameParamDef = SliderFrameParam | ColorFrameParam | SelectFrameParam | ToggleFrameParam;
-
-// slider: numeric range (e.g., border width 2-40)
-// color: hex string with alpha (#RRGGBB or #RRGGBBAA)
-// select: enumerated options (e.g., line style: solid/dashed)
-// toggle: boolean (0 or 1)
-```
-
-### Frame Registry
+## Frame Registry
 
 ```typescript
 import {
   FRAME_GENERATORS,   // FrameGenerator[] (all 20 frames)
   framesByName,        // Map<string, FrameGenerator>
 } from '@takazudo/pattern-gen';
-```
-
-### `ComposerConfig` Type
-
-```typescript
-import type { ComposerConfig, FrameConfig } from '@takazudo/pattern-gen';
-
-interface ComposerConfig {
-  version: 1;
-  background: OgpConfig;
-  layers: EditorLayer[];  // Image and text layers
-  frame?: FrameConfig;    // Optional decorative frame
-}
-
-interface FrameConfig {
-  type: string;                          // Frame generator name
-  params: Record<string, number | string>;  // Frame-specific parameters
-}
-```
-
-### `parseComposerConfig(json)` / `serializeComposerConfig(config)`
-
-Parse and validate / serialize editor configs including frame configuration.
-
-```typescript
-import { parseComposerConfig, serializeComposerConfig } from '@takazudo/pattern-gen';
-
-const config = parseComposerConfig(jsonString);
-const json = serializeComposerConfig(config);
 ```
 
 ## Color Schemes
