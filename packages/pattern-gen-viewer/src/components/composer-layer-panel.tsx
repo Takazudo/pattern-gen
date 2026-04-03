@@ -1,9 +1,62 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useId } from 'react';
 import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { FRAME_GENERATORS, framesByName } from '@takazudo/pattern-gen-generators';
 import type { AlignmentType, GridConfig } from './composer.js';
 import { ComposerFontPicker } from './composer-font-picker.js';
 import { HslaColorSwatch } from './hsla-color-picker.js';
+
+/* ── Editable slider value (inline in label) ── */
+
+function EditableLabelValue({
+  formatted,
+  onChange,
+}: {
+  formatted: string;
+  onChange: (v: number) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const escapedRef = useRef(false);
+
+  const handleFocus = () => {
+    escapedRef.current = false;
+    setDraft(formatted);
+    setIsEditing(true);
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (escapedRef.current) {
+      escapedRef.current = false;
+      return;
+    }
+    const parsed = parseFloat(draft);
+    if (!isNaN(parsed)) {
+      onChange(parsed);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    } else if (e.key === 'Escape') {
+      escapedRef.current = true;
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      className="range-value-editable composer-label-value-editable"
+      value={isEditing ? draft : formatted}
+      onFocus={handleFocus}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+    />
+  );
+}
 
 /* ── Props ── */
 
@@ -13,6 +66,7 @@ interface LayerPanelProps {
   onSelect: (ids: string[]) => void;
   onUpdate: (id: string, updates: Partial<EditorLayer>) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
   onAddImage: () => void;
   onAddText: () => void;
@@ -27,6 +81,42 @@ interface LayerPanelProps {
   onBgThresholdChange: (id: string, threshold: number) => void;
 }
 
+/* ── Collapsible section for composer panel ── */
+
+function ComposerCollapsibleSection({
+  title,
+  defaultOpen = true,
+  className,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const contentId = useId();
+
+  return (
+    <div className={`composer-panel-section${className ? ` ${className}` : ''}`}>
+      <button
+        className="composer-section-toggle"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-controls={contentId}
+      >
+        <span className="composer-props-title" style={{ marginBottom: 0 }}>{title}</span>
+        <span className="composer-section-chevron">{isOpen ? '\u25B2' : '\u25BC'}</span>
+      </button>
+      {isOpen && (
+        <div id={contentId} className="composer-section-content">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Component ── */
 
 export function ComposerLayerPanel({
@@ -35,6 +125,7 @@ export function ComposerLayerPanel({
   onSelect,
   onUpdate,
   onDelete,
+  onDuplicate,
   onReorder,
   onAddImage,
   onAddText,
@@ -128,8 +219,7 @@ export function ComposerLayerPanel({
   return (
     <div className="overlay-panel composer-panel">
       {/* Layers section (actions + list) */}
-      <div className="composer-panel-section">
-        <div className="composer-props-title">Layers</div>
+      <ComposerCollapsibleSection title="Layers" defaultOpen={true}>
         <div className="composer-panel-actions">
           <button className="btn composer-panel-btn" onClick={onAddImage}>
             Add Image
@@ -169,6 +259,17 @@ export function ComposerLayerPanel({
               </span>
               <span className="composer-layer-name">{layer.name}</span>
               <button
+                className="composer-layer-duplicate"
+                aria-label={`Duplicate ${layer.name}`}
+                title="Duplicate layer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(layer.id);
+                }}
+              >
+                ⧉
+              </button>
+              <button
                 className="composer-layer-delete"
                 aria-label={`Delete ${layer.name}`}
                 onClick={(e) => {
@@ -184,11 +285,10 @@ export function ComposerLayerPanel({
             <div className="composer-layer-empty">No layers yet</div>
           )}
         </div>
-      </div>
+      </ComposerCollapsibleSection>
 
       {/* Frame section */}
-      <div className="composer-panel-section composer-frame-section">
-        <div className="composer-props-title">Frame</div>
+      <ComposerCollapsibleSection title="Frame" defaultOpen={false} className="composer-frame-section">
         <select
           className="composer-frame-select"
           value={frameConfig?.type ?? ''}
@@ -208,14 +308,11 @@ export function ComposerLayerPanel({
             onChange={handleFrameParamChange}
           />
         )}
-      </div>
+      </ComposerCollapsibleSection>
 
       {/* Alignment panel (2+ layers selected) */}
       {selectedIds.length >= 2 && (
-        <div className="composer-panel-section composer-align-panel">
-          <div className="composer-props-title">
-            Align ({selectedIds.length} layers)
-          </div>
+        <ComposerCollapsibleSection title={`Align (${selectedIds.length} layers)`} defaultOpen={true} className="composer-align-panel">
           <div className="composer-align-grid">
             {([
               { type: 'align-left', label: 'Left', title: 'Align Left' },
@@ -235,14 +332,12 @@ export function ComposerLayerPanel({
               </button>
             ))}
           </div>
-        </div>
+        </ComposerCollapsibleSection>
       )}
 
       {/* Properties panel */}
       {selected && (
-        <div className="composer-panel-section composer-props">
-          <div className="composer-props-title">Properties</div>
-
+        <ComposerCollapsibleSection title="Properties" defaultOpen={true} className="composer-props">
           {/* Common: name */}
           <label className="composer-prop-label" htmlFor="composer-prop-name">Name</label>
           <input
@@ -362,12 +457,11 @@ export function ComposerLayerPanel({
               onUpdate={(updates) => onUpdate(selected.id, updates)}
             />
           )}
-        </div>
+        </ComposerCollapsibleSection>
       )}
 
       {/* Grid panel — always visible */}
-      <div className="composer-panel-section composer-grid-panel">
-        <div className="composer-props-title">Grid</div>
+      <ComposerCollapsibleSection title="Grid" defaultOpen={false} className="composer-grid-panel">
         <div className="composer-prop-grid">
           <div className="composer-prop-field">
             <label className="composer-prop-label" htmlFor="composer-grid-vdivide">V Divide</label>
@@ -448,7 +542,7 @@ export function ComposerLayerPanel({
           />
           <span className="composer-prop-label">Show Grid</span>
         </label>
-      </div>
+      </ComposerCollapsibleSection>
     </div>
   );
 }
@@ -578,7 +672,7 @@ function TextProps({
 
       {/* Font size */}
       <label className="composer-prop-label" htmlFor="composer-text-size">
-        Size: {layer.fontSize}px
+        Size: <EditableLabelValue formatted={`${layer.fontSize}`} onChange={(v) => onUpdate({ fontSize: v })} />px
       </label>
       <input
         id="composer-text-size"
@@ -666,7 +760,7 @@ function TextProps({
 
       {/* Letter spacing */}
       <label className="composer-prop-label" htmlFor="composer-text-letter-spacing">
-        Letter Spacing: {layer.letterSpacing}
+        Letter Spacing: <EditableLabelValue formatted={`${layer.letterSpacing}`} onChange={(v) => onUpdate({ letterSpacing: v })} />
       </label>
       <input
         id="composer-text-letter-spacing"
@@ -682,7 +776,7 @@ function TextProps({
 
       {/* Line height */}
       <label className="composer-prop-label" htmlFor="composer-text-line-height">
-        Line Height: {layer.lineHeight.toFixed(1)}
+        Line Height: <EditableLabelValue formatted={layer.lineHeight.toFixed(1)} onChange={(v) => onUpdate({ lineHeight: v })} />
       </label>
       <input
         id="composer-text-line-height"
@@ -765,20 +859,27 @@ function TextProps({
             </div>
             <div className="composer-prop-field">
               <label className="composer-prop-label" htmlFor="composer-shadow-color">Color</label>
-              <input
-                id="composer-shadow-color"
-                type="text"
-                className="composer-prop-input"
-                value={layer.shadow.color}
-                onChange={(e) =>
-                  onUpdate({
-                    shadow: {
-                      ...layer.shadow,
-                      color: e.target.value,
-                    },
-                  })
-                }
-              />
+              <div className="composer-prop-color-row">
+                <input
+                  id="composer-shadow-color"
+                  type="text"
+                  className="composer-prop-input composer-prop-color-text"
+                  value={layer.shadow.color}
+                  onChange={(e) =>
+                    onUpdate({
+                      shadow: {
+                        ...layer.shadow,
+                        color: e.target.value,
+                      },
+                    })
+                  }
+                />
+                <HslaColorSwatch
+                  color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(layer.shadow.color) ? layer.shadow.color : '#000000'}
+                  onChange={(hex) => onUpdate({ shadow: { ...layer.shadow, color: hex } })}
+                  label="Shadow color"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -802,37 +903,65 @@ function TextProps({
           <div className="composer-prop-grid">
             <div className="composer-prop-field">
               <label className="composer-prop-label" htmlFor="composer-stroke-color">Color</label>
-              <input
-                id="composer-stroke-color"
-                type="text"
-                className="composer-prop-input"
-                value={layer.stroke.color}
-                onChange={(e) =>
-                  onUpdate({
-                    stroke: {
-                      ...layer.stroke,
-                      color: e.target.value,
-                    },
-                  })
-                }
-              />
+              <div className="composer-prop-color-row">
+                <input
+                  id="composer-stroke-color"
+                  type="text"
+                  className="composer-prop-input composer-prop-color-text"
+                  value={layer.stroke.color}
+                  onChange={(e) =>
+                    onUpdate({
+                      stroke: {
+                        ...layer.stroke,
+                        color: e.target.value,
+                      },
+                    })
+                  }
+                />
+                <HslaColorSwatch
+                  color={/^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/.test(layer.stroke.color) ? layer.stroke.color : '#000000'}
+                  onChange={(hex) => onUpdate({ stroke: { ...layer.stroke, color: hex } })}
+                  label="Stroke color"
+                />
+              </div>
             </div>
             <div className="composer-prop-field">
-              <label className="composer-prop-label" htmlFor="composer-stroke-width">Width</label>
-              <input
-                id="composer-stroke-width"
-                type="number"
-                className="composer-prop-input composer-prop-num"
-                value={layer.stroke.width}
-                onChange={(e) =>
-                  onUpdate({
-                    stroke: {
-                      ...layer.stroke,
-                      width: Number(e.target.value),
-                    },
-                  })
-                }
-              />
+              <label className="composer-prop-label" htmlFor="composer-stroke-width">Width: {layer.stroke.width}</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  id="composer-stroke-width"
+                  type="range"
+                  min={0}
+                  max={20}
+                  step={0.5}
+                  value={layer.stroke.width}
+                  onChange={(e) =>
+                    onUpdate({
+                      stroke: {
+                        ...layer.stroke,
+                        width: Number(e.target.value),
+                      },
+                    })
+                  }
+                />
+                <input
+                  type="number"
+                  className="composer-prop-input composer-prop-num"
+                  min={0}
+                  max={20}
+                  step={0.5}
+                  value={layer.stroke.width}
+                  onChange={(e) =>
+                    onUpdate({
+                      stroke: {
+                        ...layer.stroke,
+                        width: Number(e.target.value),
+                      },
+                    })
+                  }
+                  style={{ width: 56 }}
+                />
+              </div>
             </div>
           </div>
         )}

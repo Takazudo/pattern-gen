@@ -56,6 +56,7 @@ export function renderTextLayer(
       ctx.strokeStyle = layer.stroke.color;
       ctx.lineWidth = layer.stroke.width;
       ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
       ctx.strokeText(lines[i], textX, y);
       ctx.restore();
     }

@@ -14,6 +14,7 @@ import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { ComposerLayerPanel } from './composer-layer-panel.js';
 import { ImageTracePreview } from './image-trace-preview.js';
+import { useComposerHistory } from './use-composer-history.js';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
 import { downloadBlob, triggerDownload } from '../utils/trigger-download.js';
 import { renderTextLayer, drawSelectionHandles, drawGrid, HANDLE_SIZE, LOADING_FONT_DIM_FACTOR } from './composer-canvas-utils.js';
@@ -89,23 +90,44 @@ export function Composer({
   outputHeight,
   onExit,
 }: ComposerProps) {
-  const [layers, setLayers] = useState<(EditorLayer & { id: string })[]>(
-    [],
-  );
+  const history = useComposerHistory({
+    layers: [],
+    frameConfig: null,
+    gridConfig: { vDivide: 2, hDivide: 2, snap: false, visible: false, lineColor: 'rgba(180, 180, 180, 0.5)' },
+  });
+  const { layers, frameConfig, gridConfig } = history.state;
+
   const layersRef = useRef(layers);
   layersRef.current = layers;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [showImageTrace, setShowImageTrace] = useState(false);
-  const [gridConfig, setGridConfig] = useState<GridConfig>({
-    vDivide: 2,
-    hDivide: 2,
-    snap: false,
-    visible: false,
-    lineColor: 'rgba(180, 180, 180, 0.5)',
-  });
-  const [frameConfig, setFrameConfig] = useState<FrameConfig | null>(null);
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Helpers to update document state through history
+  const historyRef = useRef(history.state);
+  historyRef.current = history.state;
+
+  const setLayers = history.setLayers;
+
+  const setGridConfig = useCallback(
+    (config: GridConfig) => {
+      const current = historyRef.current;
+      history.set({ ...current, gridConfig: config });
+      history.commit();
+    },
+    [history.set, history.commit],
+  );
+
+  const setFrameConfig = useCallback(
+    (config: FrameConfig | null) => {
+      const current = historyRef.current;
+      history.set({ ...current, frameConfig: config });
+      history.commit();
+    },
+    [history.set, history.commit],
+  );
 
   const [dragState, setDragState] = useState<
     | {
@@ -558,6 +580,9 @@ export function Composer({
     };
 
     const handleMouseUp = () => {
+      if (dragStateRef.current) {
+        history.commit();
+      }
       setDragState(null);
       setIsAltResize(false);
     };
@@ -568,7 +593,7 @@ export function Composer({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [getCanvasCoords]);
+  }, [getCanvasCoords, history.commit]);
 
   // Layer CRUD
   const handleAddImage = useCallback(() => {
@@ -605,6 +630,7 @@ export function Composer({
                 : l,
             ),
           );
+          history.commit();
         };
         img.src = reader.result as string;
 
@@ -614,7 +640,7 @@ export function Composer({
       reader.readAsDataURL(file);
     };
     input.click();
-  }, []);
+  }, [history.commit]);
 
   // Track a font load: add to loadingFonts, remove when loaded
   const trackFontLoad = useCallback((family: string) => {
@@ -659,7 +685,8 @@ export function Composer({
     setLayers((prev) => [...prev, newLayer]);
     setSelectedIds([id]);
     trackFontLoad('Inter');
-  }, [trackFontLoad]);
+    history.commit();
+  }, [trackFontLoad, history.commit]);
 
   const handleLayerUpdate = useCallback(
     (id: string, updates: Partial<EditorLayer>) => {
@@ -685,8 +712,9 @@ export function Composer({
           l.id === id ? ({ ...l, ...updates } as EditorLayer & { id: string }) : l,
         ),
       );
+      history.commit();
     },
-    [trackFontLoad],
+    [trackFontLoad, history.commit],
   );
 
   // Toggle bg removal on an image layer — runs ML processing
@@ -701,6 +729,7 @@ export function Composer({
               : l,
           ),
         );
+        history.commit();
         return;
       }
 
@@ -717,6 +746,7 @@ export function Composer({
               : l,
           ),
         );
+        history.commit();
         return;
       }
 
@@ -735,6 +765,7 @@ export function Composer({
               : l,
           ),
         );
+        history.commit();
       } catch (err) {
         console.error('Background removal failed:', err);
         alert(`Background removal failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -746,7 +777,7 @@ export function Composer({
         });
       }
     },
-    [],
+    [history.commit],
   );
 
   const handleBgThresholdChange = useCallback(
@@ -758,8 +789,9 @@ export function Composer({
             : l,
         ),
       );
+      history.commit();
     },
-    [],
+    [history.commit],
   );
 
   const handleLayerDelete = useCallback(
@@ -768,9 +800,63 @@ export function Composer({
       loadedImagesRef.current.delete(id);
       processedImagesRef.current.delete(id);
       setSelectedIds((prev) => prev.filter((sid) => sid !== id));
+      history.commit();
     },
-    [],
+    [history.commit],
   );
+
+  const handleDuplicateLayer = useCallback(
+    (id: string) => {
+      const newId = crypto.randomUUID();
+      setLayers((prev) => {
+        const idx = prev.findIndex((l) => l.id === id);
+        if (idx === -1) return prev;
+        const source = prev[idx];
+        const clone: EditorLayer & { id: string } = {
+          ...source,
+          id: newId,
+          name: `${source.name} copy`,
+          transform: {
+            ...source.transform,
+            x: source.transform.x + 20,
+            y: source.transform.y + 20,
+          },
+        };
+        // Copy image refs for image layers
+        if (source.type === 'image') {
+          const loadedImg = loadedImagesRef.current.get(id);
+          if (loadedImg) loadedImagesRef.current.set(newId, loadedImg);
+          const processedImg = processedImagesRef.current.get(id);
+          if (processedImg) processedImagesRef.current.set(newId, processedImg);
+        }
+        const next = [...prev];
+        next.splice(idx + 1, 0, clone);
+        return next;
+      });
+      setSelectedIds([newId]);
+      history.commit();
+    },
+    [history.commit],
+  );
+
+  // Cmd+D to duplicate selected layer
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'd' && e.key !== 'D') return;
+      if (!e.metaKey && !e.ctrlKey) return;
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      const ids = selectedIdsRef.current;
+      if (ids.length === 0) return;
+      e.preventDefault();
+      handleDuplicateLayer(ids[0]);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleDuplicateLayer]);
 
   const handleReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
@@ -780,8 +866,9 @@ export function Composer({
         next.splice(toIndex, 0, moved);
         return next;
       });
+      history.commit();
     },
-    [],
+    [history.commit],
   );
 
   // Alignment handler
@@ -795,8 +882,9 @@ export function Composer({
           return newTransform ? { ...l, transform: newTransform } : l;
         });
       });
+      history.commit();
     },
-    [],
+    [history.commit],
   );
 
   // Export handlers
@@ -833,6 +921,37 @@ export function Composer({
       });
   }, [buildEditorConfig]);
 
+  // Cmd+Delete shortcut — delete all selected layers
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Backspace') {
+        e.preventDefault();
+        for (const id of selectedIds) {
+          handleLayerDelete(id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIds, handleLayerDelete]);
+
+  // Click-outside to close settings popover
+  useEffect(() => {
+    if (!showSettings) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.composer-settings-popover') && !target.closest('.composer-settings-btn')) {
+        setShowSettings(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [showSettings]);
+
   // JSON Import
   const handleImportJson = useCallback(() => {
     const input = document.createElement('input');
@@ -849,9 +968,14 @@ export function Composer({
             ...l,
             id: crypto.randomUUID(),
           }));
-          setLayers(newLayers);
+          const current = historyRef.current;
+          history.set({
+            ...current,
+            layers: newLayers,
+            frameConfig: config.frame ?? null,
+          });
           setSelectedIds([]);
-          setFrameConfig(config.frame ?? null);
+          history.commit();
 
           // Load fonts for text layers (with loading state tracking)
           for (const l of newLayers) {
@@ -881,12 +1005,51 @@ export function Composer({
       reader.readAsText(file);
     };
     input.click();
-  }, [trackFontLoad]);
+  }, [trackFontLoad, history.set, history.commit]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Guard: don't fire when focus is in form elements
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        history.undo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        history.redo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [history.undo, history.redo]);
 
   return (
     <div className="overlay-root composer">
       <div className="overlay-toolbar composer-toolbar">
         <span className="composer-title">Composer</span>
+        <div className="composer-history-actions">
+          <button
+            className="btn composer-history-btn"
+            onClick={history.undo}
+            disabled={!history.canUndo}
+            title="Undo (Cmd+Z)"
+            aria-label="Undo"
+          >
+            &#x21A9;
+          </button>
+          <button
+            className="btn composer-history-btn"
+            onClick={history.redo}
+            disabled={!history.canRedo}
+            title="Redo (Cmd+Shift+Z)"
+            aria-label="Redo"
+          >
+            &#x21AA;
+          </button>
+        </div>
         <div className="composer-toolbar-actions">
           <button
             className="btn composer-btn"
@@ -912,10 +1075,41 @@ export function Composer({
           >
             Image Trace
           </button>
+          <button
+            className="btn composer-settings-btn"
+            onClick={() => setShowSettings(!showSettings)}
+            title="Settings & Shortcuts"
+            aria-label="Settings"
+          >
+            ⚙
+          </button>
           <button className="btn composer-btn-exit" onClick={onExit}>
             Exit Editor
           </button>
         </div>
+        {showSettings && (
+          <div className="composer-settings-popover">
+            <div className="composer-settings-title">Keyboard Shortcuts</div>
+            <div className="composer-settings-shortcuts">
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Undo</span>
+                <kbd className="composer-shortcut-key">⌘Z</kbd>
+              </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Redo</span>
+                <kbd className="composer-shortcut-key">⌘⇧Z</kbd>
+              </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Delete</span>
+                <kbd className="composer-shortcut-key">⌘⌫</kbd>
+              </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Duplicate</span>
+                <kbd className="composer-shortcut-key">⌘D</kbd>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       <div className="overlay-workspace composer-workspace">
         <div className="composer-canvas-area">
@@ -932,6 +1126,7 @@ export function Composer({
           onSelect={setSelectedIds}
           onUpdate={handleLayerUpdate}
           onDelete={handleLayerDelete}
+          onDuplicate={handleDuplicateLayer}
           onReorder={handleReorder}
           onAddImage={handleAddImage}
           onAddText={handleAddText}

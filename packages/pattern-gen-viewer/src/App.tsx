@@ -96,6 +96,9 @@ function buildBackgroundConfig(
     txVal: number;
     tyVal: number;
     useTranslate: boolean;
+    rotate: number;
+    skewX: number;
+    skewY: number;
     displayParams: Record<string, number>;
     hslAdjust: { h: number; s: number; l: number };
     contrastBrightness: { contrast: number; brightness: number };
@@ -117,6 +120,9 @@ function buildBackgroundConfig(
     translateX: state.txVal,
     translateY: state.tyVal,
     useTranslate: state.useTranslate,
+    ...(state.rotate !== 0 ? { rotate: state.rotate } : {}),
+    ...(state.skewX !== 0 ? { skewX: state.skewX } : {}),
+    ...(state.skewY !== 0 ? { skewY: state.skewY } : {}),
     params: { ...state.displayParams },
     hsl: { ...state.hslAdjust },
     ...(hasContrastBrightness ? { contrastBrightness: { ...cb } } : {}),
@@ -148,6 +154,9 @@ function generateOnCanvas(
   translateY: number,
   userOverrides: Record<string, number>,
   useTranslate: boolean,
+  rotate: number,
+  skewX: number,
+  skewY: number,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -192,6 +201,21 @@ function generateOnCanvas(
     const ty = translateY * canvas.height;
     const baseOffset = -canvas.width * (scale - 1) / 2; // center: -(scale-1)/2 * size
     ctx.save();
+
+    // Apply transforms from center of canvas
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate((rotate * Math.PI) / 180);
+
+    // Apply skew via transform matrix
+    if (skewX !== 0 || skewY !== 0) {
+      const tanX = Math.tan((skewX * Math.PI) / 180);
+      const tanY = Math.tan((skewY * Math.PI) / 180);
+      ctx.transform(1, tanY, tanX, 1, 0, 0);
+    }
+
+    ctx.translate(-cx, -cy);
     ctx.translate(baseOffset + tx, baseOffset + ty);
     ctx.drawImage(offscreen, 0, 0);
     ctx.restore();
@@ -217,6 +241,9 @@ export function App() {
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);
   const [useTranslate, setUseTranslate] = useState(false);
+  const [rotate, setRotate] = useState(0);
+  const [skewX, setSkewX] = useState(0);
+  const [skewY, setSkewY] = useState(0);
   const [currentStep, setCurrentStep] = useState<AppStep>('background');
   const [composerActive, setComposerActive] = useState(false);
   const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
@@ -231,6 +258,10 @@ export function App() {
   const [hslAdjust, setHslAdjust] = useState({ h: 0, s: 0, l: 0 });
   const [fixedColorScheme, setFixedColorScheme] = useState(false);
   const [contrastBrightness, setContrastBrightness] = useState({ contrast: 0, brightness: 0 });
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [generatedUrl, setGeneratedUrl] = useState('');
+  const [urlCopied, setUrlCopied] = useState(false);
+  const skipResetRef = useRef(0);
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
   const imageLayersRef = useRef(imageLayers);
@@ -275,8 +306,70 @@ export function App() {
   const txVal = translateX / 100;
   const tyVal = translateY / 100;
 
+  // Read URL params on mount — reproduce pattern from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('slug')) return; // No URL params, use defaults
+
+    const urlSlug = params.get('slug');
+    const urlType = params.get('type');
+    const urlColor = params.get('color');
+
+    // Count how many dep changes will trigger the reset effect.
+    // Each of slug/patternType that differs from initial state will fire the effect.
+    let skipCount = 0;
+    if (urlSlug) skipCount++;
+    if (urlType) skipCount++;
+    if (skipCount > 0) skipResetRef.current = skipCount;
+
+    if (urlSlug) setSlug(urlSlug);
+    if (urlType) setPatternType(urlType);
+    if (urlColor) setColorSchemeIndex(Number(urlColor));
+
+    if (params.has('zoom')) setZoomSlider(Number(params.get('zoom')));
+    if (params.get('translate') === '1') {
+      setUseTranslate(true);
+      if (params.has('tx')) setTranslateX(Number(params.get('tx')));
+      if (params.has('ty')) setTranslateY(Number(params.get('ty')));
+    }
+    if (params.has('rotate')) setRotate(Number(params.get('rotate')));
+    if (params.has('skewX')) setSkewX(Number(params.get('skewX')));
+    if (params.has('skewY')) setSkewY(Number(params.get('skewY')));
+
+    // Restore user overrides (p_* params)
+    const overrides: Record<string, number> = {};
+    for (const [key, val] of params.entries()) {
+      if (key.startsWith('p_')) {
+        overrides[key.slice(2)] = Number(val);
+      }
+    }
+    if (Object.keys(overrides).length > 0) setUserOverrides(overrides);
+
+    // HSL
+    if (params.has('hsl_h') || params.has('hsl_s') || params.has('hsl_l')) {
+      setHslAdjust({
+        h: Number(params.get('hsl_h') || 0),
+        s: Number(params.get('hsl_s') || 0),
+        l: Number(params.get('hsl_l') || 0),
+      });
+    }
+
+    // Contrast/brightness
+    if (params.has('contrast') || params.has('brightness')) {
+      setContrastBrightness({
+        contrast: Number(params.get('contrast') || 0),
+        brightness: Number(params.get('brightness') || 0),
+      });
+    }
+  }, []); // Run once on mount
+
   // Reset non-fixed user overrides and transform when pattern type or slug changes
   useEffect(() => {
+    // Skip reset when restoring state from URL params
+    if (skipResetRef.current > 0) {
+      skipResetRef.current--;
+      return;
+    }
     setUserOverrides((prev) => {
       const kept: Record<string, number> = {};
       for (const key of fixedParamsRef.current) {
@@ -288,18 +381,21 @@ export function App() {
     setTranslateX(0);
     setTranslateY(0);
     setUseTranslate(false);
+    setRotate(0);
+    setSkewX(0);
+    setSkewY(0);
   }, [patternType, slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generate pattern (without HSL) and cache the result
   const generateAndCache = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+    generateOnCanvas(canvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY);
     const ctx = canvas.getContext('2d');
     if (ctx) {
       cachedImageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
-  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate]);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY]);
 
   // Apply HSL adjustment from cached ImageData and cache the result
   const applyHslAndCache = useCallback(() => {
@@ -422,8 +518,56 @@ export function App() {
     if (!enabled) {
       setTranslateX(0);
       setTranslateY(0);
+      setRotate(0);
+      setSkewX(0);
+      setSkewY(0);
     }
   }, []);
+
+  const handleRotateChange = useCallback((degrees: number) => {
+    setRotate(degrees);
+  }, []);
+
+  const handleSkewChange = useCallback((sx: number, sy: number) => {
+    setSkewX(sx);
+    setSkewY(sy);
+  }, []);
+
+  const handleGenerateUrl = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('slug', slug);
+    params.set('type', patternType);
+    params.set('color', String(colorSchemeIndex));
+
+    // Only include non-default values
+    if (zoomSlider !== 50) params.set('zoom', String(zoomSlider));
+    if (useTranslate) {
+      params.set('translate', '1');
+      if (translateX !== 0) params.set('tx', String(translateX));
+      if (translateY !== 0) params.set('ty', String(translateY));
+    }
+    if (rotate !== 0) params.set('rotate', String(rotate));
+    if (skewX !== 0) params.set('skewX', String(skewX));
+    if (skewY !== 0) params.set('skewY', String(skewY));
+
+    // Include user-overridden params
+    for (const [key, val] of Object.entries(userOverrides)) {
+      params.set(`p_${key}`, String(val));
+    }
+
+    // HSL adjustments
+    if (hslAdjust.h !== 0) params.set('hsl_h', String(hslAdjust.h));
+    if (hslAdjust.s !== 0) params.set('hsl_s', String(hslAdjust.s));
+    if (hslAdjust.l !== 0) params.set('hsl_l', String(hslAdjust.l));
+
+    // Contrast/brightness
+    if (contrastBrightness.contrast !== 0) params.set('contrast', String(contrastBrightness.contrast));
+    if (contrastBrightness.brightness !== 0) params.set('brightness', String(contrastBrightness.brightness));
+
+    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    setGeneratedUrl(url);
+    setShowUrlModal(true);
+  }, [slug, patternType, colorSchemeIndex, zoomSlider, useTranslate, translateX, translateY, rotate, skewX, skewY, userOverrides, hslAdjust, contrastBrightness]);
 
   // Layer counter for unique naming
   const layerCounterRef = useRef(0);
@@ -501,6 +645,28 @@ export function App() {
   const handleDeleteLayer = useCallback((id: string) => {
     setImageLayers((prev) => prev.filter((l) => l.id !== id));
     setSelectedLayerId((prev) => (prev === id ? null : prev));
+  }, []);
+
+  const handleDuplicateImageLayer = useCallback((id: string) => {
+    const newId = crypto.randomUUID();
+    setImageLayers((prev) => {
+      const idx = prev.findIndex((l) => l.id === id);
+      if (idx === -1) return prev;
+      const source = prev[idx];
+      const clone: ViewerImageLayer = {
+        ...source,
+        id: newId,
+        name: `${source.name} copy`,
+        transform: source.transform
+          ? { ...source.transform, x: source.transform.x + 20, y: source.transform.y + 20 }
+          : null,
+        thresholdedCache: source.thresholdedCache ?? null,
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, clone);
+      return next;
+    });
+    setSelectedLayerId(newId);
   }, []);
 
   const handleLayerReorder = useCallback((fromIndex: number, toIndex: number) => {
@@ -701,7 +867,7 @@ export function App() {
       const hiResCanvas = document.createElement('canvas');
       hiResCanvas.width = renderSize;
       hiResCanvas.height = renderSize;
-      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY);
 
       // Apply HSL adjustments
       const hiResCtx = hiResCanvas.getContext('2d');
@@ -732,7 +898,7 @@ export function App() {
       const url = outCanvas.toDataURL('image/png');
       triggerDownload(url, `crop-${patternType}-${slug}.png`);
     },
-    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, contrastBrightness, compositeOverlay],
+    [patternType, slug, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, compositeOverlay],
   );
 
   const getConfigJson = useCallback(
@@ -747,13 +913,16 @@ export function App() {
         txVal,
         tyVal,
         useTranslate,
+        rotate,
+        skewX,
+        skewY,
         displayParams,
         hslAdjust,
         contrastBrightness,
       });
       return serializeOgpConfig(config);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, displayParams, hslAdjust, contrastBrightness],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, rotate, skewX, skewY, displayParams, hslAdjust, contrastBrightness],
   );
 
   const handleDownloadJson = useCallback(
@@ -790,6 +959,9 @@ export function App() {
         txVal,
         tyVal,
         useTranslate,
+        rotate,
+        skewX,
+        skewY,
         displayParams,
         hslAdjust,
         contrastBrightness,
@@ -811,7 +983,7 @@ export function App() {
       const hiResCanvas = document.createElement('canvas');
       hiResCanvas.width = renderSize;
       hiResCanvas.height = renderSize;
-      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate);
+      generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY);
 
       const hiResCtx = hiResCanvas.getContext('2d');
       if (!hiResCtx) return;
@@ -843,7 +1015,7 @@ export function App() {
       setComposerOutputSize(outSize);
       setComposerActive(true);
     },
-    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, hslAdjust, contrastBrightness, displayParams, compositeOverlay],
+    [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, displayParams, compositeOverlay],
   );
 
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
@@ -1014,8 +1186,13 @@ export function App() {
               translateX={translateX}
               translateY={translateY}
               useTranslate={useTranslate}
+              rotate={rotate}
+              skewX={skewX}
+              skewY={skewY}
               onChange={handleTransformChange}
               onUseTranslateChange={handleUseTranslateChange}
+              onRotateChange={handleRotateChange}
+              onSkewChange={handleSkewChange}
             />
           </CollapsibleSection>
 
@@ -1026,6 +1203,7 @@ export function App() {
               onSelectLayer={setSelectedLayerId}
               onImport={handleImageImport}
               onDeleteLayer={handleDeleteLayer}
+              onDuplicateLayer={handleDuplicateImageLayer}
               onReorder={handleLayerReorder}
               onOpacityChange={handleLayerOpacityChange}
               onThresholdChange={handleLayerThresholdChange}
@@ -1046,16 +1224,59 @@ export function App() {
             />
           </CollapsibleSection>
 
-          <CollapsibleSection title="Final Action">
-            <div className="final-action-buttons">
+          <CollapsibleSection title="Action">
+            <div className="action-buttons">
               <button className="btn btn-download" onClick={download}>
                 Download PNG
+              </button>
+              <button className="btn btn-generate-url" onClick={handleGenerateUrl}>
+                Generate URL
               </button>
               <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
                 Compose &rarr;
               </button>
             </div>
           </CollapsibleSection>
+        </div>
+      )}
+      {showUrlModal && (
+        <div className="url-modal-overlay" onClick={() => setShowUrlModal(false)}>
+          <div className="url-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="url-modal-title">Pattern URL</div>
+            <p className="url-modal-description">
+              This URL will reproduce the current pattern with all settings.
+            </p>
+            <textarea
+              className="url-modal-textarea"
+              readOnly
+              value={generatedUrl}
+              rows={3}
+              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            />
+            <div className="url-modal-actions">
+              <button
+                className="btn url-modal-copy-btn"
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedUrl).then(() => {
+                    setUrlCopied(true);
+                    setTimeout(() => setUrlCopied(false), 1500);
+                  }).catch(() => {
+                    // Fallback: select textarea text for manual copy
+                    const textarea = document.querySelector('.url-modal-textarea') as HTMLTextAreaElement | null;
+                    textarea?.select();
+                  });
+                }}
+              >
+                {urlCopied ? 'Copied!' : 'Copy URL'}
+              </button>
+              <button
+                className="btn url-modal-close-btn"
+                onClick={() => setShowUrlModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
