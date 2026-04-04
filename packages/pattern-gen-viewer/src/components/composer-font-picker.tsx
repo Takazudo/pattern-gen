@@ -279,6 +279,13 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
     return sortWithFavorites(filtered, favorites);
   }, [filtered, favorites, hasFavorites]);
 
+  // Ensure the active font is always in the displayed portion
+  const displayFavs = sortedFiltered.favoriteFonts.slice(0, 50);
+  const displayOthers = sortedFiltered.otherFonts.slice(0, 50);
+  const activeVisible =
+    displayFavs.includes(value) || displayOthers.includes(value);
+  const showActiveExtra = value && !activeVisible && filtered.includes(value);
+
   return (
     <div className="composer-font-picker">
       <input
@@ -290,10 +297,24 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
         className="composer-font-search"
       />
       <div className="composer-font-list">
-        {sortedFiltered.favoriteFonts.length > 0 && (
+        {showActiveExtra && (
+          <>
+            <div className="composer-font-section-label">Current</div>
+            <FontItem
+              family={value}
+              isActive={true}
+              isFavorite={isFavorite(value)}
+              showStar={isAuthenticated}
+              onSelect={() => {}}
+              onToggleFavorite={(e) => { e.stopPropagation(); toggleFavorite(value); }}
+            />
+            <div className="composer-font-section-divider" />
+          </>
+        )}
+        {displayFavs.length > 0 && (
           <>
             <div className="composer-font-section-label">Favorites</div>
-            {sortedFiltered.favoriteFonts.slice(0, 50).map((f) => (
+            {displayFavs.map((f) => (
               <FontItem
                 key={f}
                 family={f}
@@ -304,12 +325,12 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
                 onToggleFavorite={(e) => { e.stopPropagation(); toggleFavorite(f); }}
               />
             ))}
-            {sortedFiltered.otherFonts.length > 0 && (
+            {displayOthers.length > 0 && (
               <div className="composer-font-section-divider" />
             )}
           </>
         )}
-        {sortedFiltered.otherFonts.slice(0, 50).map((f) => (
+        {displayOthers.map((f) => (
           <FontItem
             key={f}
             family={f}
