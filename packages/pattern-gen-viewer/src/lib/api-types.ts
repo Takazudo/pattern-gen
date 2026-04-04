@@ -32,6 +32,7 @@ export interface AssetEntry {
   filename: string;
   contentType: string;
   sizeBytes: number;
+  notes: string | null;
   createdAt: number;
   deletedAt: number | null;
 }
