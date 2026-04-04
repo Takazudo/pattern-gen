@@ -1,0 +1,80 @@
+---
+import SidebarToggle from '../components/sidebar-toggle';
+import SettingsTrigger from '../features/vim-settings/settings-trigger';
+import CodePanelToggle from '../features/code-panel/code-panel-toggle';
+import { settings } from '../config/settings';
+import { withBase } from '../utils/base';
+import { defaultLocale, type Locale } from '../config/i18n';
+
+interface Props {
+  lang?: Locale;
+  currentPath?: string;
+  showCodePanelToggle?: boolean;
+}
+
+const { lang, currentPath = '', showCodePanelToggle = false } = Astro.props;
+---
+
+<header
+  class="sticky top-0 z-50 flex h-[3.5rem] items-center border-b border-muted bg-surface px-hsp-lg"
+  data-header
+>
+  <SidebarToggle client:media="(max-width: 1023px)">
+    <slot name="sidebar" />
+  </SidebarToggle>
+
+  <a
+    href={withBase('/')}
+    class="whitespace-nowrap text-subheading font-bold text-fg hover:underline focus:underline shrink-0"
+    data-header-logo
+  >
+    {settings.siteName}
+  </a>
+
+  {
+    settings.headerNav.length > 0 && (
+      <nav class="hidden md:flex items-center gap-x-hsp-md ml-hsp-lg">
+        {settings.headerNav.map((item) => (
+          <a href={withBase(item.path)} class="text-sm text-muted hover:text-fg transition-colors">
+            {item.label}
+          </a>
+        ))}
+      </nav>
+    )
+  }
+
+  <div class="ml-auto flex shrink-0 items-center gap-x-hsp-md" data-header-right>
+    {showCodePanelToggle && <CodePanelToggle client:load />}
+    <SettingsTrigger client:load />
+    {
+      settings.colorTweakPanel && (
+        <button
+          id="color-tweak-trigger"
+          type="button"
+          class="flex items-center justify-center text-muted transition-colors hover:text-fg"
+          aria-label="Toggle color tweak panel"
+          onclick="window.dispatchEvent(new CustomEvent('toggle-color-tweak-panel'))"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="13.5" cy="6.5" r="2.5" />
+            <circle cx="17.5" cy="10.5" r="2.5" />
+            <circle cx="8.5" cy="7.5" r="2.5" />
+            <circle cx="6.5" cy="12.5" r="2.5" />
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+          </svg>
+        </button>
+      )
+    }
+  </div>
+</header>

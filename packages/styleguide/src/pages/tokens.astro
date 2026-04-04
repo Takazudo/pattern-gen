@@ -1,0 +1,189 @@
+---
+import DocLayout from '../layouts/doc-layout.astro';
+---
+
+<DocLayout title="Design Tokens" currentSlug="tokens" hideToc={true}>
+  <div class="px-hsp-lg py-vsp-lg">
+    <h1 class="font-bold text-heading pb-vsp-sm">Design Tokens</h1>
+    <p class="text-muted pb-vsp-lg text-small">
+      Pattern Gen design token reference — colors, spacing, typography, and more.
+    </p>
+
+    {/* ===== Color Palette (p0-p15) ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-sm">Color Palette (p0-p15)</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-hsp-xs gap-y-vsp-xs">
+        {
+          [
+            { name: 'p0', desc: 'dark surface' },
+            { name: 'p1', desc: 'danger/red' },
+            { name: 'p2', desc: 'success/green' },
+            { name: 'p3', desc: 'warning/yellow' },
+            { name: 'p4', desc: 'info/blue' },
+            { name: 'p5', desc: 'accent' },
+            { name: 'p6', desc: 'neutral' },
+            { name: 'p7', desc: 'secondary' },
+            { name: 'p8', desc: 'muted' },
+            { name: 'p9', desc: 'background' },
+            { name: 'p10', desc: 'surface' },
+            { name: 'p11', desc: 'text primary' },
+            { name: 'p12', desc: 'accent variant' },
+            { name: 'p13', desc: 'decorative' },
+            { name: 'p14', desc: 'accent hover' },
+            { name: 'p15', desc: 'text secondary' },
+          ].map((c) => (
+            <div class="rounded-sm overflow-hidden border border-muted">
+              <div class="h-[60px]" style={`background-color: var(--color-${c.name})`} />
+              <div class="p-hsp-xs bg-surface">
+                <div class="font-mono text-caption font-bold">{c.name}</div>
+                <div class="text-caption text-muted">{c.desc}</div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    {/* ===== Semantic Colors ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-sm">Semantic Colors</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-hsp-xs gap-y-vsp-xs">
+        {
+          [
+            { token: 'bg', twClass: 'bg-bg' },
+            { token: 'fg', twClass: 'bg-fg' },
+            { token: 'surface', twClass: 'bg-surface' },
+            { token: 'muted', twClass: 'bg-muted' },
+            { token: 'accent', twClass: 'bg-accent' },
+            { token: 'accent-hover', twClass: 'bg-accent-hover' },
+            { token: 'success', twClass: 'bg-success' },
+            { token: 'danger', twClass: 'bg-danger' },
+            { token: 'warning', twClass: 'bg-warning' },
+            { token: 'info', twClass: 'bg-info' },
+            { token: 'code-bg', twClass: 'bg-code-bg' },
+            { token: 'code-fg', twClass: 'bg-code-fg' },
+          ].map((c) => (
+            <div class="rounded-sm overflow-hidden border border-muted">
+              <div class={`h-[50px] ${c.twClass}`} />
+              <div class="p-hsp-xs bg-surface">
+                <div class="font-mono text-caption font-bold">{c.token}</div>
+                <div class="text-caption text-muted">bg-{c.token}</div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    {/* ===== Horizontal Spacing (hsp) ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-sm">Horizontal Spacing (hsp)</h2>
+      <div class="flex flex-col gap-vsp-xs">
+        {
+          [
+            { name: 'hsp-2xs', value: '2px' },
+            { name: 'hsp-xs', value: '6px' },
+            { name: 'hsp-sm', value: '8px' },
+            { name: 'hsp-md', value: '12px' },
+            { name: 'hsp-lg', value: '16px' },
+            { name: 'hsp-xl', value: '24px' },
+            { name: 'hsp-2xl', value: '32px' },
+          ].map((s) => (
+            <div class="flex items-center gap-hsp-xs">
+              <div class="w-[120px] shrink-0 text-right">
+                <span class="font-mono text-caption font-bold text-accent">{s.name}</span>
+                <span class="font-mono text-caption text-muted ml-hsp-2xs">{s.value}</span>
+              </div>
+              <div
+                class="h-[28px] bg-accent/20 border-l-3 border-l-accent rounded-r-sm"
+                style={`width: var(--spacing-${s.name})`}
+              />
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    {/* ===== Vertical Spacing (vsp) ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-sm">Vertical Spacing (vsp)</h2>
+      <div class="flex flex-wrap gap-hsp-lg gap-y-vsp-xs">
+        {
+          [
+            { name: 'vsp-3xs', value: '4px' },
+            { name: 'vsp-2xs', value: '7px' },
+            { name: 'vsp-xs', value: '14px' },
+            { name: 'vsp-sm', value: '20px' },
+            { name: 'vsp-md', value: '24px' },
+            { name: 'vsp-lg', value: '28px' },
+            { name: 'vsp-xl', value: '40px' },
+            { name: 'vsp-2xl', value: '56px' },
+          ].map((s) => (
+            <div class="flex flex-col items-center">
+              <div class="font-mono text-caption font-bold text-success pb-vsp-2xs">{s.name}</div>
+              <div
+                class="w-[80px] bg-success/20 border-t-3 border-t-success rounded-b-sm"
+                style={`height: var(--spacing-${s.name})`}
+              />
+              <div class="font-mono text-caption text-muted pt-vsp-2xs">{s.value}</div>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    {/* ===== Typography - Font Sizes ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-sm">Typography - Font Sizes</h2>
+      <div class="flex flex-col gap-vsp-xs">
+        {
+          [
+            { name: 'caption', size: '0.875rem' },
+            { name: 'small', size: '1rem' },
+            { name: 'body', size: '1.2rem' },
+            { name: 'subheading', size: '1.4rem' },
+            { name: 'heading', size: '3rem' },
+            { name: 'display', size: '3.75rem' },
+          ].map((t) => (
+            <div class="flex items-baseline gap-hsp-lg border-b border-muted/30 pb-vsp-xs">
+              <div class="w-[100px] shrink-0">
+                <span class="font-mono text-caption font-bold text-accent">{t.name}</span>
+                <span class="font-mono text-caption text-muted block">{t.size}</span>
+              </div>
+              <div
+                class="overflow-hidden text-ellipsis whitespace-nowrap"
+                style={`font-size: var(--text-${t.name})`}
+              >
+                The quick brown fox
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    {/* ===== Border Radius ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-sm">Border Radius</h2>
+      <div class="flex flex-wrap gap-hsp-xl gap-y-vsp-sm">
+        {
+          [
+            { name: 'sm', value: '4px' },
+            { name: 'md', value: '6px' },
+            { name: 'lg', value: '12px' },
+            { name: 'full', value: '9999px' },
+          ].map((r) => (
+            <div class="flex flex-col items-center gap-vsp-2xs">
+              <div
+                class="w-[64px] h-[64px] bg-accent/20 border-2 border-accent"
+                style={`border-radius: var(--radius-${r.name})`}
+              />
+              <div class="font-mono text-caption font-bold text-accent">{r.name}</div>
+              <div class="font-mono text-caption text-muted">{r.value}</div>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+  </div>
+</DocLayout>
