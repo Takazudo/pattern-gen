@@ -196,9 +196,11 @@ When implementing UI, check if a shared component already exists:
 
 **Before creating new UI**, check if an existing component can be extended. If you need a new reusable pattern (e.g., a new type of dialog, dropdown, or form control), create it as a shared component in `src/components/` rather than inlining it.
 
-### 7. All styles in App.css
+### 7. Where to put styles
 
-Do not create CSS modules or component-specific CSS files (except for truly isolated sub-apps like the Composer). All styles go in `App.css` in the "Tier 3: Component styles" section.
+- **General/shared styles**: `App.css` in the "Tier 3: Component styles" section
+- **Complex component styles**: Component-specific CSS files alongside the component (e.g., `composer.css`, `selection-overlay.css`, `step-indicator.css`). Import them from the component's `.tsx` file
+- **Do not use CSS modules** — use plain CSS files with class-name conventions matching the component name
 
 ### 8. Styleguide maintenance
 

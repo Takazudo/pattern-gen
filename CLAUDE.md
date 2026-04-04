@@ -110,7 +110,7 @@ pnpm run b4push       # Pre-push validation
 All UI styling follows the `/l-design-system` skill (auto-invoked when working on viewer components). Key rules:
 
 - **3-tier token system**: Palette (raw oklch) -> Theme (semantic `@theme`) -> Component styles (CSS classes)
-- **All styles in `App.css`** — no CSS modules, no component-scoped CSS files
+- **Styles in `App.css`** for shared/general styles, or **component-specific CSS files** for complex components (no CSS modules)
 - **Always use design tokens** for spacing, colors, radius, font sizes — never raw pixel values
 - **Glass morphism** for floating panels: `var(--color-surface-glass)` + `backdrop-filter: blur(12px)`
 - **No external UI libraries** — build components from scratch using design tokens
