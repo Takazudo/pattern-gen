@@ -1,0 +1,174 @@
+# CSS Architecture
+
+The Pattern Gen viewer uses a **3-tier token system** built on Tailwind CSS v4's native `@theme` directive. This gives us a tight, consistent design language without utility-class sprawl.
+
+## 3-Tier Token System
+
+### Tier 1: Palette
+
+Raw color values defined as CSS custom properties on `:root`. These are **never referenced directly** by components --- they feed into the semantic theme layer.
+
+```css
+:root {
+  /* Solid neutrals (oklch for perceptual uniformity) */
+  --palette-neutral-950: oklch(14% 0 0); /* ~#111 */
+  --palette-neutral-600: oklch(53% 0 0); /* ~#777 */
+  --palette-neutral-500: oklch(60% 0 0); /* ~#888 */
+  --palette-neutral-400: oklch(66% 0 0); /* ~#999 */
+  --palette-neutral-300: oklch(73% 0 0); /* ~#aaa */
+  --palette-neutral-100: oklch(90% 0 0); /* ~#e0e0e0 */
+
+  /* Glass transparency */
+  --palette-glass-bg: oklch(0% 0 0 / 75%);
+  --palette-glass-light-8: oklch(100% 0 0 / 8%);
+  --palette-glass-light-10: oklch(100% 0 0 / 10%);
+  --palette-glass-light-12: oklch(100% 0 0 / 12%);
+  --palette-glass-light-15: oklch(100% 0 0 / 15%);
+  --palette-glass-light-30: oklch(100% 0 0 / 30%);
+}
+```
+
+All colors use **oklch** for perceptual uniformity. The palette is intentionally small --- the app is dark-mode-only with a neutral, glass-centric aesthetic.
+
+### Tier 2: Theme (Semantic Tokens)
+
+The `@theme` block maps palette values to semantic roles and defines the spacing, radius, and font-size scales. These become Tailwind utilities automatically.
+
+```css
+@theme {
+  /* ── Semantic Colors ── */
+  --color-bg: var(--palette-neutral-950);
+  --color-fg: var(--palette-neutral-100);
+  --color-fg-muted: var(--palette-neutral-300);
+  --color-fg-subtle: var(--palette-neutral-400);
+  --color-fg-faint: var(--palette-neutral-600);
+  --color-accent: var(--palette-neutral-500);
+
+  --color-surface-glass: var(--palette-glass-bg);
+  --color-control-bg: var(--palette-glass-light-8);
+  --color-control-bg-hover: var(--palette-glass-light-15);
+
+  --color-border: var(--palette-glass-light-12);
+  --color-border-hover: var(--palette-glass-light-15);
+  --color-border-focus: var(--palette-glass-light-30);
+  --color-border-subtle: var(--palette-glass-light-8);
+  --color-border-faint: var(--palette-glass-light-10);
+}
+```
+
+### Tier 3: Component Styles
+
+Component CSS uses theme tokens via `var()`. One-off values (specific widths, blur amounts) stay as literals with `/* ARBITRARY */` comments.
+
+```css
+.controls {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px); /* ARBITRARY: glass effect */
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sp-xl);
+}
+```
+
+## Spacing Scale
+
+The spacing scale is intentionally tight for a tool UI, using named tokens rather than a numeric scale:
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `sp-3xs` | 3px | Micro gaps (swatch grids) |
+| `sp-2xs` | 4px | Inline padding, compact gaps |
+| `sp-xs` | 6px | Input padding, small gaps |
+| `sp-sm` | 8px | Section padding, medium gaps |
+| `sp-md` | 12px | Group spacing, panel padding |
+| `sp-lg` | 16px | Panel outer margin, larger gaps |
+| `sp-xl` | 20px | Section spacing, panel inner padding |
+| `sp-2xl` | 28px | Major section dividers |
+
+Available as Tailwind utilities: `p-sp-sm`, `gap-sp-md`, `m-sp-lg`, etc.
+
+## Semantic Color Tokens
+
+| Token | Role |
+|-------|------|
+| `--color-bg` | Page background |
+| `--color-fg` | Primary text |
+| `--color-fg-muted` | Secondary text (labels, descriptions) |
+| `--color-fg-subtle` | Tertiary text (placeholders, captions) |
+| `--color-fg-faint` | De-emphasized text (disabled, section headers) |
+| `--color-accent` | Accent elements (range sliders, active states) |
+| `--color-surface-glass` | Glass panel backgrounds |
+| `--color-control-bg` | Form element backgrounds |
+| `--color-control-bg-hover` | Form element hover state |
+| `--color-border` | Default borders |
+| `--color-border-hover` | Hover borders |
+| `--color-border-focus` | Focus borders |
+| `--color-border-subtle` | Subtle dividers |
+| `--color-border-faint` | Faintest dividers |
+
+## Glass Morphism Pattern
+
+The app uses a consistent glass morphism pattern for floating panels:
+
+```css
+.controls {
+  background: var(--color-surface-glass);   /* oklch(0% 0 0 / 75%) */
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg);          /* 12px */
+  border: 1px solid var(--color-border);    /* oklch(100% 0 0 / 12%) */
+}
+```
+
+This combination of semi-transparent black background + backdrop blur + subtle white border creates the glass effect used throughout:
+- Control panels
+- Step indicator bar
+- Auth button
+- Floating links
+- Dropdowns
+
+## Border Radius Tokens
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--radius-sm` | 4px | Small elements (color swatches, checkboxes, tags) |
+| `--radius-md` | 6px | Controls (inputs, buttons, dropdowns) |
+| `--radius-lg` | 12px | Panels (control panel, modals) |
+
+## Font Size Tokens
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--font-size-2xs` | 10px | Micro labels (fix toggles, layer names) |
+| `--font-size-xs` | 11px | Section headers, small UI labels |
+| `--font-size-sm` | 12px | Body text in controls, button text |
+| `--font-size-base` | 13px | Default input text, modal descriptions |
+| `--font-size-lg` | 18px | Panel heading (h1) |
+
+## Modal / Overlay Conventions
+
+Modals use a shared pattern:
+
+```css
+/* Overlay: fixed fullscreen with dark backdrop */
+.url-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: oklch(0% 0 0 / 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+
+/* Modal: dark card with subtle border */
+.url-modal {
+  background: oklch(15% 0 0);
+  border: 1px solid oklch(100% 0 0 / 15%);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 520px;
+  width: 90%;
+  box-shadow: 0 16px 48px oklch(0% 0 0 / 50%);
+}
+```
+
+Gallery modals (assets, compositions) extend this with a wider max-width (680px) and scrollable content area.

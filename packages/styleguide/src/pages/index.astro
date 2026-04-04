@@ -1,0 +1,36 @@
+---
+import BaseLayout from '../layouts/base-layout.astro';
+import { Sidebar } from '../components/sidebar';
+import { getStoriesByCategory, toSerializableCategories } from '../data/stories';
+
+const categories = toSerializableCategories(getStoriesByCategory());
+---
+
+<BaseLayout title="Stories" currentPath="/">
+  <Sidebar client:load categories={categories} />
+  <main class="sg-main">
+    <h1 class="sg-story-title">Pattern Gen Styleguide</h1>
+    <p style="color: var(--color-fg-muted); font-size: 14px; margin-bottom: 24px;">
+      Interactive component library for the Pattern Gen viewer app.
+      Select a story from the sidebar to preview components.
+    </p>
+
+    {categories.map((cat) => (
+      <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-fg-faint); margin-bottom: 8px;">
+          {cat.category}
+        </h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px;">
+          {cat.stories.map((story) => (
+            <a
+              href={`/stories/${story.slug}`}
+              style="padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); text-decoration: none; color: var(--color-fg-muted); font-size: 13px; transition: border-color 0.15s, color 0.15s;"
+            >
+              {story.name}
+            </a>
+          ))}
+        </div>
+      </div>
+    ))}
+  </main>
+</BaseLayout>

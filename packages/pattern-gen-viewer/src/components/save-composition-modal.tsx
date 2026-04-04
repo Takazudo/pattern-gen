@@ -6,6 +6,7 @@ interface SaveCompositionModalProps {
   patternType: string;
   configJson: string;
   previewDataUrl?: string;
+  defaultName?: string;
   onClose: () => void;
   onSaved: (composition: Composition) => void;
 }
@@ -14,10 +15,11 @@ export function SaveCompositionModal({
   patternType,
   configJson,
   previewDataUrl,
+  defaultName,
   onClose,
   onSaved,
 }: SaveCompositionModalProps) {
-  const [name, setName] = useState(`${patternType} composition`);
+  const [name, setName] = useState(defaultName ?? `${patternType} composition`);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

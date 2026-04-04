@@ -1760,6 +1760,105 @@ label.fix-toggle input[type="checkbox"] {
   border-color: oklch(100% 0 0 / 25%);
 }
 
+/* ── Composition Menu ── */
+
+.composition-menu-wrapper {
+  position: absolute;
+  z-index: 10;
+  top: calc(var(--step-indicator-height) + 12px);
+  right: 380px;
+}
+
+.composition-menu-trigger {
+  cursor: pointer;
+  gap: 6px;
+}
+
+.composition-menu-trigger-title {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composition-menu-chevron {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.composition-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  background: oklch(12% 0 0);
+  border: 1px solid oklch(100% 0 0 / 12%);
+  border-radius: 8px;
+  padding: 4px 0;
+  box-shadow: 0 8px 32px oklch(0% 0 0 / 50%);
+  animation: popover-fade-in 0.12s ease-out;
+}
+
+.composition-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  color: oklch(75% 0 0);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.composition-menu-item:hover {
+  background: oklch(100% 0 0 / 8%);
+  color: oklch(90% 0 0);
+}
+
+.composition-menu-divider {
+  height: 1px;
+  background: oklch(100% 0 0 / 10%);
+  margin: 4px 0;
+}
+
+/* ── Discard Confirmation Dialog ── */
+
+.discard-dialog {
+  background: oklch(15% 0 0);
+  border: 1px solid oklch(100% 0 0 / 15%);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 16px 48px oklch(0% 0 0 / 50%);
+}
+
+.discard-dialog-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.discard-dialog-discard {
+  background: oklch(40% 0.15 25);
+  color: oklch(95% 0 0);
+}
+
+.discard-dialog-discard:hover {
+  background: oklch(45% 0.18 25);
+}
+
+.discard-dialog-keep {
+  background: oklch(40% 0.12 145);
+  color: oklch(95% 0 0);
+}
+
+.discard-dialog-keep:hover {
+  background: oklch(45% 0.15 145);
+}
+
 /* ── Image Layer Browse Button ── */
 
 .image-layer-browse {
@@ -1775,4 +1874,109 @@ label.fix-toggle input[type="checkbox"] {
 
 .image-layer-browse:hover {
   color: var(--color-fg);
+}
+
+/* ── Confirm Dialog ── */
+
+.confirm-dialog {
+  background: oklch(15% 0 0);
+  border: 1px solid oklch(100% 0 0 / 15%);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 16px 48px oklch(0% 0 0 / 50%);
+}
+
+.confirm-dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: oklch(90% 0 0);
+  margin-bottom: 8px;
+}
+
+.confirm-dialog-message {
+  font-size: 13px;
+  color: oklch(65% 0 0);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.confirm-dialog-content {
+  margin-bottom: 16px;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.confirm-dialog-cancel {
+  background: oklch(100% 0 0 / 6%);
+}
+
+.confirm-dialog-primary {
+  background: oklch(100% 0 0 / 12%);
+}
+
+.confirm-dialog-danger {
+  background: oklch(45% 0.15 25);
+  color: oklch(95% 0 0);
+}
+
+.confirm-dialog-danger:hover {
+  background: oklch(50% 0.18 25);
+}
+
+.confirm-dialog-preview {
+  border-radius: 8px;
+  overflow: hidden;
+  background: oklch(0% 0 0 / 30%);
+  max-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-dialog-preview-img {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+/* ── Asset Notes ── */
+
+.asset-notes {
+  padding: 0 8px 4px;
+}
+
+.asset-notes-input {
+  width: 100%;
+  padding: 4px 6px;
+  background: oklch(100% 0 0 / 4%);
+  border: 1px solid oklch(100% 0 0 / 8%);
+  border-radius: 4px;
+  color: oklch(80% 0 0);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.asset-notes-input::placeholder {
+  color: oklch(40% 0 0);
+}
+
+.asset-notes-input:focus {
+  border-color: oklch(100% 0 0 / 25%);
+}
+
+/* ── Asset Card Action Buttons ── */
+
+.gallery-card-action-btn-danger {
+  color: oklch(70% 0.12 25);
+}
+
+.gallery-card-action-btn-danger:hover {
+  color: oklch(80% 0.15 25);
 }

@@ -30,6 +30,9 @@
     "previewer:dev:net": "lsof -ti :14362 | xargs kill 2>/dev/null; true",
     "viewer:dev:net": "pnpm --filter pattern-gen-viewer dev -- --host 0.0.0.0",
     "viewer:build": "pnpm --filter pattern-gen-viewer build",
+    "prestyleguide:dev": "lsof -ti :14400 | xargs kill 2>/dev/null; true",
+    "styleguide:dev": "pnpm --filter pattern-gen-styleguide dev",
+    "styleguide:build": "pnpm --filter pattern-gen-styleguide build",
     "// ── Doc site ────────────────────────────────────": "",
     "predoc:dev": "lsof -ti :4321 | xargs kill 2>/dev/null; true",
     "doc:dev": "cd doc && pnpm run dev",
@@ -40,7 +43,8 @@
     "// ── Validation ──────────────────────────────────": "",
     "b4push": "./scripts/run-b4push.sh",
     "// ── Typecheck ───────────────────────────────────": "",
-    "typecheck": "pnpm --filter @takazudo/pattern-gen-core run typecheck && pnpm --filter @takazudo/pattern-gen-image-processor run typecheck && pnpm --filter @takazudo/pattern-gen-generators run typecheck && tsc --noEmit"
+    "typecheck": "pnpm --filter @takazudo/pattern-gen-core run typecheck && pnpm --filter @takazudo/pattern-gen-image-processor run typecheck && pnpm --filter @takazudo/pattern-gen-generators run typecheck && tsc --noEmit",
+    "// ── Styleguide ──────────────────────────────────": ""
   },
   "keywords": [
     "pattern",

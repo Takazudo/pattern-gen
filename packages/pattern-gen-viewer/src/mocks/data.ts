@@ -30,6 +30,7 @@ export interface MockAsset {
   filename: string;
   contentType: string;
   sizeBytes: number;
+  notes: string | null;
   createdAt: number;
   deletedAt: number | null;
 }
@@ -160,6 +161,7 @@ export const initialAssets: MockAsset[] = [
     filename: 'background.png',
     contentType: 'image/png',
     sizeBytes: 245_000,
+    notes: null,
     createdAt: now - 8 * day,
     deletedAt: null,
   },
@@ -168,6 +170,7 @@ export const initialAssets: MockAsset[] = [
     filename: 'logo.svg',
     contentType: 'image/svg+xml',
     sizeBytes: 12_400,
+    notes: null,
     createdAt: now - 6 * day,
     deletedAt: null,
   },
@@ -176,6 +179,7 @@ export const initialAssets: MockAsset[] = [
     filename: 'texture.jpg',
     contentType: 'image/jpeg',
     sizeBytes: 890_000,
+    notes: null,
     createdAt: now - 4 * day,
     deletedAt: null,
   },
@@ -184,6 +188,7 @@ export const initialAssets: MockAsset[] = [
     filename: 'overlay.png',
     contentType: 'image/png',
     sizeBytes: 156_000,
+    notes: null,
     createdAt: now - 2 * day,
     deletedAt: null,
   },
@@ -192,6 +197,7 @@ export const initialAssets: MockAsset[] = [
     filename: 'icon-set.png',
     contentType: 'image/png',
     sizeBytes: 67_800,
+    notes: null,
     createdAt: now - 1 * day,
     deletedAt: null,
   },
@@ -203,6 +209,7 @@ export const initialTrashedAssets: MockAsset[] = [
     filename: 'old-banner.jpg',
     contentType: 'image/jpeg',
     sizeBytes: 420_000,
+    notes: null,
     createdAt: now - 25 * day,
     deletedAt: now - 3 * day,
   },

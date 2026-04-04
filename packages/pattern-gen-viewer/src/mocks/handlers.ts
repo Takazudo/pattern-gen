@@ -66,6 +66,7 @@ function assetToResponse(f: MockAsset) {
     filename: f.filename,
     contentType: f.contentType,
     sizeBytes: f.sizeBytes,
+    notes: f.notes,
     createdAt: f.createdAt,
   };
 }
@@ -299,6 +300,7 @@ export const handlers = [
       filename,
       contentType,
       sizeBytes: buffer.byteLength,
+      notes: null,
       createdAt: now,
       deletedAt: null,
     };
@@ -317,6 +319,18 @@ export const handlers = [
     const asset = assets.find((f) => f.id === params.id && f.deletedAt === null);
     if (!asset) {
       return HttpResponse.json({ error: 'Asset not found' }, { status: 404 });
+    }
+    return HttpResponse.json(assetToResponse(asset));
+  }),
+
+  http.patch('/api/assets/:id', async ({ params, request }) => {
+    const asset = assets.find((f) => f.id === params.id && f.deletedAt === null);
+    if (!asset) {
+      return HttpResponse.json({ error: 'Asset not found' }, { status: 404 });
+    }
+    const body = (await request.json()) as { notes?: string | null };
+    if (body.notes !== undefined) {
+      asset.notes = body.notes;
     }
     return HttpResponse.json(assetToResponse(asset));
   }),

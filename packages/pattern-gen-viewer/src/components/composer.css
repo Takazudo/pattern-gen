@@ -70,6 +70,36 @@
   outline-offset: 2px;
 }
 
+/* ── Editable title ── */
+
+.composer-title-editable {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+
+.composer-title-editable:hover {
+  background: oklch(100% 0 0 / 8%);
+}
+
+.composer-title-input {
+  font-size: 16px;
+  font-weight: 600;
+  color: oklch(90% 0 0);
+  background: oklch(100% 0 0 / 8%);
+  border: 1px solid oklch(100% 0 0 / 20%);
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+  min-width: 120px;
+  max-width: 300px;
+}
+
+.composer-title-input:focus {
+  border-color: oklch(100% 0 0 / 35%);
+}
+
 /* ── Canvas area ── */
 
 .composer-canvas-area {

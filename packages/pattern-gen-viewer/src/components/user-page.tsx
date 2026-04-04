@@ -13,7 +13,7 @@ import { ImageEnlargeModal } from './image-enlarge-modal.js';
 
 interface UserPageProps {
   onClose: () => void;
-  onLoadComposition: (configJson: string, patternType: string) => void;
+  onLoadComposition: (composition: Composition) => void;
   onUseAsLayer: (file: File) => void;
 }
 
@@ -401,7 +401,7 @@ export function UserPage({ onClose, onLoadComposition, onUseAsLayer }: UserPageP
               actionId={compositionActionId}
               onLoadMore={() => fetchCompositions(compositions.length, true)}
               onLoadComposition={(p) => {
-                onLoadComposition(p.configJson, p.patternType);
+                onLoadComposition(p);
                 onClose();
               }}
               onDelete={handleDeleteComposition}
