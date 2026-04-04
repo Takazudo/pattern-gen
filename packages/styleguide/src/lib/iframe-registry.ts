@@ -5,42 +5,16 @@
  * all iframes on the page. Overrides are stored on `window` so all
  * Astro island bundles share state.
  *
- * Variable name bridging:
- *   The design-system tokens (--zd-p0, --zd-semantic-bg, …) differ from the
- *   styleguide CSS variables set by ColorSchemeProvider (--zd-0, --zd-bg, …).
- *   When applying overrides to preview iframes we emit BOTH names so that
- *   Tailwind utilities (which reference --zd-0, --zd-bg, …) pick up changes.
+ * The three-tier token system uses:
+ *   --pg-palette-{name}  (Tier 1: raw colors)
+ *   --pg-{semantic}      (Tier 2: semantic roles)
+ *   --color-{name}       (Tier 3: @theme component tokens)
+ *
+ * Overrides set --pg-* vars directly; the @theme tokens resolve through
+ * the CSS variable chain.
  */
 
 const OVERRIDES_KEY = '__styleguideTokenOverrides';
-
-/** Regex matching palette vars like --zd-p0 … --zd-p15 */
-const PALETTE_RE = /^--zd-p(\d+)$/;
-
-/**
- * Expand design-system variable names to include the styleguide equivalents.
- *   --zd-p{N}          → also --zd-{N}
- *   --zd-semantic-{x}  → also --zd-{x}
- */
-function expandOverrides(overrides: Record<string, string>): Record<string, string> {
-  const expanded: Record<string, string> = {};
-  for (const [variable, value] of Object.entries(overrides)) {
-    expanded[variable] = value;
-
-    // Palette: --zd-p5 → --zd-5
-    const paletteMatch = PALETTE_RE.exec(variable);
-    if (paletteMatch) {
-      expanded[`--zd-${paletteMatch[1]}`] = value;
-      continue;
-    }
-
-    // Semantic: --zd-semantic-accent-hover → --zd-accent-hover
-    if (variable.startsWith('--zd-semantic-')) {
-      expanded[variable.replace('--zd-semantic-', '--zd-')] = value;
-    }
-  }
-  return expanded;
-}
 
 function getOverrides(): Record<string, string> {
   const w = globalThis as unknown as Record<string, Record<string, string>>;
@@ -102,20 +76,18 @@ export function unregisterIframe(_el: HTMLIFrameElement): void {
 }
 
 export function applyToAllIframes(variable: string, value: string): void {
-  const expanded = expandOverrides({ [variable]: value });
-  const merged = { ...getOverrides(), ...expanded };
+  const patch = { [variable]: value };
+  const merged = { ...getOverrides(), ...patch };
   setOverridesStore(merged);
   for (const iframe of getAllIframes()) {
-    applyOverridesToIframe(iframe, expanded);
+    applyOverridesToIframe(iframe, patch);
   }
 }
 
 export function setGlobalOverrides(overrides: Record<string, string>): void {
   // Merge with existing overrides instead of replacing, so multiple panels
   // (ColorTweakPanel + TokenTweakPanel) don't clobber each other.
-  // Expand design-system names to styleguide equivalents for preview iframes.
-  const expanded = expandOverrides(overrides);
-  const merged = { ...getOverrides(), ...expanded };
+  const merged = { ...getOverrides(), ...overrides };
   setOverridesStore(merged);
   for (const iframe of getAllIframes()) {
     applyOverridesToIframe(iframe, merged);

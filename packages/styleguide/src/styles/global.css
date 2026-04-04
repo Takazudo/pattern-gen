@@ -8,63 +8,49 @@
 /* ========================================
  * Design Token System
  *
- * Pattern Gen uses a dark-only oklch neutral palette.
- * The --zd-* CSS vars are injected by ColorSchemeProvider from color-schemes.ts.
- * Below we map them to Tailwind @theme tokens.
+ * Three-tier color architecture:
+ *   Tier 1 (Palette): --pg-palette-* raw oklch values (injected by ColorSchemeProvider)
+ *   Tier 2 (Semantic): --pg-* role tokens referencing palette (injected by ColorSchemeProvider)
+ *   Tier 3 (Component): @theme --color-* tokens referencing semantic vars
  * ======================================== */
 
 @theme {
   /* ========================================
-   * Colors — Three-tier token system
+   * Colors — Tier 3 (Component tokens)
+   * References --pg-* semantic vars from ColorSchemeProvider.
    * ======================================== */
 
   /* ── Base ── */
-  --color-bg: var(--zd-bg);
-  --color-fg: var(--zd-fg);
-  --color-sel-bg: var(--zd-sel-bg);
-  --color-sel-fg: var(--zd-sel-fg);
+  --color-bg: var(--pg-bg);
+  --color-fg: var(--pg-fg);
+  --color-sel-bg: var(--pg-sel-bg);
+  --color-sel-fg: var(--pg-sel-fg);
 
-  /* ── Raw palette (p0–p15) ── */
-  --color-p0: var(--zd-0);
-  --color-p1: var(--zd-1);
-  --color-p2: var(--zd-2);
-  --color-p3: var(--zd-3);
-  --color-p4: var(--zd-4);
-  --color-p5: var(--zd-5);
-  --color-p6: var(--zd-6);
-  --color-p7: var(--zd-7);
-  --color-p8: var(--zd-8);
-  --color-p9: var(--zd-9);
-  --color-p10: var(--zd-10);
-  --color-p11: var(--zd-11);
-  --color-p12: var(--zd-12);
-  --color-p13: var(--zd-13);
-  --color-p14: var(--zd-14);
-  --color-p15: var(--zd-15);
+  /* ── Semantic ── */
+  --color-surface: var(--pg-surface);
+  --color-muted: var(--pg-muted);
+  --color-accent: var(--pg-accent);
+  --color-accent-hover: var(--pg-accent-hover);
+  --color-code-bg: var(--pg-code-bg);
+  --color-code-fg: var(--pg-code-fg);
+  --color-success: var(--pg-success);
+  --color-danger: var(--pg-danger);
+  --color-warning: var(--pg-warning);
+  --color-info: var(--pg-info);
 
-  /* ── Semantic aliases ── */
-  --color-surface: var(--zd-surface);
-  --color-muted: var(--zd-muted);
-  --color-accent: var(--zd-accent);
-  --color-accent-hover: var(--zd-accent-hover);
-  --color-code-bg: var(--zd-code-bg);
-  --color-code-fg: var(--zd-code-fg);
-  --color-success: var(--zd-success);
-  --color-danger: var(--zd-danger);
-  --color-warning: var(--zd-warning);
-  --color-info: var(--zd-info);
+  /* ── Text hierarchy ── */
+  --color-fg-muted: var(--pg-fg-muted);
+  --color-fg-subtle: var(--pg-fg-subtle);
+  --color-fg-faint: var(--pg-fg-faint);
 
-  /* ── Viewer-compatible tokens ── */
-  --color-fg-muted: var(--zd-15);
-  --color-fg-subtle: var(--zd-8);
-  --color-fg-faint: var(--zd-6);
-  --color-surface-glass: var(--zd-0);
-  --color-control-bg: var(--zd-10);
-  --color-control-bg-hover: var(--zd-surface);
-  --color-border: var(--zd-muted);
-  --color-border-hover: var(--zd-accent);
-  --color-border-focus: var(--zd-accent-hover);
-  --color-border-subtle: var(--zd-8);
+  /* ── Viewer-compatible aliases ── */
+  --color-surface-glass: var(--pg-surface);
+  --color-control-bg: var(--pg-palette-neutral-800);
+  --color-control-bg-hover: var(--pg-surface);
+  --color-border: var(--pg-border);
+  --color-border-hover: var(--pg-accent);
+  --color-border-focus: var(--pg-accent-hover);
+  --color-border-subtle: var(--pg-palette-neutral-800);
 
   /* ========================================
    * Spacing — hsp (horizontal) + vsp (vertical)

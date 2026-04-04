@@ -166,16 +166,16 @@ const SEMANTIC_FIELDS: {
   label: string;
   cssVar: string;
 }[] = [
-  { key: 'bg', label: 'BG', cssVar: '--zd-semantic-bg' },
-  { key: 'fg', label: 'FG', cssVar: '--zd-semantic-fg' },
-  { key: 'surface', label: 'Surface', cssVar: '--zd-semantic-surface' },
-  { key: 'muted', label: 'Muted', cssVar: '--zd-semantic-muted' },
-  { key: 'accent', label: 'Accent', cssVar: '--zd-semantic-accent' },
-  { key: 'accentHover', label: 'Acc Hover', cssVar: '--zd-semantic-accent-hover' },
-  { key: 'success', label: 'Success', cssVar: '--zd-semantic-success' },
-  { key: 'danger', label: 'Danger', cssVar: '--zd-semantic-danger' },
-  { key: 'warning', label: 'Warning', cssVar: '--zd-semantic-warning' },
-  { key: 'info', label: 'Info', cssVar: '--zd-semantic-info' },
+  { key: 'bg', label: 'BG', cssVar: '--pg-bg' },
+  { key: 'fg', label: 'FG', cssVar: '--pg-fg' },
+  { key: 'surface', label: 'Surface', cssVar: '--pg-surface' },
+  { key: 'muted', label: 'Muted', cssVar: '--pg-muted' },
+  { key: 'accent', label: 'Accent', cssVar: '--pg-accent' },
+  { key: 'accentHover', label: 'Acc Hover', cssVar: '--pg-accent-hover' },
+  { key: 'success', label: 'Success', cssVar: '--pg-success' },
+  { key: 'danger', label: 'Danger', cssVar: '--pg-danger' },
+  { key: 'warning', label: 'Warning', cssVar: '--pg-warning' },
+  { key: 'info', label: 'Info', cssVar: '--pg-info' },
 ];
 
 const BASE_FIELDS = SEMANTIC_FIELDS.filter((f) => f.key === 'bg' || f.key === 'fg');
@@ -213,9 +213,7 @@ function loadState(): { state: TweakState; preset: string } {
 function applyToIframes(state: TweakState) {
   const overrides: Record<string, string> = {};
 
-  state.palette.forEach((color, i) => {
-    overrides[`--zd-p${i}`] = color;
-  });
+  // Set semantic --pg-* vars with resolved colors
   SEMANTIC_FIELDS.forEach(({ key, cssVar }) => {
     const paletteIndex = state.semanticMappings[key] ?? DEFAULT_SEMANTIC_MAPPINGS[key] ?? 0;
     const color = state.palette[paletteIndex] ?? '#000000';

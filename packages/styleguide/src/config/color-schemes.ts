@@ -1,44 +1,16 @@
-/** A color reference: palette index (number) or direct color value (string) */
-export type ColorRef = number | string;
+/**
+ * Three-tier color system:
+ *   Tier 1 (Palette): Raw oklch colors by name — no semantic meaning.
+ *   Tier 2 (Semantic): Role-based tokens referencing palette keys.
+ *   Tier 3 (Component): CSS classes using semantic tokens via @theme.
+ */
 
 export interface ColorScheme {
-  background: ColorRef;
-  foreground: ColorRef;
-  cursor: ColorRef;
-  selectionBg: ColorRef;
-  selectionFg: ColorRef;
-  palette: [
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-  ];
+  /** Tier 1: Named raw color values (oklch). Never used directly in components. */
+  palette: Record<string, string>;
+  /** Tier 2: Semantic roles mapping to palette key names. */
+  semantic: Record<string, string>;
   shikiTheme: NonNullable<import('astro').ShikiConfig['theme']>;
-  /** Optional semantic overrides — when omitted, defaults are used. */
-  semantic?: {
-    surface?: ColorRef;
-    muted?: ColorRef;
-    accent?: ColorRef;
-    accentHover?: ColorRef;
-    codeBg?: ColorRef;
-    codeFg?: ColorRef;
-    success?: ColorRef;
-    danger?: ColorRef;
-    warning?: ColorRef;
-    info?: ColorRef;
-  };
 }
 
 /**
@@ -47,41 +19,55 @@ export interface ColorScheme {
  */
 export const colorSchemes: Record<string, ColorScheme> = {
   'Default Dark': {
-    background: 9,
-    foreground: 15,
-    cursor: 6,
-    selectionBg: 10,
-    selectionFg: 11,
-    palette: [
-      '#1a1a1a',
-      '#e05252',
-      '#6abf69',
-      '#e0a84b', // p0-3: dark surface, danger, success, warning
-      '#5b9fd6',
-      '#9a9a9a',
-      '#7a7a7a',
-      '#8a8a8a', // p4-7: info, accent, neutral, secondary
-      '#666666',
-      '#1a1a1a',
-      '#2a2a2a',
-      '#e6e6e6', // p8-11: muted, background, surface, text
-      '#a0a0a0',
-      '#888888',
-      '#b0b0b0',
-      '#cccccc', // p12-15: accent variant, decorative, hover, text secondary
-    ],
-    shikiTheme: 'vitesse-dark',
-    semantic: {
-      surface: 0,
-      muted: 8,
-      accent: 12,
-      accentHover: 14,
-      codeBg: 10,
-      codeFg: 11,
-      success: 2,
-      danger: 1,
-      warning: 3,
-      info: 4,
+    palette: {
+      // Neutrals
+      'neutral-950': 'oklch(14% 0 0)', // near-black
+      'neutral-900': 'oklch(18% 0 0)', // very dark
+      'neutral-800': 'oklch(25% 0 0)', // dark surface
+      'neutral-600': 'oklch(40% 0 0)', // muted
+      'neutral-500': 'oklch(53% 0 0)', // mid gray
+      'neutral-400': 'oklch(60% 0 0)', // subtle
+      'neutral-300': 'oklch(66% 0 0)', // secondary text
+      'neutral-200': 'oklch(73% 0 0)', // text
+      'neutral-100': 'oklch(90% 0 0)', // bright text
+      // Status colors
+      'red-500': 'oklch(63% 0.24 25)',
+      'green-500': 'oklch(70% 0.18 145)',
+      'yellow-500': 'oklch(80% 0.16 85)',
+      'blue-500': 'oklch(65% 0.18 250)',
     },
+    semantic: {
+      bg: 'neutral-950',
+      fg: 'neutral-100',
+      'fg-muted': 'neutral-300',
+      'fg-subtle': 'neutral-400',
+      'fg-faint': 'neutral-600',
+      surface: 'neutral-900',
+      muted: 'neutral-600',
+      accent: 'neutral-500',
+      'accent-hover': 'neutral-200',
+      border: 'neutral-800',
+      'code-bg': 'neutral-900',
+      'code-fg': 'neutral-100',
+      cursor: 'neutral-500',
+      'sel-bg': 'neutral-800',
+      'sel-fg': 'neutral-100',
+      danger: 'red-500',
+      success: 'green-500',
+      warning: 'yellow-500',
+      info: 'blue-500',
+      // Mermaid
+      'mermaid-node-bg': 'neutral-950',
+      'mermaid-text': 'neutral-100',
+      'mermaid-line': 'neutral-800',
+      'mermaid-label-bg': 'neutral-900',
+      'mermaid-note-bg': 'neutral-950',
+      // Chat
+      'chat-user-bg': 'neutral-500',
+      'chat-user-text': 'neutral-950',
+      'chat-assistant-bg': 'neutral-950',
+      'chat-assistant-text': 'neutral-100',
+    },
+    shikiTheme: 'vitesse-dark',
   },
 };

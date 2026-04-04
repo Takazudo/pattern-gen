@@ -113,19 +113,23 @@ const contentTransition = {
             if (!raw) return;
             try {
               var s = JSON.parse(raw);
-              if (!s.palette || s.palette.length !== 16 || s.background === undefined) return;
+              if (!s.palette || !s.semanticMappings) return;
               var root = document.documentElement;
-              for (var i = 0; i < 16; i++) root.style.setProperty("--zd-" + i, s.palette[i]);
-              root.style.setProperty("--zd-bg", s.palette[s.background]);
-              root.style.setProperty("--zd-fg", s.palette[s.foreground]);
-              root.style.setProperty("--zd-cursor", s.palette[s.cursor]);
-              root.style.setProperty("--zd-sel-bg", s.palette[s.selectionBg]);
-              root.style.setProperty("--zd-sel-fg", s.palette[s.selectionFg]);
+              // Apply base vars
+              var bg = s.semanticMappings.bg !== undefined ? s.palette[s.semanticMappings.bg] : (s.background !== undefined ? s.palette[s.background] : null);
+              var fg = s.semanticMappings.fg !== undefined ? s.palette[s.semanticMappings.fg] : (s.foreground !== undefined ? s.palette[s.foreground] : null);
+              if (bg) root.style.setProperty("--pg-bg", bg);
+              if (fg) root.style.setProperty("--pg-fg", fg);
+              if (s.cursor !== undefined) root.style.setProperty("--pg-cursor", s.palette[s.cursor]);
+              if (s.selectionBg !== undefined) root.style.setProperty("--pg-sel-bg", s.palette[s.selectionBg]);
+              if (s.selectionFg !== undefined) root.style.setProperty("--pg-sel-fg", s.palette[s.selectionFg]);
+              // Apply semantic overrides
               for (var key in tweakSemanticCss) {
                 var m = s.semanticMappings && s.semanticMappings[key];
                 if (m === undefined) m = tweakSemanticDefaults[key];
-                var val = m === "bg" ? s.palette[s.background] : m === "fg" ? s.palette[s.foreground] : s.palette[m];
-                root.style.setProperty(tweakSemanticCss[key], val);
+                if (m !== undefined && s.palette[m]) {
+                  root.style.setProperty(tweakSemanticCss[key], s.palette[m]);
+                }
               }
             } catch (e) { localStorage.removeItem("zudo-doc-tweak-state"); }
           }
@@ -230,7 +234,7 @@ const contentTransition = {
         let dragging = false;
 
         handle.addEventListener('mouseenter', () => {
-          if (!dragging) handle.style.background = 'var(--zd-accent, rgba(128,128,128,0.3))';
+          if (!dragging) handle.style.background = 'var(--pg-accent, rgba(128,128,128,0.3))';
         });
         handle.addEventListener('mouseleave', () => {
           if (!dragging) handle.style.background = '';
@@ -240,7 +244,7 @@ const contentTransition = {
           e.preventDefault();
           handle.setPointerCapture(e.pointerId);
           dragging = true;
-          handle.style.background = 'var(--zd-accent, rgba(128,128,128,0.3))';
+          handle.style.background = 'var(--pg-accent, rgba(128,128,128,0.3))';
           document.documentElement.style.cursor = 'col-resize';
           document.documentElement.style.userSelect = 'none';
 
@@ -250,7 +254,7 @@ const contentTransition = {
             top: '0',
             width: '2px',
             height: '100vh',
-            background: 'var(--zd-accent, rgba(128,128,128,0.5))',
+            background: 'var(--pg-accent, rgba(128,128,128,0.5))',
             pointerEvents: 'none',
             zIndex: '9999',
           });
