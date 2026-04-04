@@ -1,0 +1,363 @@
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+
+/* Scan viewer component files for Tailwind classes */
+@source "../../../pattern-gen-viewer/src/**/*.tsx";
+
+/* ── Tier 1: Palette (same as viewer) ── */
+:root {
+  --palette-neutral-950: oklch(14% 0 0);
+  --palette-neutral-600: oklch(53% 0 0);
+  --palette-neutral-500: oklch(60% 0 0);
+  --palette-neutral-400: oklch(66% 0 0);
+  --palette-neutral-300: oklch(73% 0 0);
+  --palette-neutral-100: oklch(90% 0 0);
+
+  --palette-glass-bg: oklch(0% 0 0 / 75%);
+  --palette-glass-light-8: oklch(100% 0 0 / 8%);
+  --palette-glass-light-10: oklch(100% 0 0 / 10%);
+  --palette-glass-light-12: oklch(100% 0 0 / 12%);
+  --palette-glass-light-15: oklch(100% 0 0 / 15%);
+  --palette-glass-light-30: oklch(100% 0 0 / 30%);
+}
+
+/* ── Tier 2: Theme (same as viewer) ── */
+@theme {
+  --default-transition-duration: 0.15s;
+  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --color-bg: var(--palette-neutral-950);
+  --color-fg: var(--palette-neutral-100);
+  --color-fg-muted: var(--palette-neutral-300);
+  --color-fg-subtle: var(--palette-neutral-400);
+  --color-fg-faint: var(--palette-neutral-600);
+  --color-accent: var(--palette-neutral-500);
+
+  --color-surface-glass: var(--palette-glass-bg);
+  --color-control-bg: var(--palette-glass-light-8);
+  --color-control-bg-hover: var(--palette-glass-light-15);
+
+  --color-border: var(--palette-glass-light-12);
+  --color-border-hover: var(--palette-glass-light-15);
+  --color-border-focus: var(--palette-glass-light-30);
+  --color-border-subtle: var(--palette-glass-light-8);
+  --color-border-faint: var(--palette-glass-light-10);
+
+  --spacing-0: 0;
+  --spacing-1px: 1px;
+  --spacing-sp-3xs: 3px;
+  --spacing-sp-2xs: 4px;
+  --spacing-sp-xs: 6px;
+  --spacing-sp-sm: 8px;
+  --spacing-sp-md: 12px;
+  --spacing-sp-lg: 16px;
+  --spacing-sp-xl: 20px;
+  --spacing-sp-2xl: 28px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+
+  --font-size-2xs: 10px;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-lg: 18px;
+
+  --step-indicator-height: 44px;
+}
+
+/* ── Base styles (override viewer's body overflow: hidden) ── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  margin: 0;
+  overflow: auto;
+}
+
+/* ── Styleguide shell ── */
+.sg-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+
+.sg-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-md);
+  padding: 0 var(--spacing-sp-lg);
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sg-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.sg-header-nav {
+  display: flex;
+  gap: var(--spacing-sp-md);
+  margin-left: auto;
+}
+
+.sg-header-nav a {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.sg-header-nav a:hover,
+.sg-header-nav a[aria-current="page"] {
+  color: var(--color-fg);
+}
+
+.sg-sidebar {
+  overflow-y: auto;
+  padding: var(--spacing-sp-md);
+  border-right: 1px solid var(--color-border);
+  background: oklch(12% 0 0);
+}
+
+.sg-main {
+  overflow-y: auto;
+  padding: var(--spacing-sp-xl);
+}
+
+/* ── Sidebar tree ── */
+.sg-search {
+  width: 100%;
+  padding: var(--spacing-sp-xs) var(--spacing-sp-sm);
+  background: var(--color-control-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  font-size: var(--font-size-sm);
+  outline: none;
+  margin-bottom: var(--spacing-sp-md);
+}
+
+.sg-search:focus {
+  border-color: var(--color-border-focus);
+}
+
+.sg-category {
+  margin-bottom: var(--spacing-sp-sm);
+}
+
+.sg-category-title {
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-fg-faint);
+  margin-bottom: var(--spacing-sp-2xs);
+}
+
+.sg-story-link {
+  display: block;
+  padding: var(--spacing-sp-2xs) var(--spacing-sp-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+
+.sg-story-link:hover {
+  background: var(--color-control-bg-hover);
+  color: var(--color-fg);
+}
+
+.sg-story-link[aria-current="page"] {
+  background: var(--color-control-bg);
+  color: var(--color-fg);
+}
+
+/* ── Story page ── */
+.sg-story-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sp-lg);
+}
+
+.sg-variant-tabs {
+  display: flex;
+  gap: var(--spacing-sp-2xs);
+  margin-bottom: var(--spacing-sp-lg);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--spacing-sp-xs);
+}
+
+.sg-variant-tab {
+  padding: var(--spacing-sp-2xs) var(--spacing-sp-md);
+  border: none;
+  background: none;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sg-variant-tab:hover {
+  color: var(--color-fg);
+}
+
+.sg-variant-tab.active {
+  color: var(--color-fg);
+  border-bottom-color: var(--color-fg);
+}
+
+.sg-variant-preview {
+  padding: var(--spacing-sp-xl);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+}
+
+/* ── MDX prose ── */
+.sg-prose {
+  max-width: 72ch;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.sg-prose h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 var(--spacing-sp-lg);
+}
+
+.sg-prose h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: var(--spacing-sp-2xl) 0 var(--spacing-sp-md);
+  padding-top: var(--spacing-sp-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.sg-prose h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: var(--spacing-sp-xl) 0 var(--spacing-sp-sm);
+}
+
+.sg-prose p {
+  margin: 0 0 var(--spacing-sp-md);
+  color: var(--color-fg-muted);
+}
+
+.sg-prose code {
+  font-size: 12px;
+  padding: 2px 5px;
+  background: var(--color-control-bg);
+  border-radius: var(--radius-sm);
+}
+
+.sg-prose pre {
+  padding: var(--spacing-sp-md);
+  background: oklch(10% 0 0);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin: 0 0 var(--spacing-sp-lg);
+}
+
+.sg-prose pre code {
+  padding: 0;
+  background: none;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sg-prose ul,
+.sg-prose ol {
+  margin: 0 0 var(--spacing-sp-md);
+  padding-left: var(--spacing-sp-xl);
+  color: var(--color-fg-muted);
+}
+
+.sg-prose li {
+  margin-bottom: var(--spacing-sp-2xs);
+}
+
+.sg-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 var(--spacing-sp-lg);
+  font-size: 13px;
+}
+
+.sg-prose th,
+.sg-prose td {
+  padding: var(--spacing-sp-xs) var(--spacing-sp-sm);
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.sg-prose th {
+  background: var(--color-control-bg);
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.sg-prose td {
+  color: var(--color-fg-muted);
+}
+
+/* ── Token swatches (for CSS architecture page) ── */
+.sg-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-lg);
+}
+
+.sg-swatch {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.sg-swatch-color {
+  height: 48px;
+}
+
+.sg-swatch-label {
+  padding: var(--spacing-sp-2xs) var(--spacing-sp-xs);
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-muted);
+}
+
+.sg-spacing-demo {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-sp-sm);
+  margin-bottom: var(--spacing-sp-lg);
+}
+
+.sg-spacing-bar {
+  background: var(--color-control-bg-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.sg-spacing-label {
+  font-size: var(--font-size-2xs);
+  color: var(--color-fg-muted);
+  padding-top: var(--spacing-sp-2xs);
+  white-space: nowrap;
+}
