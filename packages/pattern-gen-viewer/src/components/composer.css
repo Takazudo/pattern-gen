@@ -447,10 +447,20 @@
   font-size: 12px;
 }
 
+.composer-font-btn-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
 .composer-font-more-btn {
   font-size: 10px;
   padding: 2px 8px;
-  align-self: flex-start;
+}
+
+.composer-font-explore-btn {
+  font-size: 10px;
+  padding: 2px 8px;
 }
 
 .composer-font-search {

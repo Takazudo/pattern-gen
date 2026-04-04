@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FontExplorerModal } from './font-explorer-modal.js';
 
 const CURATED_FONTS = [
   'Inter',
@@ -201,6 +202,7 @@ interface FontPickerProps {
 
 export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
   const [showMore, setShowMore] = useState(false);
+  const [showExplorer, setShowExplorer] = useState(false);
   const [search, setSearch] = useState('');
 
   const allFonts = showMore
@@ -232,12 +234,20 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
               <option value={value}>{value}</option>
             )}
           </select>
-          <button
-            className="btn composer-font-more-btn"
-            onClick={() => setShowMore(true)}
-          >
-            More...
-          </button>
+          <div className="composer-font-btn-row">
+            <button
+              className="btn composer-font-more-btn"
+              onClick={() => setShowMore(true)}
+            >
+              More...
+            </button>
+            <button
+              className="btn composer-font-explore-btn"
+              onClick={() => setShowExplorer(true)}
+            >
+              Explore
+            </button>
+          </div>
         </>
       ) : (
         <>
@@ -263,10 +273,27 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
               </button>
             ))}
           </div>
-          <button className="btn" onClick={() => setShowMore(false)}>
-            Back
-          </button>
+          <div className="composer-font-btn-row">
+            <button className="btn" onClick={() => setShowMore(false)}>
+              Back
+            </button>
+            <button
+              className="btn composer-font-explore-btn"
+              onClick={() => setShowExplorer(true)}
+            >
+              Explore
+            </button>
+          </div>
         </>
+      )}
+      {showExplorer && (
+        <FontExplorerModal
+          onSelect={(family) => {
+            onChange(family);
+            setShowMore(false);
+          }}
+          onClose={() => setShowExplorer(false)}
+        />
       )}
     </div>
   );
