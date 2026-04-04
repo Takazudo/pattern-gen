@@ -1,0 +1,170 @@
+---
+title: CSS Architecture
+description: How the Pattern Gen viewer organizes its CSS with a three-tier token system.
+sidebar_position: 1
+---
+
+# CSS Architecture
+
+The Pattern Gen viewer uses a **three-tier design token system** built on CSS custom properties and Tailwind CSS v4's `@theme` directive. All styles live in `App.css` — no CSS modules, no external UI libraries.
+
+## Three-Tier Token System
+
+### Tier 1: Palette
+
+Raw oklch color values defined in `:root`. These are the source-of-truth color definitions. **Components never reference palette tokens directly.**
+
+```css
+:root {
+  --palette-neutral-950: oklch(14% 0 0);
+  --palette-neutral-600: oklch(53% 0 0);
+  --palette-neutral-500: oklch(60% 0 0);
+  --palette-neutral-400: oklch(66% 0 0);
+  --palette-neutral-300: oklch(73% 0 0);
+  --palette-neutral-100: oklch(90% 0 0);
+
+  --palette-glass-bg: oklch(0% 0 0 / 75%);
+  --palette-glass-light-8: oklch(100% 0 0 / 8%);
+  --palette-glass-light-10: oklch(100% 0 0 / 10%);
+  --palette-glass-light-12: oklch(100% 0 0 / 12%);
+  --palette-glass-light-15: oklch(100% 0 0 / 15%);
+  --palette-glass-light-30: oklch(100% 0 0 / 30%);
+}
+```
+
+The palette is intentionally small — a neutral oklch ramp plus a set of glass (semi-transparent white/black) values for the dark-on-pattern UI.
+
+### Tier 2: Theme (Semantic Tokens)
+
+Defined in the `@theme` block, these tokens map palette values to semantic roles. They become Tailwind utilities automatically (e.g. `bg-bg`, `text-fg-muted`, `border-border`).
+
+```css
+@theme {
+  --color-bg: var(--palette-neutral-950);
+  --color-fg: var(--palette-neutral-100);
+  --color-fg-muted: var(--palette-neutral-300);
+  --color-accent: var(--palette-neutral-500);
+  --color-surface-glass: var(--palette-glass-bg);
+  --color-control-bg: var(--palette-glass-light-8);
+  --color-border: var(--palette-glass-light-12);
+  /* ... */
+}
+```
+
+### Tier 3: Component Styles
+
+Components reference theme tokens via `var()`. One-off values (specific widths, blur radii, panel dimensions) stay as CSS literals with an `/* ARBITRARY */` comment.
+
+```css
+.controls {
+  width: 280px; /* ARBITRARY: panel-specific width */
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px); /* ARBITRARY: glass effect */
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sp-xl);
+}
+```
+
+## Token Naming Conventions
+
+| Prefix | Tier | Examples |
+|--------|------|----------|
+| `--palette-*` | 1 (Palette) | `--palette-neutral-500`, `--palette-glass-light-12` |
+| `--color-*` | 2 (Theme) | `--color-bg`, `--color-fg-muted`, `--color-border` |
+| `--spacing-*` | 2 (Theme) | `--spacing-sp-sm`, `--spacing-sp-xl` |
+| `--radius-*` | 2 (Theme) | `--radius-sm`, `--radius-md`, `--radius-lg` |
+| `--font-size-*` | 2 (Theme) | `--font-size-2xs`, `--font-size-base`, `--font-size-lg` |
+
+## Color Tokens
+
+### Foreground
+
+| Token | Role |
+|-------|------|
+| `--color-fg` | Primary text |
+| `--color-fg-muted` | Secondary text (descriptions, hints) |
+| `--color-fg-subtle` | Tertiary text (labels, uppercase headers) |
+| `--color-fg-faint` | Disabled / decorative text |
+| `--color-accent` | Accent color (sliders, links) |
+
+### Surfaces
+
+| Token | Role |
+|-------|------|
+| `--color-bg` | Page background |
+| `--color-surface-glass` | Glass panel fill (75% black) |
+| `--color-control-bg` | Default control background (8% white) |
+| `--color-control-bg-hover` | Hovered control background (15% white) |
+
+### Borders
+
+| Token | Role |
+|-------|------|
+| `--color-border` | Default border (12% white) |
+| `--color-border-hover` | Hovered border (15% white) |
+| `--color-border-focus` | Focused border (30% white) |
+| `--color-border-subtle` | Section dividers (8% white) |
+| `--color-border-faint` | Faint separators (10% white) |
+
+## Spacing System
+
+The viewer uses a single `sp-*` scale optimized for compact tool UI:
+
+| Token | Value | Typical use |
+|-------|-------|-------------|
+| `--spacing-sp-3xs` | 3px | Minimal gap between swatches |
+| `--spacing-sp-2xs` | 4px | Label-to-input gap |
+| `--spacing-sp-xs` | 6px | Input padding, small gaps |
+| `--spacing-sp-sm` | 8px | Button padding, section margins |
+| `--spacing-sp-md` | 12px | Control group spacing |
+| `--spacing-sp-lg` | 16px | Panel padding, standard gaps |
+| `--spacing-sp-xl` | 20px | Panel inner padding |
+| `--spacing-sp-2xl` | 28px | Large section gaps |
+
+## Glass Morphism
+
+The standard recipe for floating panels over the pattern canvas:
+
+```css
+.panel {
+  background: var(--color-surface-glass);   /* 75% black */
+  backdrop-filter: blur(12px);               /* frosted glass */
+  border-radius: var(--radius-lg);           /* 12px corners */
+  border: 1px solid var(--color-border);     /* 12% white edge */
+}
+```
+
+All floating UI (controls panel, modals, menus) uses this pattern. The glass background lets the underlying pattern show through while maintaining text readability.
+
+## Modal / Overlay Conventions
+
+Modals use a two-layer approach:
+
+1. **Backdrop**: `oklch(0% 0 0 / 60%)` with `backdrop-filter: blur(4px)` — dims and subtly blurs the background
+2. **Content**: Glass morphism panel (same recipe as above)
+
+```css
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: oklch(0% 0 0 / 60%);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sp-xl);
+}
+```
+
+## No External UI Libraries
+
+The viewer builds all components from scratch using design tokens. This approach:
+
+- **Keeps bundle size minimal** — no framework overhead for a handful of controls
+- **Matches the dark-on-glass aesthetic** — pre-built component libraries assume opaque backgrounds
+- **Uses standard CSS** — no runtime styling, no CSS-in-JS, just CSS custom properties
+- **Stays maintainable** — the compact token set means fewer moving parts than a full design system
