@@ -12,18 +12,7 @@ export const SignedOut = () => (
 );
 
 export const SignedIn = () => (
-  <AuthProvider
-    mockUser={{
-      id: 'user-1',
-      email: 'demo@example.com',
-      emailVerified: true,
-      name: 'Demo User',
-      nickname: 'demo',
-      pictureUrl: null,
-      photoUrl: null,
-      createdAt: Date.now(),
-    }}
-  >
+  <AuthProvider>
     <div style={{ position: 'relative', height: 60 }}>
       <AuthButton onOpenUserPage={() => console.log('Open user page')} />
     </div>
@@ -31,7 +20,7 @@ export const SignedIn = () => (
 );
 
 export const Loading = () => (
-  <AuthProvider mockIsLoading>
+  <AuthProvider>
     <div style={{ position: 'relative', height: 60 }}>
       <AuthButton onOpenUserPage={() => {}} />
     </div>

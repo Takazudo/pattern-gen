@@ -380,7 +380,7 @@ export function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('slug')) return; // No URL params, use defaults
-    suppressDirtyUntilRef.current = Date.now();
+    suppressDirtyCountRef.current += 1;
 
     const urlSlug = params.get('slug');
     const urlType = params.get('type');

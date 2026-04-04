@@ -1,12 +1,13 @@
 import { MyCompositions } from './my-compositions';
+import type { Composition } from '../lib/api-types.js';
 
 export const meta = { title: 'UI/MyCompositions' };
 
 export const Empty = () => (
   <MyCompositions
     onClose={() => console.log('Close')}
-    onLoadComposition={(configJson, patternType) =>
-      console.log('Load composition:', patternType, configJson)
+    onLoadComposition={(composition: Composition) =>
+      console.log('Load composition:', composition.name)
     }
   />
 );
@@ -14,8 +15,8 @@ export const Empty = () => (
 export const Default = () => (
   <MyCompositions
     onClose={() => console.log('Close')}
-    onLoadComposition={(configJson, patternType) =>
-      console.log('Load composition:', patternType, configJson)
+    onLoadComposition={(composition: Composition) =>
+      console.log('Load composition:', composition.name)
     }
   />
 );
