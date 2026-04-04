@@ -56,6 +56,9 @@ jobs:
       - name: Build doc site
         run: pnpm run doc:build
 
+      - name: Build styleguide
+        run: pnpm run styleguide:build
+
       - name: Upload viewer artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
@@ -68,6 +71,13 @@ jobs:
         with:
           name: dist-doc
           path: doc/dist/
+          retention-days: 1
+
+      - name: Upload styleguide artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: dist-styleguide
+          path: packages/styleguide/dist/
           retention-days: 1
 
   # ---------------------------------------------------------------------------
@@ -92,11 +102,18 @@ jobs:
           name: dist-doc
           path: dist-doc/
 
+      - name: Download styleguide artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: dist-styleguide
+          path: dist-styleguide/
+
       - name: Prepare deploy directory
         run: |
           mkdir -p deploy/pj/pattern-gen
           cp -r dist-viewer/. deploy/pj/pattern-gen/
           cp -r dist-doc/. deploy/pj/pattern-gen/doc/
+          cp -r dist-styleguide/. deploy/pj/pattern-gen/styleguide/
           echo '/ /pj/pattern-gen/ 302' > deploy/_redirects
 
       - name: Deploy to Cloudflare Pages (production)

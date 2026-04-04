@@ -51,6 +51,7 @@ function mockViewerDeps(): Plugin {
 
 export default defineConfig({
   output: "static",
+  base: "/pj/pattern-gen/styleguide/",
   integrations: [react(), mdx()],
   vite: {
     plugins: [tailwindcss(), mockViewerDeps()],
