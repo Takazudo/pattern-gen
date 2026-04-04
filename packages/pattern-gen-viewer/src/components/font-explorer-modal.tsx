@@ -116,44 +116,44 @@ export function FontExplorerModal({ onSelect, onClose }: FontExplorerModalProps)
           </button>
         </div>
 
-        {/* Filter bar + result count */}
+        {/* Filter bar + preview input (combined row) */}
         <div className="font-explorer-filters">
-          <div className="font-explorer-category-bar">
-            <button
-              className={`btn font-explorer-cat-btn ${activeCategory === null ? 'active' : ''}`}
-              onClick={() => setActiveCategory(null)}
-            >
-              All
-            </button>
-            {FONT_CATEGORIES.map((cat) => (
+          <div className="font-explorer-filters-left">
+            <div className="font-explorer-category-bar">
               <button
-                key={cat}
-                className={`btn font-explorer-cat-btn ${activeCategory === cat ? 'active' : ''}`}
-                onClick={() =>
-                  setActiveCategory(activeCategory === cat ? null : cat)
-                }
+                className={`btn font-explorer-cat-btn ${activeCategory === null ? 'active' : ''}`}
+                onClick={() => setActiveCategory(null)}
               >
-                {CATEGORY_LABELS[cat]}
+                All
               </button>
-            ))}
+              {FONT_CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  className={`btn font-explorer-cat-btn ${activeCategory === cat ? 'active' : ''}`}
+                  onClick={() =>
+                    setActiveCategory(activeCategory === cat ? null : cat)
+                  }
+                >
+                  {CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+            </div>
+            <div className="font-explorer-count">
+              {filtered.length === catalog.length
+                ? `${catalog.length} families`
+                : `${filtered.length} of ${catalog.length} families`}
+            </div>
           </div>
-          <div className="font-explorer-count">
-            {filtered.length === catalog.length
-              ? `${catalog.length} families`
-              : `${filtered.length} of ${catalog.length} families`}
+          <div className="font-explorer-preview-field">
+            <label className="font-explorer-preview-label">Preview:</label>
+            <input
+              type="text"
+              className="font-explorer-preview-input"
+              value={previewText}
+              onChange={(e) => setPreviewText(e.target.value)}
+              placeholder="Type preview text..."
+            />
           </div>
-        </div>
-
-        {/* Preview text input */}
-        <div className="font-explorer-preview-bar">
-          <label className="font-explorer-preview-label">Preview:</label>
-          <input
-            type="text"
-            className="font-explorer-preview-input"
-            value={previewText}
-            onChange={(e) => setPreviewText(e.target.value)}
-            placeholder="Type preview text..."
-          />
         </div>
 
         {/* Font grid */}
