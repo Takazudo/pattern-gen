@@ -159,6 +159,7 @@
 
 .font-explorer-preview-input {
   width: 180px;
+  max-width: 100%;
   padding: var(--spacing-sp-2xs) var(--spacing-sp-sm);
   background: var(--color-control-bg);
   border: 1px solid var(--color-border-subtle);
@@ -286,7 +287,7 @@
 .font-explorer-card-skeleton {
   display: block;
   width: 80%;
-  height: 20px;
+  height: 40px;
   background: var(--color-border-subtle);
   border-radius: var(--radius-sm);
   animation: font-explorer-skeleton-pulse 1.2s ease-in-out infinite;
@@ -319,6 +320,15 @@
     width: 100vw;
     height: 100vh;
     border-radius: 0;
+  }
+
+  .font-explorer-preview-field {
+    width: 100%;
+  }
+
+  .font-explorer-preview-input {
+    flex: 1;
+    width: auto;
   }
 
   .font-explorer-grid {
