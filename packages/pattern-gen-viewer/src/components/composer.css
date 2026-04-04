@@ -50,6 +50,26 @@
   background: var(--color-control-bg-hover);
 }
 
+.composer-btn-tweak {
+  padding: var(--spacing-sp-xs) var(--spacing-sp-md);
+  border: 1px solid oklch(65% 0.12 250 / 40%);
+  border-radius: var(--radius-md);
+  background: oklch(65% 0.12 250 / 15%);
+  color: oklch(80% 0.06 250);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.composer-btn-tweak:hover {
+  background: oklch(65% 0.12 250 / 25%);
+  color: oklch(90% 0.04 250);
+}
+
+.composer-btn-tweak:focus-visible {
+  outline: 2px solid oklch(65% 0.15 250);
+  outline-offset: 2px;
+}
+
 .composer-btn-exit {
   padding: var(--spacing-sp-xs) var(--spacing-sp-md);
   border: 1px solid oklch(100% 0 0 / 20%);
