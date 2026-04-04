@@ -14,6 +14,7 @@ interface FontFavoritesResult {
 
 const EMPTY_SET = new Set<string>();
 const noop = async () => {};
+const returnFalse = () => false;
 
 export function useFontFavorites(): FontFavoritesResult {
   const { isAuthenticated } = useAuth();
@@ -122,7 +123,7 @@ export function useFontFavorites(): FontFavoritesResult {
     return {
       favorites: EMPTY_SET,
       isLoading: false,
-      isFavorite: () => false,
+      isFavorite: returnFalse,
       toggleFavorite: noop,
       addFavorite: noop,
       removeFavorite: noop,

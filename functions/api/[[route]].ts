@@ -786,8 +786,8 @@ app.post("/font-favorites", async (c) => {
         .first<FontFavoriteRow>();
 
       return c.json({
-        fontFamily: existing!.font_family,
-        createdAt: existing!.created_at,
+        fontFamily: existing?.font_family ?? body.fontFamily,
+        createdAt: existing?.created_at ?? now,
       } satisfies FontFavoriteResponse);
     }
     throw err;
@@ -804,7 +804,7 @@ app.post("/font-favorites", async (c) => {
 
 app.delete("/font-favorites/:family", async (c) => {
   const auth = c.get("auth");
-  const family = decodeURIComponent(c.req.param("family"));
+  const family = c.req.param("family");
 
   const result = await c.env.DB.prepare(
     "DELETE FROM font_favorites WHERE user_id = ?1 AND font_family = ?2"

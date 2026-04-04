@@ -208,6 +208,37 @@ function sortWithFavorites(fonts: string[], favorites: Set<string>): { favoriteF
   return { favoriteFonts, otherFonts };
 }
 
+interface FontItemProps {
+  family: string;
+  isActive: boolean;
+  isFavorite: boolean;
+  showStar: boolean;
+  onSelect: () => void;
+  onToggleFavorite: (e: React.MouseEvent) => void;
+}
+
+function FontItem({ family, isActive, isFavorite, showStar, onSelect, onToggleFavorite }: FontItemProps) {
+  return (
+    <div className="composer-font-item-row">
+      <button
+        className={`composer-font-item ${isActive ? 'active' : ''}`}
+        onClick={onSelect}
+      >
+        {family}
+      </button>
+      {showStar && (
+        <button
+          className="composer-font-star-btn"
+          onClick={onToggleFavorite}
+          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          {isFavorite ? '\u2605' : '\u2606'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface FontPickerProps {
   id?: string;
   value: string;
@@ -228,14 +259,18 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
     return sortWithFavorites(CURATED_FONTS, favorites);
   }, [favorites, hasFavorites]);
 
-  const allFonts = showMore
-    ? [...CURATED_FONTS, ...EXTENDED_FONTS]
-    : CURATED_FONTS;
-  const filtered = showMore
-    ? allFonts.filter((f) =>
-        f.toLowerCase().includes(search.toLowerCase()),
-      )
-    : allFonts;
+  const allFonts = useMemo(
+    () => (showMore ? [...CURATED_FONTS, ...EXTENDED_FONTS] : CURATED_FONTS),
+    [showMore],
+  );
+
+  const filtered = useMemo(
+    () =>
+      showMore
+        ? allFonts.filter((f) => f.toLowerCase().includes(search.toLowerCase()))
+        : allFonts,
+    [allFonts, search, showMore],
+  );
 
   // Expanded mode: sort filtered list with favorites first
   const sortedFiltered = useMemo(() => {
@@ -307,29 +342,15 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
               <>
                 <div className="composer-font-section-label">Favorites</div>
                 {sortedFiltered.favoriteFonts.slice(0, 50).map((f) => (
-                  <div key={f} className="composer-font-item-row">
-                    <button
-                      className={`composer-font-item ${f === value ? 'active' : ''}`}
-                      onClick={() => {
-                        onChange(f);
-                        setShowMore(false);
-                      }}
-                    >
-                      {f}
-                    </button>
-                    {isAuthenticated && (
-                      <button
-                        className="composer-font-star-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite(f);
-                        }}
-                        title="Remove from favorites"
-                      >
-                        {'\u2605'}
-                      </button>
-                    )}
-                  </div>
+                  <FontItem
+                    key={f}
+                    family={f}
+                    isActive={f === value}
+                    isFavorite={true}
+                    showStar={isAuthenticated}
+                    onSelect={() => { onChange(f); setShowMore(false); }}
+                    onToggleFavorite={(e) => { e.stopPropagation(); toggleFavorite(f); }}
+                  />
                 ))}
                 {sortedFiltered.otherFonts.length > 0 && (
                   <div className="composer-font-section-divider" />
@@ -337,29 +358,15 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
               </>
             )}
             {sortedFiltered.otherFonts.slice(0, 50).map((f) => (
-              <div key={f} className="composer-font-item-row">
-                <button
-                  className={`composer-font-item ${f === value ? 'active' : ''}`}
-                  onClick={() => {
-                    onChange(f);
-                    setShowMore(false);
-                  }}
-                >
-                  {f}
-                </button>
-                {isAuthenticated && (
-                  <button
-                    className="composer-font-star-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(f);
-                    }}
-                    title={isFavorite(f) ? 'Remove from favorites' : 'Add to favorites'}
-                  >
-                    {isFavorite(f) ? '\u2605' : '\u2606'}
-                  </button>
-                )}
-              </div>
+              <FontItem
+                key={f}
+                family={f}
+                isActive={f === value}
+                isFavorite={false}
+                showStar={isAuthenticated}
+                onSelect={() => { onChange(f); setShowMore(false); }}
+                onToggleFavorite={(e) => { e.stopPropagation(); toggleFavorite(f); }}
+              />
             ))}
           </div>
           <button className="btn" onClick={() => setShowMore(false)}>
