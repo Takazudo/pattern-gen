@@ -1,21 +1,36 @@
-import { getModuleBySlugSync } from '../../data/stories';
+import { loadStoryByPath } from './story-loader';
+import { parseVariants } from '../../data/story-module-parser';
 import { MswProvider } from './msw-provider';
 import { MswVariantHandlers } from './msw-variant-handlers';
 import type { ReactNode } from 'react';
 import { useState, useEffect } from 'react';
+import type { ControlsMap } from './control-types';
 
 interface VariantRendererProps {
   slug: string;
   variant: string;
+  /** Glob-relative path passed from the server-side page */
+  storyPath: string;
 }
 
-export function VariantRenderer({ slug, variant: variantName }: VariantRendererProps) {
-  const module = getModuleBySlugSync(slug);
-  const hasControls = Boolean(module?.controls);
+export function VariantRenderer({ slug, variant: variantName, storyPath }: VariantRendererProps) {
+  const [mod, setMod] = useState<Record<string, any> | null>(null);
+  const [loading, setLoading] = useState(true);
   const [dynamicProps, setDynamicProps] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
-    if (!hasControls) return;
+    let cancelled = false;
+    setLoading(true);
+    loadStoryByPath(storyPath).then((m) => {
+      if (!cancelled) {
+        setMod(m);
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [storyPath]);
+
+  useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data?.type === 'styleguide:updateProps') {
         setDynamicProps(event.data.props);
@@ -23,13 +38,19 @@ export function VariantRenderer({ slug, variant: variantName }: VariantRendererP
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [hasControls]);
+  }, []);
 
-  if (!module) {
+  if (loading) {
+    return <div style={{ color: 'var(--color-fg-muted)', padding: '12px' }}>Loading story...</div>;
+  }
+
+  if (!mod) {
     return <div className="text-danger p-hsp-md">Story not found: {slug}</div>;
   }
 
-  const variant = module.variants.find((v) => v.name === variantName);
+  const controls = (mod.controls ?? undefined) as ControlsMap | undefined;
+  const variants = parseVariants(mod);
+  const variant = variants.find((v) => v.name === variantName);
 
   if (!variant) {
     return (
@@ -39,22 +60,19 @@ export function VariantRenderer({ slug, variant: variantName }: VariantRendererP
     );
   }
 
-  const Component = module.component;
   const baseArgs = variant.args ?? {};
-  const args = module.controls ? { ...baseArgs, ...dynamicProps } : baseArgs;
+  const args = controls ? { ...baseArgs, ...dynamicProps } : baseArgs;
 
   let rendered: ReactNode;
 
   if (variant.render) {
     const RenderFn = variant.render;
     rendered = <RenderFn {...args} />;
-  } else if (Component) {
-    rendered = <Component {...args} />;
   } else {
-    rendered = <div className="text-danger">No component or render function</div>;
+    rendered = <div className="text-danger">No render function for variant</div>;
   }
 
-  const allDecorators = [...(module.decorators ?? []), ...(variant.decorators ?? [])];
+  const allDecorators = [...(variant.decorators ?? [])];
 
   if (allDecorators.length > 0) {
     for (let i = allDecorators.length - 1; i >= 0; i--) {
@@ -69,23 +87,21 @@ export function VariantRenderer({ slug, variant: variantName }: VariantRendererP
     }
   }
 
-  const moduleHandlers = module.parameters?.msw?.handlers as any[] | undefined;
   const variantHandlers = variant.parameters?.msw?.handlers as any[] | undefined;
-  const allHandlers = [...(moduleHandlers ?? []), ...(variantHandlers ?? [])];
 
   const content = (
     <div className="p-hsp-md">{rendered}</div>
   );
 
-  if (allHandlers.length > 0) {
+  if (variantHandlers && variantHandlers.length > 0) {
     return (
       <MswProvider>
-        <MswVariantHandlers handlers={allHandlers}>{content}</MswVariantHandlers>
+        <MswVariantHandlers handlers={variantHandlers}>{content}</MswVariantHandlers>
       </MswProvider>
     );
   }
 
-  if (module.parameters?.msw !== undefined || variant.parameters?.msw !== undefined) {
+  if (variant.parameters?.msw !== undefined) {
     return <MswProvider>{content}</MswProvider>;
   }
 

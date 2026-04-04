@@ -2,8 +2,8 @@
 @import 'tailwindcss/utilities';
 
 /* Scan viewer components for Tailwind */
-@source "../../pattern-gen-viewer/src/**/*.tsx";
-@source "../../pattern-gen-viewer/src/**/*.ts";
+@source "../../../pattern-gen-viewer/src/**/*.tsx";
+@source "../../../pattern-gen-viewer/src/**/*.ts";
 
 /* ========================================
  * Design Token System

@@ -10,16 +10,15 @@
  */
 
 // Lazy: each story loaded on demand as a separate chunk
-const storyLoaders = import.meta.glob('../../../../../components/**/*.stories.tsx') as Record<
+const storyLoaders = import.meta.glob('../../../../pattern-gen-viewer/src/**/*.stories.tsx') as Record<
   string,
   () => Promise<Record<string, any>>
 >;
 
-// Normalize keys: strip leading ../ segments to get stable "components/..." paths.
-// This avoids mismatches between stories.ts (4 levels of ../) and this file (5 levels).
+// Normalize keys: strip leading segments to get stable "pattern-gen-viewer/src/..." paths.
 const loadersByNormalizedPath = new Map<string, () => Promise<Record<string, any>>>();
 for (const [path, loader] of Object.entries(storyLoaders)) {
-  const match = path.match(/(components\/.+)$/);
+  const match = path.match(/(pattern-gen-viewer\/src\/.+)$/);
   if (match) loadersByNormalizedPath.set(match[1], loader);
 }
 
@@ -29,7 +28,7 @@ for (const [path, loader] of Object.entries(storyLoaders)) {
  * Paths are normalized to "components/..." for stable matching.
  */
 export async function loadStoryByPath(path: string): Promise<Record<string, any> | null> {
-  const match = path.match(/(components\/.+)$/);
+  const match = path.match(/(pattern-gen-viewer\/src\/.+)$/);
   if (!match) return null;
   const loader = loadersByNormalizedPath.get(match[1]);
   if (!loader) return null;

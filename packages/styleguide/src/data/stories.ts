@@ -20,7 +20,7 @@ import { parseVariants } from './story-module-parser';
 export type { StoryVariant } from './story-module-parser';
 
 // Eager but lightweight: only the `meta` named export (title strings)
-const storyMeta = import.meta.glob('../../pattern-gen-viewer/src/**/*.stories.tsx', {
+const storyMeta = import.meta.glob('../../../pattern-gen-viewer/src/**/*.stories.tsx', {
   eager: true,
   import: 'meta',
 }) as Record<string, { title?: string } | undefined>;
@@ -28,12 +28,12 @@ const storyMeta = import.meta.glob('../../pattern-gen-viewer/src/**/*.stories.ts
 // Eager full modules — used ONLY at build time (getStaticPaths, getModuleBySlug).
 // This is safe because Astro pages run server-side. The browser-side VariantRenderer
 // does NOT import from this file, so this glob is NOT bundled into the client.
-const storyModulesEager = import.meta.glob('../../pattern-gen-viewer/src/**/*.stories.tsx', {
+const storyModulesEager = import.meta.glob('../../../pattern-gen-viewer/src/**/*.stories.tsx', {
   eager: true,
 }) as Record<string, Record<string, any>>;
 
 // Lazy: raw source text loaded on demand
-const storySourceModules = import.meta.glob('../../pattern-gen-viewer/src/**/*.stories.tsx', {
+const storySourceModules = import.meta.glob('../../../pattern-gen-viewer/src/**/*.stories.tsx', {
   query: '?raw',
   import: 'default',
 }) as Record<string, () => Promise<string>>;
@@ -41,9 +41,9 @@ const storySourceModules = import.meta.glob('../../pattern-gen-viewer/src/**/*.s
 // Lazy: component source files loaded on demand
 const allComponentSources = import.meta.glob(
   [
-    '../../pattern-gen-viewer/src/**/*.tsx',
-    '../../pattern-gen-viewer/src/**/*.ts',
-    '../../pattern-gen-viewer/src/**/*.css',
+    '../../../pattern-gen-viewer/src/**/*.tsx',
+    '../../../pattern-gen-viewer/src/**/*.ts',
+    '../../../pattern-gen-viewer/src/**/*.css',
   ],
   {
     query: '?raw',
