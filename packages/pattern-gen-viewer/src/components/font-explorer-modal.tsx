@@ -6,6 +6,8 @@ import {
   useMemo,
 } from 'react';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
+import { useAuth } from '../contexts/auth-context.js';
+import { useFontFavorites } from '../hooks/use-font-favorites.js';
 import catalogData from '../data/google-fonts-catalog.json';
 import type {
   GoogleFontEntry,
@@ -33,6 +35,8 @@ export function FontExplorerModal({ onSelect, onClose }: FontExplorerModalProps)
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const gridRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const { isAuthenticated } = useAuth();
+  const { isFavorite, toggleFavorite, favorites } = useFontFavorites();
 
   // Focus search on mount
   useEffect(() => {
@@ -48,7 +52,7 @@ export function FontExplorerModal({ onSelect, onClose }: FontExplorerModalProps)
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Filter fonts
+  // Filter fonts, sort favorites first
   const filtered = useMemo(() => {
     let result = catalog;
     if (activeCategory) {
@@ -58,8 +62,13 @@ export function FontExplorerModal({ onSelect, onClose }: FontExplorerModalProps)
       const q = search.toLowerCase();
       result = result.filter((f) => f.family.toLowerCase().includes(q));
     }
+    if (favorites.size > 0) {
+      const favs = result.filter((f) => favorites.has(f.family));
+      const rest = result.filter((f) => !favorites.has(f.family));
+      result = [...favs, ...rest];
+    }
     return result;
-  }, [search, activeCategory]);
+  }, [search, activeCategory, favorites]);
 
   // Reset display count when filters change
   useEffect(() => {
@@ -162,6 +171,9 @@ export function FontExplorerModal({ onSelect, onClose }: FontExplorerModalProps)
                     font={font}
                     previewText={previewText}
                     onClick={handleSelect}
+                    showStar={isAuthenticated}
+                    starred={isFavorite(font.family)}
+                    onToggleStar={toggleFavorite}
                   />
                 ))}
               </div>
@@ -187,10 +199,16 @@ function FontCard({
   font,
   previewText,
   onClick,
+  showStar,
+  starred,
+  onToggleStar,
 }: {
   font: GoogleFontEntry;
   previewText: string;
   onClick: (family: string) => void;
+  showStar: boolean;
+  starred: boolean;
+  onToggleStar: (family: string) => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(() => isFontLoaded(font.family));
@@ -232,9 +250,20 @@ function FontCard({
     >
       <div className="font-explorer-card-header">
         <span className="font-explorer-card-name">{font.family}</span>
-        <span className="font-explorer-card-meta">
-          {variantCount} {variantCount === 1 ? 'style' : 'styles'}
-        </span>
+        <div className="font-explorer-card-header-right">
+          {showStar && (
+            <button
+              className="font-explorer-card-star"
+              onClick={(e) => { e.stopPropagation(); onToggleStar(font.family); }}
+              title={starred ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {starred ? '\u2605' : '\u2606'}
+            </button>
+          )}
+          <span className="font-explorer-card-meta">
+            {variantCount} {variantCount === 1 ? 'style' : 'styles'}
+          </span>
+        </div>
       </div>
       <div className="font-explorer-card-tag">
         {CATEGORY_LABELS[font.category]}
