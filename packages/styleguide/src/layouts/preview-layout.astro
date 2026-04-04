@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import '@viewer/App.css';
 import ColorSchemeProvider from '../components/color-scheme-provider.astro';
 ---
 
@@ -15,6 +16,8 @@ import ColorSchemeProvider from '../components/color-scheme-provider.astro';
       body {
         margin: 0;
         padding: 0;
+        /* Override viewer's body { overflow: hidden } — previews need scrolling */
+        overflow: auto !important;
       }
       /* Constrain to article column width — wider content doesn't reflect real render context */
       .preview-wrapper {
