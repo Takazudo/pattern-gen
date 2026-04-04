@@ -1,5 +1,8 @@
-import { useState } from 'react';
-import { FontExplorerModal } from './font-explorer-modal.js';
+import { useState, lazy, Suspense } from 'react';
+
+const FontExplorerModal = lazy(() =>
+  import('./font-explorer-modal.js').then((m) => ({ default: m.FontExplorerModal })),
+);
 
 const CURATED_FONTS = [
   'Inter',
@@ -287,13 +290,15 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
         </>
       )}
       {showExplorer && (
-        <FontExplorerModal
-          onSelect={(family) => {
-            onChange(family);
-            setShowMore(false);
-          }}
-          onClose={() => setShowExplorer(false)}
-        />
+        <Suspense fallback={null}>
+          <FontExplorerModal
+            onSelect={(family) => {
+              onChange(family);
+              setShowMore(false);
+            }}
+            onClose={() => setShowExplorer(false)}
+          />
+        </Suspense>
       )}
     </div>
   );
