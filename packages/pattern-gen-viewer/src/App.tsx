@@ -329,7 +329,8 @@ export function App() {
   const [compositionTitle, setCompositionTitle] = useState('Untitled');
   const [isDirty, setIsDirty] = useState(false);
   const [discardAction, setDiscardAction] = useState<'new' | 'open' | null>(null);
-  const suppressDirtyUntilRef = useRef(Date.now());
+  const suppressDirtyCountRef = useRef(0);
+  const lastSeenSuppressRef = useRef(0);
   const skipResetRef = useRef(0);
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
@@ -554,15 +555,20 @@ export function App() {
   }, [restoreColorAdjusted, applyContrastBrightnessAndCache, applyHslAndCache, generateAndCache, imageLayers]);
 
   // Track dirty state for composition changes.
-  // Suppressed for 200ms after suppressDirtyUntilRef is set (covers batched
-  // state updates from loading, URL restoration, and resets).
+  // Counter-based suppression: suppressDirty() increments a counter.
+  // The first effect firing after the counter changes consumes the
+  // suppression and skips marking dirty. Real user edits after that
+  // immediately set isDirty = true.
   useEffect(() => {
-    if (Date.now() - suppressDirtyUntilRef.current < 200) return;
+    if (suppressDirtyCountRef.current !== lastSeenSuppressRef.current) {
+      lastSeenSuppressRef.current = suppressDirtyCountRef.current;
+      return;
+    }
     setIsDirty(true);
   }, [slug, patternType, colorSchemeIndex, zoomSlider, translateX, translateY, useTranslate, rotate, skewX, skewY, userOverrides, hslAdjust, contrastBrightness, compositionTitle, imageLayers]);
 
   const suppressDirty = useCallback(() => {
-    suppressDirtyUntilRef.current = Date.now();
+    suppressDirtyCountRef.current += 1;
   }, []);
 
   const handleParamChange = useCallback((key: string, value: number) => {
@@ -1240,10 +1246,13 @@ export function App() {
   const handleLoadComposition = useCallback((composition: Composition) => {
     suppressDirty();
     setIsDirty(false);
-    setCurrentCompositionId(composition.id);
-    setCompositionTitle(composition.name);
     try {
       const config = JSON.parse(composition.configJson) as OgpConfig;
+
+      // Only promote to current composition after config parses successfully.
+      // This prevents corrupted state if configJson is malformed.
+      setCurrentCompositionId(composition.id);
+      setCompositionTitle(composition.name);
 
       // Prevent reset effect from overriding loaded state.
       // React 18 batches all state updates into one render, so the effect

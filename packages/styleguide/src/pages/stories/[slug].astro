@@ -2,18 +2,18 @@
 import BaseLayout from '../../layouts/base-layout.astro';
 import { Sidebar } from '../../components/sidebar';
 import { StoryRenderer } from '../../components/story-renderer';
-import { getStories, getStoriesByCategory } from '../../data/stories';
+import { getStories, getStoriesByCategory, toSerializableStory, toSerializableCategories } from '../../data/stories';
 
 export function getStaticPaths() {
   const stories = getStories();
   return stories.map((story) => ({
     params: { slug: story.slug },
-    props: { story },
+    props: { story: toSerializableStory(story) },
   }));
 }
 
 const { story } = Astro.props;
-const categories = getStoriesByCategory();
+const categories = toSerializableCategories(getStoriesByCategory());
 ---
 
 <BaseLayout title={story.name} currentPath={`/stories/${story.slug}`}>

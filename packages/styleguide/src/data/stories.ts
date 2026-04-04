@@ -11,8 +11,16 @@ export interface StoryEntry {
   category: string;
   /** Variant names (named exports except meta/default) */
   variants: string[];
-  /** Module loader */
+  /** Module loader — NOT serializable, only available server-side */
   module: () => Promise<Record<string, unknown>>;
+}
+
+/** Serializable subset of StoryEntry for passing to client:load components */
+export type SerializableStoryEntry = Omit<StoryEntry, 'module'>;
+
+export interface SerializableCategoryGroup {
+  category: string;
+  stories: SerializableStoryEntry[];
 }
 
 export interface CategoryGroup {
@@ -78,6 +86,20 @@ export function getStoriesByCategory(): CategoryGroup[] {
     .map(([category, stories]) => ({ category, stories }));
 }
 
+/** Strip non-serializable `module` field for passing to client components */
+export function toSerializableStory(entry: StoryEntry): SerializableStoryEntry {
+  const { module: _m, ...rest } = entry;
+  return rest;
+}
+
+/** Strip module from all category groups for client components */
+export function toSerializableCategories(categories: CategoryGroup[]): SerializableCategoryGroup[] {
+  return categories.map((cat) => ({
+    category: cat.category,
+    stories: cat.stories.map(toSerializableStory),
+  }));
+}
+
 /**
  * Resolve a story module: load it, extract meta + variants.
  * Returns a copy of the parsed data without mutating cached entries.
@@ -100,4 +122,37 @@ export async function resolveStory(
   }
 
   return { meta, variants };
+}
+
+/**
+ * Client-side module loader. Uses its own import.meta.glob so that
+ * the loader function is created in the client bundle (not serialized from server).
+ */
+const clientStoryModules = import.meta.glob<Record<string, unknown>>(
+  '../../../pattern-gen-viewer/src/**/*.stories.tsx',
+);
+
+export async function resolveStoryBySlug(
+  slug: string,
+): Promise<{
+  meta: StoryMeta;
+  variants: { name: string; render: () => unknown }[];
+} | null> {
+  // Find the matching module by slug
+  for (const [path, loader] of Object.entries(clientStoryModules)) {
+    const filename = path.split('/').pop()?.replace('.stories.tsx', '') ?? '';
+    if (filename === slug) {
+      const mod = await loader();
+      const meta = (mod.meta as StoryMeta) ?? { title: slug };
+      const variants: { name: string; render: () => unknown }[] = [];
+      for (const [key, value] of Object.entries(mod)) {
+        if (key === 'meta' || key === 'default') continue;
+        if (typeof value === 'function') {
+          variants.push({ name: key, render: value as () => unknown });
+        }
+      }
+      return { meta, variants };
+    }
+  }
+  return null;
 }

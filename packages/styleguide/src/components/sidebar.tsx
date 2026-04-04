@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import type { CategoryGroup } from '../data/stories';
+import type { SerializableCategoryGroup } from '../data/stories';
 
 interface SidebarProps {
-  categories: CategoryGroup[];
+  categories: SerializableCategoryGroup[];
   currentSlug?: string;
 }
 

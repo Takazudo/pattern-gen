@@ -1,9 +1,9 @@
 import { useState, useEffect, createElement, type ComponentType } from 'react';
-import type { StoryEntry } from '../data/stories';
-import { resolveStory } from '../data/stories';
+import type { SerializableStoryEntry } from '../data/stories';
+import { resolveStoryBySlug } from '../data/stories';
 
 interface StoryRendererProps {
-  entry: StoryEntry;
+  entry: SerializableStoryEntry;
 }
 
 interface VariantInfo {
@@ -20,8 +20,9 @@ export function StoryRenderer({ entry }: StoryRendererProps) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    resolveStory(entry).then(({ meta, variants: vs }) => {
-      if (cancelled) return;
+    resolveStoryBySlug(entry.slug).then((result) => {
+      if (cancelled || !result) return;
+      const { meta, variants: vs } = result;
       const displayTitle = meta.title.includes('/')
         ? meta.title.split('/').slice(1).join('/')
         : meta.title;
@@ -31,7 +32,7 @@ export function StoryRenderer({ entry }: StoryRendererProps) {
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [entry]);
+  }, [entry.slug]);
 
   if (loading) {
     return <div style={{ color: 'var(--color-fg-muted)' }}>Loading story...</div>;

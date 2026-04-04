@@ -1,10 +1,9 @@
 ---
 import BaseLayout from '../layouts/base-layout.astro';
 import { Sidebar } from '../components/sidebar';
-import { getStoriesByCategory, getStories } from '../data/stories';
+import { getStoriesByCategory, toSerializableCategories } from '../data/stories';
 
-const categories = getStoriesByCategory();
-const stories = getStories();
+const categories = toSerializableCategories(getStoriesByCategory());
 ---
 
 <BaseLayout title="Stories" currentPath="/">
