@@ -257,10 +257,14 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
 
   const hasFavorites = favorites.size > 0;
 
-  const allFonts = useMemo(
-    () => [...CURATED_FONTS, ...EXTENDED_FONTS],
-    [],
-  );
+  const allFonts = useMemo(() => {
+    const base = [...CURATED_FONTS, ...EXTENDED_FONTS];
+    // Ensure the currently selected font is always in the list (e.g. from FontExplorerModal)
+    if (value && !base.includes(value)) {
+      base.push(value);
+    }
+    return base;
+  }, [value]);
 
   const filtered = useMemo(
     () =>
