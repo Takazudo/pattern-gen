@@ -1,158 +1,277 @@
-export interface StoryMeta {
+/**
+ * Story registry — auto-discovers all story modules via import.meta.glob
+ * and builds a navigable tree grouped by category.
+ *
+ * PERFORMANCE:
+ * - storyMeta: eager, imports only `meta` named export (title strings only)
+ * - storyModulesEager: eager, full modules — used at BUILD TIME only
+ *   (getStaticPaths, getVariantNames). NOT imported by browser-side code.
+ * - storySourceModules: lazy, raw source text on demand
+ * - allComponentSources: lazy, raw component source on demand
+ *
+ * The key optimization: VariantRenderer (browser-side) does NOT import
+ * this module. It receives its story path as a prop and dynamically
+ * imports only that single story file.
+ */
+
+import type { ComponentType, ReactNode } from 'react';
+import type { ControlsMap } from '../features/preview/control-types';
+import { parseVariants } from './story-module-parser';
+export type { StoryVariant } from './story-module-parser';
+
+// Eager but lightweight: only the `meta` named export (title strings)
+const storyMeta = import.meta.glob('../../../pattern-gen-viewer/src/**/*.stories.tsx', {
+  eager: true,
+  import: 'meta',
+}) as Record<string, { title?: string } | undefined>;
+
+// Eager full modules — used ONLY at build time (getStaticPaths, getModuleBySlug).
+// This is safe because Astro pages run server-side. The browser-side VariantRenderer
+// does NOT import from this file, so this glob is NOT bundled into the client.
+const storyModulesEager = import.meta.glob('../../../pattern-gen-viewer/src/**/*.stories.tsx', {
+  eager: true,
+}) as Record<string, Record<string, any>>;
+
+// Lazy: raw source text loaded on demand
+const storySourceModules = import.meta.glob('../../../pattern-gen-viewer/src/**/*.stories.tsx', {
+  query: '?raw',
+  import: 'default',
+}) as Record<string, () => Promise<string>>;
+
+// Lazy: component source files loaded on demand
+const allComponentSources = import.meta.glob(
+  [
+    '../../../pattern-gen-viewer/src/**/*.tsx',
+    '../../../pattern-gen-viewer/src/**/*.ts',
+    '../../../pattern-gen-viewer/src/**/*.css',
+  ],
+  {
+    query: '?raw',
+    import: 'default',
+  },
+) as Record<string, () => Promise<string>>;
+
+// ─── Types ────────────────────────────────────────────
+
+export interface RelatedSource {
+  /** Display filename (e.g., "home-article-item.tsx") */
+  filename: string;
+  /** Raw source code */
+  source: string;
+  /** Glob-relative path for dev-mode file saving */
+  relativePath: string;
+}
+
+export interface StoryModule {
   title: string;
+  component?: ComponentType<any>;
+  parameters?: Record<string, unknown>;
+  decorators?: Array<(Story: ComponentType, context: any) => ReactNode>;
+  controls?: ControlsMap;
+  variants: StoryVariant[];
+  source?: string;
+  relatedSources: RelatedSource[];
 }
 
-export interface StoryEntry {
-  /** Slug used in URL: e.g. "collapsible-section" */
+export interface CategoryEntry {
+  category: string;
+  stories: { slug: string; name: string; variantCount: number }[];
+}
+
+// ─── Slug utilities ──────────────────────────────────
+
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// ─── Metadata registry (sync, lightweight) ───────────
+
+interface StoryMetaEntry {
+  title: string;
   slug: string;
-  /** Display title from meta: e.g. "CollapsibleSection" */
-  name: string;
-  /** Category parsed from meta title: e.g. "UI" */
-  category: string;
-  /** Variant names (named exports except meta/default) */
-  variants: string[];
-  /** Module loader — NOT serializable, only available server-side */
-  module: () => Promise<Record<string, unknown>>;
+  path: string;
 }
 
-/** Serializable subset of StoryEntry for passing to client:load components */
-export type SerializableStoryEntry = Omit<StoryEntry, 'module'>;
+const metaEntries: StoryMetaEntry[] = Object.entries(storyMeta)
+  .filter(([, m]) => m?.title)
+  .map(([path, m]) => ({
+    title: m!.title!,
+    slug: slugify(m!.title!),
+    path,
+  }));
 
-export interface SerializableCategoryGroup {
-  category: string;
-  stories: SerializableStoryEntry[];
+const metaBySlug = new Map<string, StoryMetaEntry>();
+for (const entry of metaEntries) {
+  metaBySlug.set(entry.slug, entry);
 }
 
-export interface CategoryGroup {
-  category: string;
-  stories: StoryEntry[];
+// ─── Import resolution ───────────────────────────────
+
+function extractRelativeImports(source: string): string[] {
+  const imports: string[] = [];
+  const importRegex = /import\s+(?:[\s\S]*?\s+from\s+)?['"](\.[^'"]+)['"]/g;
+  let match;
+  while ((match = importRegex.exec(source)) !== null) {
+    const importPath = match[1];
+    if (importPath.includes('__test-utils__')) continue;
+    if (importPath.includes('styleguide')) continue;
+    imports.push(importPath);
+  }
+  return imports;
 }
 
-// Discover all *.stories.tsx files in the viewer package
-const storyModules = import.meta.glob<Record<string, unknown>>(
-  '../../../pattern-gen-viewer/src/**/*.stories.tsx',
-);
+async function resolveImportSource(
+  storyPath: string,
+  importPath: string,
+): Promise<RelatedSource | null> {
+  const storyDir = storyPath.substring(0, storyPath.lastIndexOf('/'));
+  const resolved = normalizePath(`${storyDir}/${importPath}`);
 
-function parseStoryModule(
-  path: string,
-  loader: () => Promise<Record<string, unknown>>,
-): StoryEntry | null {
-  const filename = path.split('/').pop()?.replace('.stories.tsx', '') ?? '';
-  const name = filename
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join('');
+  const extensions = ['.tsx', '.ts', '.css', '/index.tsx', '/index.ts'];
+  for (const ext of extensions) {
+    const fullPath = resolved + ext;
+    const loader = allComponentSources[fullPath];
+    if (loader) {
+      const source = await loader().catch(() => undefined);
+      if (source == null) continue;
+      const filename = fullPath.substring(fullPath.lastIndexOf('/') + 1);
+      return { filename, source, relativePath: fullPath };
+    }
+  }
 
+  const exactLoader = allComponentSources[resolved];
+  if (exactLoader) {
+    const source = await exactLoader().catch(() => undefined);
+    if (source == null) return null;
+    const filename = resolved.substring(resolved.lastIndexOf('/') + 1);
+    return { filename, source, relativePath: resolved };
+  }
+
+  return null;
+}
+
+function normalizePath(path: string): string {
+  const parts = path.split('/');
+  const result: string[] = [];
+  for (const part of parts) {
+    if (part === '.') continue;
+    if (part === '..') {
+      if (result.length > 0 && result[result.length - 1] !== '..') {
+        result.pop();
+      } else {
+        result.push('..');
+      }
+    } else {
+      result.push(part);
+    }
+  }
+  return result.join('/');
+}
+
+// ─── Parse a story module ─────────────────────────────
+
+function toStoryModule(
+  raw: Record<string, any>,
+  title: string,
+  source?: string,
+  relatedSources: RelatedSource[] = [],
+): StoryModule {
+  const meta = raw.meta ?? raw.default ?? {};
   return {
-    slug: filename,
-    name,
-    category: 'UI',
-    variants: [],
-    module: loader,
+    title,
+    component: meta.component,
+    parameters: meta.parameters,
+    decorators: meta.decorators,
+    controls: raw.controls as ControlsMap | undefined,
+    variants: parseVariants(raw),
+    source,
+    relatedSources,
   };
 }
 
-let _storiesCache: StoryEntry[] | null = null;
+// ─── Public API ──────────────────────────────────────
 
-export function getStories(): StoryEntry[] {
-  if (_storiesCache) return _storiesCache;
+/**
+ * Build category tree from lightweight metadata (sync, no component loading).
+ */
+export function getCategoryTree(): CategoryEntry[] {
+  const map = new Map<string, CategoryEntry['stories']>();
 
-  const entries: StoryEntry[] = [];
-  for (const [path, loader] of Object.entries(storyModules)) {
-    const entry = parseStoryModule(path, loader);
-    if (entry) entries.push(entry);
+  for (const entry of metaEntries) {
+    const parts = entry.title.split('/');
+    const category = parts.length > 1 ? parts[0] : 'General';
+    const name = parts.length > 1 ? parts.slice(1).join('/') : parts[0];
+
+    // Get variant count from eager modules (server-side only)
+    const raw = storyModulesEager[entry.path];
+    const variantCount = raw
+      ? Object.keys(raw).filter((k) => k !== 'default' && k !== 'meta' && k !== 'controls').length
+      : 0;
+
+    if (!map.has(category)) map.set(category, []);
+    map.get(category)!.push({ slug: entry.slug, name, variantCount });
   }
 
-  entries.sort((a, b) => a.name.localeCompare(b.name));
-  _storiesCache = entries;
-  return entries;
-}
-
-export function getStoriesByCategory(): CategoryGroup[] {
-  const stories = getStories();
-  const categoryMap = new Map<string, StoryEntry[]>();
-
-  for (const story of stories) {
-    const existing = categoryMap.get(story.category);
-    if (existing) {
-      existing.push(story);
-    } else {
-      categoryMap.set(story.category, [story]);
-    }
-  }
-
-  return Array.from(categoryMap.entries())
+  return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([category, stories]) => ({ category, stories }));
-}
-
-/** Strip non-serializable `module` field for passing to client components */
-export function toSerializableStory(entry: StoryEntry): SerializableStoryEntry {
-  const { module: _m, ...rest } = entry;
-  return rest;
-}
-
-/** Strip module from all category groups for client components */
-export function toSerializableCategories(categories: CategoryGroup[]): SerializableCategoryGroup[] {
-  return categories.map((cat) => ({
-    category: cat.category,
-    stories: cat.stories.map(toSerializableStory),
-  }));
+    .map(([category, stories]) => ({
+      category,
+      stories: stories.sort((a, b) => a.name.localeCompare(b.name)),
+    }));
 }
 
 /**
- * Resolve a story module: load it, extract meta + variants.
- * Returns a copy of the parsed data without mutating cached entries.
+ * Get a fully loaded StoryModule by slug (async).
+ * Loads story module + source text + related component sources.
+ * Used on [slug].astro story pages (server-side).
  */
-export async function resolveStory(
-  entry: StoryEntry,
-): Promise<{
-  meta: StoryMeta;
-  variants: { name: string; render: () => unknown }[];
-}> {
-  const mod = await entry.module();
-  const meta = (mod.meta as StoryMeta) ?? { title: `${entry.category}/${entry.name}` };
+export async function getModuleBySlug(slug: string): Promise<StoryModule | undefined> {
+  const entry = metaBySlug.get(slug);
+  if (!entry) return undefined;
 
-  const variants: { name: string; render: () => unknown }[] = [];
-  for (const [key, value] of Object.entries(mod)) {
-    if (key === 'meta' || key === 'default') continue;
-    if (typeof value === 'function') {
-      variants.push({ name: key, render: value as () => unknown });
+  const raw = storyModulesEager[entry.path];
+  if (!raw) return undefined;
+
+  const sourceLoader = storySourceModules[entry.path];
+  const source = sourceLoader ? await sourceLoader().catch(() => undefined) : undefined;
+
+  const relatedSources: RelatedSource[] = [];
+  if (source) {
+    const importPaths = extractRelativeImports(source);
+    const results = await Promise.all(
+      importPaths.map((importPath) => resolveImportSource(entry.path, importPath)),
+    );
+    for (const rs of results) {
+      if (rs) relatedSources.push(rs);
     }
   }
 
-  return { meta, variants };
+  return toStoryModule(raw, entry.title, source, relatedSources);
 }
 
 /**
- * Client-side module loader. Uses its own import.meta.glob so that
- * the loader function is created in the client bundle (not serialized from server).
+ * Get a StoryModule by slug without loading sources (sync).
+ * Used by VariantRenderer (browser) and preview getStaticPaths.
+ * Returns the full component/variant data from the eager glob.
  */
-const clientStoryModules = import.meta.glob<Record<string, unknown>>(
-  '../../../pattern-gen-viewer/src/**/*.stories.tsx',
-);
+export function getModuleBySlugSync(slug: string): StoryModule | undefined {
+  const entry = metaBySlug.get(slug);
+  if (!entry) return undefined;
+  const raw = storyModulesEager[entry.path];
+  if (!raw) return undefined;
+  return toStoryModule(raw, entry.title);
+}
 
-export async function resolveStoryBySlug(
-  slug: string,
-): Promise<{
-  meta: StoryMeta;
-  variants: { name: string; render: () => unknown }[];
-} | null> {
-  // Find the matching module by slug
-  for (const [path, loader] of Object.entries(clientStoryModules)) {
-    const filename = path.split('/').pop()?.replace('.stories.tsx', '') ?? '';
-    if (filename === slug) {
-      const mod = await loader();
-      const meta = (mod.meta as StoryMeta) ?? { title: slug };
-      const variants: { name: string; render: () => unknown }[] = [];
-      for (const [key, value] of Object.entries(mod)) {
-        if (key === 'meta' || key === 'default') continue;
-        if (typeof value === 'function') {
-          variants.push({ name: key, render: value as () => unknown });
-        }
-      }
-      return { meta, variants };
-    }
-  }
-  return null;
+/**
+ * Get the glob-relative path for a story by slug.
+ */
+export function getStoryPath(slug: string): string | undefined {
+  return metaBySlug.get(slug)?.path;
+}
+
+export function getAllSlugs(): string[] {
+  return metaEntries.map((e) => e.slug);
 }
