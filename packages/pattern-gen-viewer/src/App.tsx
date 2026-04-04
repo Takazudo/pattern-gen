@@ -38,8 +38,10 @@ import { MyAssets } from './components/my-assets.js';
 import { ImageUpload } from './components/image-upload.js';
 import { UserPage } from './components/user-page.js';
 import { MediaBrowserDialog } from './components/media-browser-dialog.js';
+import { CompositionMenu } from './components/composition-menu.js';
+import { DiscardConfirmationDialog } from './components/discard-confirmation-dialog.js';
 import { api } from './lib/api-client.js';
-import type { AssetEntry } from './lib/api-types.js';
+import type { AssetEntry, Composition } from './lib/api-types.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -322,6 +324,12 @@ export function App() {
   const [showUserPage, setShowUserPage] = useState(false);
   const [mediaBrowserLayerId, setMediaBrowserLayerId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // Composition tracking
+  const [currentCompositionId, setCurrentCompositionId] = useState<string | null>(null);
+  const [compositionTitle, setCompositionTitle] = useState('Untitled');
+  const [isDirty, setIsDirty] = useState(false);
+  const [discardAction, setDiscardAction] = useState<'new' | 'open' | null>(null);
+  const suppressDirtyUntilRef = useRef(Date.now());
   const skipResetRef = useRef(0);
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
@@ -371,6 +379,7 @@ export function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('slug')) return; // No URL params, use defaults
+    suppressDirtyUntilRef.current = Date.now();
 
     const urlSlug = params.get('slug');
     const urlType = params.get('type');
@@ -543,6 +552,18 @@ export function App() {
       ctx.restore();
     }
   }, [restoreColorAdjusted, applyContrastBrightnessAndCache, applyHslAndCache, generateAndCache, imageLayers]);
+
+  // Track dirty state for composition changes.
+  // Suppressed for 200ms after suppressDirtyUntilRef is set (covers batched
+  // state updates from loading, URL restoration, and resets).
+  useEffect(() => {
+    if (Date.now() - suppressDirtyUntilRef.current < 200) return;
+    setIsDirty(true);
+  }, [slug, patternType, colorSchemeIndex, zoomSlider, translateX, translateY, useTranslate, rotate, skewX, skewY, userOverrides, hslAdjust, contrastBrightness, compositionTitle, imageLayers]);
+
+  const suppressDirty = useCallback(() => {
+    suppressDirtyUntilRef.current = Date.now();
+  }, []);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
@@ -1187,22 +1208,50 @@ export function App() {
     return preview.toDataURL('image/png');
   }, []);
 
-  const handleSaveComposition = useCallback(() => {
-    setSaveModalData({
-      configJson: getSaveConfigJson(),
-      previewDataUrl: getSavePreviewDataUrl(),
-    });
-    setShowSaveModal(true);
-  }, [getSaveConfigJson, getSavePreviewDataUrl]);
+  // ── Composition management ──
 
-  const handleLoadComposition = useCallback((configJson: string, _patternType: string) => {
+  const resetToFreshState = useCallback(() => {
+    suppressDirty();
+    setIsDirty(false);
+    setCurrentCompositionId(null);
+    setCompositionTitle('Untitled');
+    setSlug(randomSlug());
+    setPatternType(patternRegistry[0].name);
+    setColorSchemeIndex(0);
+    setZoomSlider(50);
+    setTranslateX(0);
+    setTranslateY(0);
+    setUseTranslate(false);
+    setRotate(0);
+    setSkewX(0);
+    setSkewY(0);
+    setUserOverrides({});
+    setFixedParams(new Set());
+    setHslAdjust({ h: 0, s: 0, l: 0 });
+    setContrastBrightness({ contrast: 0, brightness: 0 });
+    setImageLayers([]);
+    setSelectedLayerId(null);
+    setCurrentStep('background');
+    setComposerActive(false);
+    setComposerBgImage(null);
+    setComposerBgConfig(null);
+  }, [suppressDirty]);
+
+  const handleLoadComposition = useCallback((composition: Composition) => {
+    suppressDirty();
+    setIsDirty(false);
+    setCurrentCompositionId(composition.id);
+    setCompositionTitle(composition.name);
     try {
-      const config = JSON.parse(configJson) as OgpConfig;
+      const config = JSON.parse(composition.configJson) as OgpConfig;
+
+      // Prevent reset effect from overriding loaded state.
+      // React 18 batches all state updates into one render, so the effect
+      // fires exactly once. Always set to 1 to skip that single firing.
+      if (config.slug || config.type) skipResetRef.current = 1;
+
       if (config.slug) setSlug(config.slug);
-      if (config.type) {
-        // Find pattern type name
-        setPatternType(config.type);
-      }
+      if (config.type) setPatternType(config.type);
       if (config.colorScheme) {
         const idx = COLOR_SCHEMES.findIndex((s) => s.name === config.colorScheme);
         if (idx >= 0) setColorSchemeIndex(idx);
@@ -1212,7 +1261,6 @@ export function App() {
       }
       if (config.useTranslate) {
         setUseTranslate(true);
-        // Config stores translateX/Y as -1..1 fractions; state uses -100..100
         if (config.translateX != null) setTranslateX(config.translateX * 100);
         if (config.translateY != null) setTranslateY(config.translateY * 100);
       }
@@ -1226,7 +1274,144 @@ export function App() {
     } catch {
       showToast('Failed to load composition config');
     }
-  }, [showToast]);
+  }, [suppressDirty, showToast]);
+
+  const handleMenuNew = useCallback(() => {
+    if (isDirty) {
+      setDiscardAction('new');
+    } else {
+      resetToFreshState();
+    }
+  }, [isDirty, resetToFreshState]);
+
+  const handleMenuOpen = useCallback(() => {
+    if (isDirty) {
+      setDiscardAction('open');
+    } else {
+      setShowMyCompositions(true);
+    }
+  }, [isDirty]);
+
+  const handleMenuSave = useCallback(async () => {
+    if (currentCompositionId) {
+      try {
+        const configJson = getSaveConfigJson();
+        const previewDataUrl = getSavePreviewDataUrl();
+        await api.put<Composition>(`/api/compositions/${currentCompositionId}`, {
+          name: compositionTitle,
+          configJson,
+          patternType,
+          previewDataUrl,
+        });
+        suppressDirty();
+        setIsDirty(false);
+        showToast('Composition saved');
+      } catch {
+        showToast('Failed to save composition');
+      }
+    } else {
+      // No ID — show Save As modal
+      setSaveModalData({
+        configJson: getSaveConfigJson(),
+        previewDataUrl: getSavePreviewDataUrl(),
+      });
+      setShowSaveModal(true);
+    }
+  }, [currentCompositionId, compositionTitle, patternType, getSaveConfigJson, getSavePreviewDataUrl, suppressDirty, showToast]);
+
+  const handleMenuSaveAs = useCallback(() => {
+    setSaveModalData({
+      configJson: getSaveConfigJson(),
+      previewDataUrl: getSavePreviewDataUrl(),
+    });
+    setShowSaveModal(true);
+  }, [getSaveConfigJson, getSavePreviewDataUrl]);
+
+  const handleMenuDuplicate = useCallback(async () => {
+    try {
+      const configJson = getSaveConfigJson();
+      const previewDataUrl = getSavePreviewDataUrl();
+      const composition = await api.post<Composition>('/api/compositions', {
+        name: `${compositionTitle} (copy)`,
+        configJson,
+        patternType,
+        previewDataUrl,
+      });
+      suppressDirty();
+      setCurrentCompositionId(composition.id);
+      setCompositionTitle(composition.name);
+      setIsDirty(false);
+      showToast('Composition duplicated');
+    } catch {
+      showToast('Failed to duplicate composition');
+    }
+  }, [compositionTitle, patternType, getSaveConfigJson, getSavePreviewDataUrl, suppressDirty, showToast]);
+
+  const handleDiscard = useCallback(() => {
+    const action = discardAction;
+    setDiscardAction(null);
+    resetToFreshState();
+    if (action === 'open') {
+      setTimeout(() => setShowMyCompositions(true), 0);
+    }
+  }, [discardAction, resetToFreshState]);
+
+  const handleKeep = useCallback(async () => {
+    const action = discardAction;
+    setDiscardAction(null);
+    try {
+      const configJson = getSaveConfigJson();
+      const previewDataUrl = getSavePreviewDataUrl();
+      if (currentCompositionId) {
+        await api.put<Composition>(`/api/compositions/${currentCompositionId}`, {
+          name: compositionTitle,
+          configJson,
+          patternType,
+          previewDataUrl,
+        });
+      } else {
+        const composition = await api.post<Composition>('/api/compositions', {
+          name: compositionTitle,
+          configJson,
+          patternType,
+          previewDataUrl,
+        });
+        setCurrentCompositionId(composition.id);
+      }
+      showToast('Composition saved');
+    } catch {
+      showToast('Failed to save composition');
+      return;
+    }
+
+    if (action === 'new') {
+      resetToFreshState();
+    } else if (action === 'open') {
+      suppressDirty();
+      setIsDirty(false);
+      setShowMyCompositions(true);
+    }
+  }, [discardAction, currentCompositionId, compositionTitle, patternType, getSaveConfigJson, getSavePreviewDataUrl, suppressDirty, showToast, resetToFreshState]);
+
+  const handleCancelDiscard = useCallback(() => {
+    setDiscardAction(null);
+  }, []);
+
+  const handleCompositionTitleChange = useCallback(async (newTitle: string) => {
+    if (currentCompositionId) {
+      // Title will be persisted to server — suppress dirty so the UI
+      // doesn't show "unsaved changes" just because the name was renamed.
+      suppressDirty();
+    }
+    setCompositionTitle(newTitle);
+    if (currentCompositionId) {
+      try {
+        await api.put(`/api/compositions/${currentCompositionId}`, { name: newTitle });
+      } catch {
+        // Silent failure for title update
+      }
+    }
+  }, [currentCompositionId, suppressDirty]);
 
   const showStepIndicator = !composerActive;
 
@@ -1251,6 +1436,18 @@ export function App() {
           <AuthButton
             onOpenUserPage={() => setShowUserPage(true)}
           />
+
+          {/* Composition menu (authenticated only) */}
+          {isAuthenticated && (
+            <CompositionMenu
+              compositionTitle={compositionTitle}
+              onNew={handleMenuNew}
+              onOpen={handleMenuOpen}
+              onSave={handleMenuSave}
+              onSaveAs={handleMenuSaveAs}
+              onDuplicate={handleMenuDuplicate}
+            />
+          )}
 
           {/* Site logo link (top-right) */}
           <a
@@ -1305,6 +1502,8 @@ export function App() {
           backgroundConfig={composerBgConfig}
           outputWidth={composerOutputSize.width}
           outputHeight={composerOutputSize.height}
+          compositionTitle={isAuthenticated ? compositionTitle : undefined}
+          onTitleChange={isAuthenticated ? handleCompositionTitleChange : undefined}
           onExit={handleExitComposer}
         />
       )}
@@ -1445,16 +1644,6 @@ export function App() {
               <button className="btn btn-generate-url" onClick={handleGenerateUrl}>
                 Generate URL
               </button>
-              {isAuthenticated && (
-                <>
-                  <button className="btn" onClick={handleSaveComposition}>
-                    Save Composition
-                  </button>
-                  <button className="btn" onClick={() => setShowMyCompositions(true)}>
-                    Load from My Compositions
-                  </button>
-                </>
-              )}
               <button className="btn btn-next-step" onClick={() => setCurrentStep('compose')}>
                 Compose &rarr;
               </button>
@@ -1507,13 +1696,18 @@ export function App() {
           patternType={patternType}
           configJson={saveModalData.configJson}
           previewDataUrl={saveModalData.previewDataUrl}
+          defaultName={compositionTitle !== 'Untitled' ? compositionTitle : undefined}
           onClose={() => {
             setShowSaveModal(false);
             setSaveModalData(null);
           }}
-          onSaved={() => {
+          onSaved={(composition) => {
             setShowSaveModal(false);
             setSaveModalData(null);
+            suppressDirty();
+            setCurrentCompositionId(composition.id);
+            setCompositionTitle(composition.name);
+            setIsDirty(false);
             showToast('Composition saved!');
           }}
         />
@@ -1541,6 +1735,13 @@ export function App() {
         <MediaBrowserDialog
           onClose={() => setMediaBrowserLayerId(null)}
           onSelect={handleMediaBrowserSelect}
+        />
+      )}
+      {discardAction && (
+        <DiscardConfirmationDialog
+          onDiscard={handleDiscard}
+          onKeep={handleKeep}
+          onCancel={handleCancelDiscard}
         />
       )}
       {toast && <div className="toast">{toast}</div>}

@@ -4,7 +4,7 @@ import type { Composition, CompositionsResponse } from '../lib/api-types.js';
 
 interface MyCompositionsProps {
   onClose: () => void;
-  onLoadComposition: (configJson: string, patternType: string) => void;
+  onLoadComposition: (composition: Composition) => void;
 }
 
 const PAGE_SIZE = 20;
@@ -84,7 +84,7 @@ export function MyCompositions({ onClose, onLoadComposition }: MyCompositionsPro
                   <div
                     className="gallery-card-preview"
                     onClick={() => {
-                      onLoadComposition(p.configJson, p.patternType);
+                      onLoadComposition(p);
                       onClose();
                     }}
                   >
