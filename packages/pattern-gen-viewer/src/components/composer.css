@@ -457,27 +457,6 @@
   gap: 4px;
 }
 
-.composer-font-select-row {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.composer-font-select-row select {
-  flex: 1;
-  min-width: 0;
-}
-
-.composer-font-picker select {
-  width: 100%;
-  padding: 4px 6px;
-  background: oklch(100% 0 0 / 6%);
-  border: 1px solid oklch(100% 0 0 / 10%);
-  border-radius: 4px;
-  color: oklch(90% 0 0);
-  font-size: 12px;
-}
-
 .composer-font-btn-row {
   display: flex;
   gap: 4px;
@@ -502,11 +481,6 @@
   background: oklch(100% 0 0 / 6%);
 }
 
-.composer-font-more-btn {
-  font-size: 10px;
-  padding: 2px 8px;
-}
-
 .composer-font-explore-btn {
   font-size: 10px;
   padding: 2px 8px;
@@ -527,7 +501,7 @@
 }
 
 .composer-font-list {
-  max-height: 150px;
+  max-height: 200px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
