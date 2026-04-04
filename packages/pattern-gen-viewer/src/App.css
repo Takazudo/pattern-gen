@@ -1025,6 +1025,11 @@ label.fix-toggle input[type="checkbox"] {
 
 /* ── Info Popover ── */
 
+.info-popover-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
 .info-trigger {
   background: none;
   border: none;
@@ -1042,6 +1047,10 @@ label.fix-toggle input[type="checkbox"] {
 }
 
 .info-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
   background: oklch(18% 0 0);
   color: var(--color-fg-muted);
   border: 1px solid var(--color-border);
@@ -1055,7 +1064,14 @@ label.fix-toggle input[type="checkbox"] {
 }
 
 .info-popover-arrow {
-  fill: oklch(18% 0 0);
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 5px;
+  background: oklch(18% 0 0);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 @keyframes popover-fade-in {
