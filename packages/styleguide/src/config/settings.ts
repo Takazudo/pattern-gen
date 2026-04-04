@@ -43,7 +43,7 @@ export const settings = {
   footer: false as FooterConfig | false,
   sidebarFilter: true,
   headerNav: [
-    { label: 'Tokens', path: '/tokens', categoryMatch: 'tokens' },
+    { label: 'Design System', path: '/tokens', categoryMatch: 'tokens' },
     { label: 'Components', path: '/components', categoryMatch: '!' },
   ] satisfies HeaderNavItem[],
 };
