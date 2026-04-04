@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, createElement, type ComponentType } from 'react';
 import type { StoryEntry } from '../data/stories';
 import { resolveStory } from '../data/stories';
 
@@ -8,7 +8,7 @@ interface StoryRendererProps {
 
 interface VariantInfo {
   name: string;
-  render: () => unknown;
+  Component: ComponentType;
 }
 
 export function StoryRenderer({ entry }: StoryRendererProps) {
@@ -26,7 +26,7 @@ export function StoryRenderer({ entry }: StoryRendererProps) {
         ? meta.title.split('/').slice(1).join('/')
         : meta.title;
       setTitle(displayTitle);
-      setVariants(vs);
+      setVariants(vs.map((v) => ({ name: v.name, Component: v.render as ComponentType })));
       setActiveVariant(0);
       setLoading(false);
     });
@@ -42,7 +42,6 @@ export function StoryRenderer({ entry }: StoryRendererProps) {
   }
 
   const current = variants[activeVariant];
-  const rendered = current?.render();
 
   return (
     <div>
@@ -63,7 +62,7 @@ export function StoryRenderer({ entry }: StoryRendererProps) {
       )}
 
       <div className="sg-variant-preview">
-        {rendered as ReactNode}
+        {current && createElement(current.Component, { key: current.name })}
       </div>
     </div>
   );

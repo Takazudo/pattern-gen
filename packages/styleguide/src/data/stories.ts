@@ -3,7 +3,7 @@ export interface StoryMeta {
 }
 
 export interface StoryEntry {
-  /** Slug used in URL: e.g. "ui-collapsible-section" */
+  /** Slug used in URL: e.g. "collapsible-section" */
   slug: string;
   /** Display title from meta: e.g. "CollapsibleSection" */
   name: string;
@@ -25,17 +25,10 @@ const storyModules = import.meta.glob<Record<string, unknown>>(
   '../../../pattern-gen-viewer/src/**/*.stories.tsx',
 );
 
-function slugify(title: string): string {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
 function parseStoryModule(
   path: string,
   loader: () => Promise<Record<string, unknown>>,
 ): StoryEntry | null {
-  // We can't synchronously read module exports from glob.
-  // Store the loader and resolve variants lazily.
-  // For the sidebar, we derive info from the file path as a fallback.
   const filename = path.split('/').pop()?.replace('.stories.tsx', '') ?? '';
   const name = filename
     .split('-')
@@ -62,7 +55,6 @@ export function getStories(): StoryEntry[] {
     if (entry) entries.push(entry);
   }
 
-  // Sort alphabetically by name
   entries.sort((a, b) => a.name.localeCompare(b.name));
   _storiesCache = entries;
   return entries;
@@ -88,6 +80,7 @@ export function getStoriesByCategory(): CategoryGroup[] {
 
 /**
  * Resolve a story module: load it, extract meta + variants.
+ * Returns a copy of the parsed data without mutating cached entries.
  */
 export async function resolveStory(
   entry: StoryEntry,
@@ -98,13 +91,6 @@ export async function resolveStory(
   const mod = await entry.module();
   const meta = (mod.meta as StoryMeta) ?? { title: `${entry.category}/${entry.name}` };
 
-  // Update entry from meta
-  if (meta.title.includes('/')) {
-    const [cat, ...rest] = meta.title.split('/');
-    entry.category = cat;
-    entry.name = rest.join('/');
-  }
-
   const variants: { name: string; render: () => unknown }[] = [];
   for (const [key, value] of Object.entries(mod)) {
     if (key === 'meta' || key === 'default') continue;
@@ -112,8 +98,6 @@ export async function resolveStory(
       variants.push({ name: key, render: value as () => unknown });
     }
   }
-
-  entry.variants = variants.map((v) => v.name);
 
   return { meta, variants };
 }

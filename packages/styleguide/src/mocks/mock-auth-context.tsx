@@ -23,16 +23,6 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-// Default: signed-out state
-let mockUser: AuthUser | null = null;
-let mockIsLoading = false;
-
-/** Call before rendering a story to configure the auth state */
-export function setMockAuth(user: AuthUser | null, isLoading = false) {
-  mockUser = user;
-  mockIsLoading = isLoading;
-}
-
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
@@ -43,7 +33,23 @@ const AuthContext = createContext<AuthContextType>({
   refreshUser: async () => {},
 });
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+  /** Mock user for stories. Omit or pass null for signed-out state. */
+  mockUser?: AuthUser | null;
+  /** Mock loading state for stories. */
+  mockIsLoading?: boolean;
+}
+
+/**
+ * Mock AuthProvider that accepts user/loading as props.
+ * Stories pass mock data declaratively instead of via mutable globals.
+ */
+export function AuthProvider({
+  children,
+  mockUser = null,
+  mockIsLoading = false,
+}: AuthProviderProps) {
   const value: AuthContextType = {
     user: mockUser,
     isAuthenticated: mockUser !== null,
