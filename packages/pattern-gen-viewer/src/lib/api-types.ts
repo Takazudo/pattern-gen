@@ -48,3 +48,8 @@ export interface AssetsResponse {
   limit: number;
   offset: number;
 }
+
+export interface FontFavorite {
+  fontFamily: string;
+  createdAt: number;
+}

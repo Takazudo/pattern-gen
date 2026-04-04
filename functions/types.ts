@@ -59,6 +59,20 @@ export interface AssetRow {
   created_at: number;
 }
 
+/** D1 row: font_favorites table */
+export interface FontFavoriteRow {
+  id: string;
+  user_id: string;
+  font_family: string;
+  created_at: number;
+}
+
+/** API response: font favorite */
+export interface FontFavoriteResponse {
+  fontFamily: string;
+  createdAt: number;
+}
+
 /** Auth context attached to request by middleware */
 export interface AuthContext {
   userId: string;

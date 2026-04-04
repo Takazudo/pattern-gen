@@ -298,6 +298,7 @@ export function App() {
   const [skewY, setSkewY] = useState(0);
   const [currentStep, setCurrentStep] = useState<AppStep>('background');
   const [composerActive, setComposerActive] = useState(false);
+  const [tweakingPattern, setTweakingPattern] = useState(false);
   const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
   const [composerBgConfig, setComposerBgConfig] = useState<OgpConfig | null>(null);
   const [composerOutputSize, setComposerOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
@@ -1169,12 +1170,127 @@ export function App() {
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
   const handleStepChange = useCallback((step: AppStep) => {
+    // During tweaking, block all step changes — use
+    // "Return to Composer" or "Discard" buttons instead
+    if (tweakingPattern) return;
     setCurrentStep(step);
+    setComposerActive(false);
+  }, [tweakingPattern]);
+
+  const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
+  const handleExitComposer = useCallback(() => {
+    setTweakingPattern(false);
     setComposerActive(false);
   }, []);
 
-  const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
-  const handleExitComposer = useCallback(() => setComposerActive(false), []);
+  // Tweak Pattern: go back to background view while keeping Composer mounted
+  const handleTweakPattern = useCallback(() => {
+    setTweakingPattern(true);
+    setCurrentStep('background');
+  }, []);
+
+  // Return to Composer: re-render background with current pattern settings
+  const handleReturnToComposer = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const outW = composerOutputSize.width;
+    const outH = composerOutputSize.height;
+    const outputAspect = outW / outH;
+
+    // Ensure the render canvas is large enough that the center crop
+    // region covers the output dimensions with quality headroom
+    const cropAspect = outputAspect >= 1 ? outputAspect : 1 / outputAspect;
+    const renderSize = Math.min(4000, Math.max(
+      CANVAS_SIZE,
+      Math.ceil(Math.max(outW, outH) * cropAspect),
+    ));
+
+    const hiResCanvas = document.createElement('canvas');
+    hiResCanvas.width = renderSize;
+    hiResCanvas.height = renderSize;
+    generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY);
+
+    const hiResCtx = hiResCanvas.getContext('2d');
+    if (!hiResCtx) return;
+    if (hslAdjust.h !== 0 || hslAdjust.s !== 0 || hslAdjust.l !== 0) {
+      applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
+    }
+    applyContrastBrightness(hiResCtx, renderSize, renderSize, contrastBrightness);
+    // Note: do NOT call compositeOverlay here — the Composer manages its
+    // own layers. Baking viewer image layers into the background would
+    // double-composite them when the Composer re-renders.
+
+    // Reuse existing crop from composerBgConfig if available (preserves
+    // the original selection framing during tweak mode), otherwise center crop.
+    let cropX: number;
+    let cropY: number;
+    let cropW: number;
+    let cropH: number;
+    if (composerBgConfig?.crop) {
+      cropX = composerBgConfig.crop.x * renderSize;
+      cropY = composerBgConfig.crop.y * renderSize;
+      cropW = composerBgConfig.crop.width * renderSize;
+      cropH = composerBgConfig.crop.height * renderSize;
+    } else {
+      const outputAspectFallback = outW / outH;
+      if (outputAspectFallback >= 1) {
+        cropW = renderSize;
+        cropH = renderSize / outputAspectFallback;
+      } else {
+        cropH = renderSize;
+        cropW = renderSize * outputAspectFallback;
+      }
+      cropX = (renderSize - cropW) / 2;
+      cropY = (renderSize - cropH) / 2;
+    }
+
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = outW;
+    bgCanvas.height = outH;
+    const bgCtx = bgCanvas.getContext('2d');
+    if (!bgCtx) return;
+    bgCtx.drawImage(hiResCanvas, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
+
+    const bitmap = await createImageBitmap(bgCanvas);
+
+    const cb = contrastBrightness;
+    const hasContrastBrightness = cb.contrast !== 0 || cb.brightness !== 0;
+    const config: OgpConfig = {
+      version: 1,
+      slug,
+      type: patternType,
+      colorScheme: COLOR_SCHEMES[colorSchemeIndex].name,
+      zoom,
+      translateX: txVal,
+      translateY: tyVal,
+      useTranslate,
+      ...(rotate !== 0 ? { rotate } : {}),
+      ...(skewX !== 0 ? { skewX } : {}),
+      ...(skewY !== 0 ? { skewY } : {}),
+      params: { ...displayParams },
+      hsl: { ...hslAdjust },
+      ...(hasContrastBrightness ? { contrastBrightness: { ...cb } } : {}),
+      crop: {
+        x: cropX / renderSize,
+        y: cropY / renderSize,
+        width: cropW / renderSize,
+        height: cropH / renderSize,
+      },
+    };
+
+    setComposerBgImage(bitmap);
+    setComposerBgConfig(config);
+    setCurrentStep('compose');
+    setTweakingPattern(false);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, displayParams, composerOutputSize, composerBgConfig]);
+
+  // Discard working composition and return to background
+  const handleDiscardComposition = useCallback(() => {
+    setTweakingPattern(false);
+    setComposerActive(false);
+    setCurrentStep('background');
+  }, []);
 
   const getSaveConfigJson = useCallback((): string => {
     const canvas = canvasRef.current;
@@ -1239,6 +1355,7 @@ export function App() {
     setSelectedLayerId(null);
     setCurrentStep('background');
     setComposerActive(false);
+    setTweakingPattern(false);
     setComposerBgImage(null);
     setComposerBgConfig(null);
   }, [suppressDirty]);
@@ -1422,7 +1539,7 @@ export function App() {
     }
   }, [currentCompositionId, suppressDirty]);
 
-  const showStepIndicator = !composerActive;
+  const showStepIndicator = !composerActive || tweakingPattern;
 
   return (
     <div className="app">
@@ -1506,20 +1623,37 @@ export function App() {
       )}
 
       {composerActive && (
-        <Composer
-          backgroundImage={composerBgImage}
-          backgroundConfig={composerBgConfig}
-          outputWidth={composerOutputSize.width}
-          outputHeight={composerOutputSize.height}
-          compositionTitle={isAuthenticated ? compositionTitle : undefined}
-          onTitleChange={isAuthenticated ? handleCompositionTitleChange : undefined}
-          onExit={handleExitComposer}
-        />
+        <div style={{ display: tweakingPattern ? 'none' : 'contents' }}>
+          <Composer
+            backgroundImage={composerBgImage}
+            backgroundConfig={composerBgConfig}
+            outputWidth={composerOutputSize.width}
+            outputHeight={composerOutputSize.height}
+            compositionTitle={isAuthenticated ? compositionTitle : undefined}
+            onTitleChange={isAuthenticated ? handleCompositionTitleChange : undefined}
+            onExit={handleExitComposer}
+            onTweakPattern={handleTweakPattern}
+          />
+        </div>
       )}
 
       {currentStep === 'background' && (
         <div className="controls">
           <h1>zudo-pattern-gen</h1>
+
+          {tweakingPattern && (
+            <div className="tweak-banner">
+              <div className="tweak-banner-label">Tweaking pattern for Composer</div>
+              <div className="tweak-banner-actions">
+                <button className="btn tweak-banner-btn-return" onClick={handleReturnToComposer}>
+                  Return to Composer
+                </button>
+                <button className="btn tweak-banner-btn-discard" onClick={handleDiscardComposition}>
+                  Discard Composition
+                </button>
+              </div>
+            </div>
+          )}
 
           <CollapsibleSection title="Pattern Generation" defaultOpen={true}>
             <div className="control-group">

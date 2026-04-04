@@ -34,6 +34,7 @@ interface ComposerProps {
   compositionTitle?: string;
   onTitleChange?: (title: string) => void;
   onExit: () => void;
+  onTweakPattern?: () => void;
 }
 
 /* ── Editable title sub-component ── */
@@ -145,6 +146,7 @@ export function Composer({
   compositionTitle,
   onTitleChange,
   onExit,
+  onTweakPattern,
 }: ComposerProps) {
   const history = useComposerHistory({
     layers: [],
@@ -1188,6 +1190,11 @@ export function Composer({
           >
             ⚙
           </button>
+          {onTweakPattern && (
+            <button className="btn composer-btn-tweak" onClick={onTweakPattern}>
+              Tweak Pattern
+            </button>
+          )}
           <button className="btn composer-btn-exit" onClick={onExit}>
             Exit Editor
           </button>
