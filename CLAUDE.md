@@ -19,6 +19,7 @@ pnpm workspace monorepo with internal sub-packages:
 - `src/cli.ts` — CLI entry point with 3 modes: basic, OGP config, Composer config
 - `src/index.ts` — re-exports from core + generators + renderer
 - `packages/pattern-gen-viewer/` — Vite + React interactive viewer with step-based workflow + Composer
+- `packages/styleguide/` — Astro-based component styleguide with React stories
 - `doc/` — Documentation site (zudo-doc framework / Astro)
 
 Sub-packages are `private: true` (not published separately). The root package bundles them via tsup `noExternal`.
@@ -101,6 +102,38 @@ pnpm run b4push       # Pre-push validation
 | OGP Config | A pattern configuration optimized for Open Graph preview images (1200×630). |
 | Composer Config | A full composition configuration including background pattern + all layers. |
 | Dustbox | Soft-delete trash bin. Deleted compositions/assets go here before permanent deletion. |
+
+## UI Development
+
+### Design System
+
+All UI styling follows the `/l-design-system` skill (auto-invoked when working on viewer components). Key rules:
+
+- **3-tier token system**: Palette (raw oklch) -> Theme (semantic `@theme`) -> Component styles (CSS classes)
+- **Styles in `App.css`** for shared/general styles, or **component-specific CSS files** for complex components (no CSS modules)
+- **Always use design tokens** for spacing, colors, radius, font sizes — never raw pixel values
+- **Glass morphism** for floating panels: `var(--color-surface-glass)` + `backdrop-filter: blur(12px)`
+- **No external UI libraries** — build components from scratch using design tokens
+- For advanced CSS patterns, invoke `/css-wisdom <topic>`
+
+### Shared Components
+
+Before creating new UI, check if a shared component exists in `packages/pattern-gen-viewer/src/components/`:
+
+- `ConfirmDialog` — reusable confirmation modal with custom content slot
+- `CollapsibleSection` — expandable/collapsible panel
+- `CompositionMenu` — dropdown menu pattern
+- `DiscardConfirmationDialog` — discard/keep/cancel flow
+
+When a UI pattern is used in 2+ places, extract it as a shared component. Prefer extending existing components over creating new ones.
+
+### Styleguide
+
+The styleguide at `packages/styleguide/` auto-discovers `*.stories.tsx` files from the viewer package. When adding or modifying shared components:
+
+1. Create/update a `*.stories.tsx` file alongside the component
+2. Add stories for key variants and states
+3. Verify with `pnpm run styleguide:dev` (port 14400)
 
 ## Doc Site Commands
 
