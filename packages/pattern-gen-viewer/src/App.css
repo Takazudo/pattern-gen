@@ -630,6 +630,58 @@ label.fix-toggle input[type="checkbox"] {
   background: oklch(100% 0 0 / 15%);
 }
 
+/* ── Tweak Banner ── */
+
+.tweak-banner {
+  margin-bottom: var(--spacing-sp-md);
+  padding: var(--spacing-sp-md);
+  border: 1px solid oklch(65% 0.12 250 / 30%);
+  border-radius: var(--radius-md);
+  background: oklch(65% 0.12 250 / 10%);
+}
+
+.tweak-banner-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: oklch(80% 0.06 250);
+  margin-bottom: var(--spacing-sp-sm);
+}
+
+.tweak-banner-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sp-xs);
+}
+
+.tweak-banner-btn-return {
+  width: 100%;
+  padding: var(--spacing-sp-sm) var(--spacing-sp-md);
+  border: 1px solid oklch(65% 0.12 250 / 40%);
+  background: oklch(65% 0.12 250 / 20%);
+  color: oklch(90% 0.04 250);
+  font-weight: 500;
+}
+
+.tweak-banner-btn-return:hover {
+  background: oklch(65% 0.12 250 / 30%);
+  border-color: oklch(65% 0.12 250 / 50%);
+}
+
+.tweak-banner-btn-discard {
+  width: 100%;
+  padding: var(--spacing-sp-xs) var(--spacing-sp-md);
+  border: 1px solid oklch(100% 0 0 / 15%);
+  background: oklch(100% 0 0 / 5%);
+  color: oklch(65% 0 0);
+  font-size: var(--font-size-xs);
+}
+
+.tweak-banner-btn-discard:hover {
+  background: oklch(0% 0.1 25 / 20%);
+  border-color: oklch(60% 0.15 25 / 40%);
+  color: oklch(75% 0.1 25);
+}
+
 /* ── Image Overlay Section ── */
 
 .image-overlay-section {
