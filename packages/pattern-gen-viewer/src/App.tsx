@@ -1170,12 +1170,11 @@ export function App() {
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
   const handleStepChange = useCallback((step: AppStep) => {
-    // During tweaking, don't allow navigating to compose step — use
+    // During tweaking, block all step changes — use
     // "Return to Composer" or "Discard" buttons instead
-    if (tweakingPattern && step === 'compose') return;
+    if (tweakingPattern) return;
     setCurrentStep(step);
     setComposerActive(false);
-    setTweakingPattern(false);
   }, [tweakingPattern]);
 
   const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
@@ -1222,18 +1221,29 @@ export function App() {
     // own layers. Baking viewer image layers into the background would
     // double-composite them when the Composer re-renders.
 
-    // Center crop matching output aspect ratio
+    // Reuse existing crop from composerBgConfig if available (preserves
+    // the original selection framing during tweak mode), otherwise center crop.
+    let cropX: number;
+    let cropY: number;
     let cropW: number;
     let cropH: number;
-    if (outputAspect >= 1) {
-      cropW = renderSize;
-      cropH = renderSize / outputAspect;
+    if (composerBgConfig?.crop) {
+      cropX = composerBgConfig.crop.x * renderSize;
+      cropY = composerBgConfig.crop.y * renderSize;
+      cropW = composerBgConfig.crop.width * renderSize;
+      cropH = composerBgConfig.crop.height * renderSize;
     } else {
-      cropH = renderSize;
-      cropW = renderSize * outputAspect;
+      const outputAspectFallback = outW / outH;
+      if (outputAspectFallback >= 1) {
+        cropW = renderSize;
+        cropH = renderSize / outputAspectFallback;
+      } else {
+        cropH = renderSize;
+        cropW = renderSize * outputAspectFallback;
+      }
+      cropX = (renderSize - cropW) / 2;
+      cropY = (renderSize - cropH) / 2;
     }
-    const cropX = (renderSize - cropW) / 2;
-    const cropY = (renderSize - cropH) / 2;
 
     const bgCanvas = document.createElement('canvas');
     bgCanvas.width = outW;
@@ -1271,8 +1281,9 @@ export function App() {
 
     setComposerBgImage(bitmap);
     setComposerBgConfig(config);
+    setCurrentStep('compose');
     setTweakingPattern(false);
-  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, displayParams, composerOutputSize]);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, displayParams, composerOutputSize, composerBgConfig]);
 
   // Discard working composition and return to background
   const handleDiscardComposition = useCallback(() => {
