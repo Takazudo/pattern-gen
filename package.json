@@ -32,6 +32,8 @@
     "viewer:build": "pnpm --filter pattern-gen-viewer build",
     "prestyleguide:dev": "lsof -ti :14400 | xargs kill 2>/dev/null; true",
     "styleguide:dev": "pnpm --filter pattern-gen-styleguide dev",
+    "prestyleguide:dev:net": "lsof -ti :14400 | xargs kill 2>/dev/null; true",
+    "styleguide:dev:net": "pnpm --filter pattern-gen-styleguide dev -- --host 0.0.0.0",
     "styleguide:build": "pnpm --filter pattern-gen-styleguide build",
     "// ── Doc site ────────────────────────────────────": "",
     "predoc:dev": "lsof -ti :4321 | xargs kill 2>/dev/null; true",
