@@ -131,9 +131,10 @@
   --radius-full: 9999px; /* rounded-full */
 
   /* ========================================
-   * Breakpoints (3 steps)
+   * Breakpoints (4 steps)
    * ======================================== */
   --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
 }
