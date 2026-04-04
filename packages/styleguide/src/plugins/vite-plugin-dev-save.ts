@@ -21,8 +21,8 @@ import { fileURLToPath } from 'node:url';
  */
 const DATA_DIR = fileURLToPath(new URL('../data/', import.meta.url));
 
-/** Only allow writes inside the project's components/ directory. */
-const COMPONENTS_DIR = normalize(resolve(DATA_DIR, '../../../../components'));
+/** Only allow writes inside the viewer's src/ directory (where components and stories live). */
+const COMPONENTS_DIR = normalize(resolve(DATA_DIR, '../../../pattern-gen-viewer/src'));
 
 function jsonResponse(
   res: import('http').ServerResponse,

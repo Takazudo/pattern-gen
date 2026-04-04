@@ -8,6 +8,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { colorSchemes } from './src/config/color-schemes';
 import { settings } from './src/config/settings';
 import { searchIndexIntegration } from './src/integrations/search-index';
+import { devSavePlugin } from './src/plugins/vite-plugin-dev-save';
 import remarkDirective from 'remark-directive';
 import { remarkAdmonitions } from './src/plugins/remark-admonitions';
 import { remarkResolveMarkdownLinks } from './src/plugins/remark-resolve-markdown-links';
@@ -73,7 +74,7 @@ export default defineConfig({
   devToolbar: { enabled: false },
   integrations: [mdx(), react(), searchIndexIntegration()],
   vite: {
-    plugins: [tailwindcss(), mockViewerDeps()],
+    plugins: [tailwindcss(), mockViewerDeps(), devSavePlugin()],
     resolve: {
       alias: [
         {
