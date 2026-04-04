@@ -1,4 +1,4 @@
-import { useMemo, useState, lazy, Suspense } from 'react';
+import { useMemo, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/auth-context.js';
 import { useFontFavorites } from '../hooks/use-font-favorites.js';
@@ -252,9 +252,21 @@ interface FontPickerProps {
 
 export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
   const [showExplorer, setShowExplorer] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated } = useAuth();
   const { isFavorite, toggleFavorite, favorites } = useFontFavorites();
+
+  const handleFocus = useCallback(() => {
+    setListOpen(true);
+  }, []);
+
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    // If focus moves to another element inside the container, keep open
+    if (containerRef.current?.contains(e.relatedTarget as Node)) return;
+    setListOpen(false);
+  }, []);
 
   const hasFavorites = favorites.size > 0;
 
@@ -288,16 +300,21 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
   const showActiveExtra = value && !activeVisible && filtered.includes(value);
 
   return (
-    <div className="composer-font-picker">
+    <div
+      className="composer-font-picker"
+      ref={containerRef}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+    >
       <input
         id={id}
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search fonts..."
+        placeholder={value || 'Search fonts...'}
         className="composer-font-search"
       />
-      <div className="composer-font-list">
+      {listOpen && <div className="composer-font-list">
         {showActiveExtra && (
           <>
             <div className="composer-font-section-label">Current</div>
@@ -342,7 +359,7 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
             onToggleFavorite={(e) => { e.stopPropagation(); toggleFavorite(f); }}
           />
         ))}
-      </div>
+      </div>}
       <div className="composer-font-btn-row">
         <button
           className="btn composer-font-explore-btn"
