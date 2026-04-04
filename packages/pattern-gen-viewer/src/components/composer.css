@@ -437,6 +437,17 @@
   gap: 4px;
 }
 
+.composer-font-select-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.composer-font-select-row select {
+  flex: 1;
+  min-width: 0;
+}
+
 .composer-font-picker select {
   width: 100%;
   padding: 4px 6px;
@@ -445,6 +456,24 @@
   border-radius: 4px;
   color: oklch(90% 0 0);
   font-size: 12px;
+}
+
+.composer-font-star-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: oklch(65% 0.15 85);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+
+.composer-font-star-btn:hover {
+  color: oklch(75% 0.18 85);
+  background: oklch(100% 0 0 / 6%);
 }
 
 .composer-font-more-btn {
@@ -476,6 +505,35 @@
   border: 1px solid oklch(100% 0 0 / 8%);
   border-radius: 4px;
   padding: 2px;
+}
+
+.composer-font-section-label {
+  padding: 4px 8px 2px;
+  font-size: 10px;
+  color: oklch(60% 0 0);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.composer-font-section-divider {
+  height: 1px;
+  background: oklch(100% 0 0 / 8%);
+  margin: 2px 4px;
+}
+
+.composer-font-item-row {
+  display: flex;
+  align-items: center;
+}
+
+.composer-font-item-row .composer-font-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.composer-font-item-row .composer-font-star-btn {
+  font-size: 12px;
+  padding: 2px 4px;
 }
 
 .composer-font-item {

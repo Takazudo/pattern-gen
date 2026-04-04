@@ -6,11 +6,13 @@ import type {
   UserRow,
   CompositionRow,
   AssetRow,
+  FontFavoriteRow,
   CreateCompositionRequest,
   UpdateCompositionRequest,
   UpdateProfileRequest,
   CompositionResponse,
   AssetResponse,
+  FontFavoriteResponse,
   PaginatedResponse,
 } from "../types.js";
 
@@ -736,6 +738,85 @@ app.delete("/assets/:id/permanent", async (c) => {
     .run();
 
   return c.json({ ok: true });
+});
+
+// ─── Font Favorites ──────────────────────────────────────────
+
+app.get("/font-favorites", async (c) => {
+  const auth = c.get("auth");
+
+  const result = await c.env.DB.prepare(
+    "SELECT font_family, created_at FROM font_favorites WHERE user_id = ?1 ORDER BY created_at DESC"
+  )
+    .bind(auth.userId)
+    .all<FontFavoriteRow>();
+
+  const items: FontFavoriteResponse[] = result.results.map((row) => ({
+    fontFamily: row.font_family,
+    createdAt: row.created_at,
+  }));
+
+  return c.json({ items });
+});
+
+app.post("/font-favorites", async (c) => {
+  const auth = c.get("auth");
+  const body = await c.req.json<{ fontFamily: string }>();
+
+  if (!body.fontFamily) {
+    return c.json({ error: "Missing required field: fontFamily" }, 400);
+  }
+
+  const id = randomId();
+  const now = Math.floor(Date.now() / 1000);
+
+  try {
+    await c.env.DB.prepare(
+      "INSERT INTO font_favorites (id, user_id, font_family, created_at) VALUES (?1, ?2, ?3, ?4)"
+    )
+      .bind(id, auth.userId, body.fontFamily, now)
+      .run();
+  } catch (err: unknown) {
+    // UNIQUE constraint violation — already favorited, return existing
+    if (err instanceof Error && err.message.includes("UNIQUE")) {
+      const existing = await c.env.DB.prepare(
+        "SELECT font_family, created_at FROM font_favorites WHERE user_id = ?1 AND font_family = ?2"
+      )
+        .bind(auth.userId, body.fontFamily)
+        .first<FontFavoriteRow>();
+
+      return c.json({
+        fontFamily: existing!.font_family,
+        createdAt: existing!.created_at,
+      } satisfies FontFavoriteResponse);
+    }
+    throw err;
+  }
+
+  return c.json(
+    {
+      fontFamily: body.fontFamily,
+      createdAt: now,
+    } satisfies FontFavoriteResponse,
+    201
+  );
+});
+
+app.delete("/font-favorites/:family", async (c) => {
+  const auth = c.get("auth");
+  const family = decodeURIComponent(c.req.param("family"));
+
+  const result = await c.env.DB.prepare(
+    "DELETE FROM font_favorites WHERE user_id = ?1 AND font_family = ?2"
+  )
+    .bind(auth.userId, family)
+    .run();
+
+  if (!result.meta.changes) {
+    return c.json({ error: "Font favorite not found" }, 404);
+  }
+
+  return new Response(null, { status: 204 });
 });
 
 export { app };
