@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api, fetchBlob } from '../lib/api-client.js';
 import type { AssetEntry, AssetsResponse } from '../lib/api-types.js';
+import { ConfirmDialog } from './confirm-dialog.js';
 
 interface MyAssetsProps {
   onClose: () => void;
   onUseAsLayer: (file: File) => void;
+  onToast?: (msg: string) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -13,7 +15,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function MyAssets({ onClose, onUseAsLayer }: MyAssetsProps) {
+export function MyAssets({ onClose, onUseAsLayer, onToast }: MyAssetsProps) {
   const [assets, setAssets] = useState<AssetEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,10 @@ export function MyAssets({ onClose, onUseAsLayer }: MyAssetsProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AssetEntry | null>(null);
+  const [notesLocal, setNotesLocal] = useState<Record<string, string>>({});
+  const [savingNotesId, setSavingNotesId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchAssets = useCallback(async () => {
@@ -30,6 +36,12 @@ export function MyAssets({ onClose, onUseAsLayer }: MyAssetsProps) {
       const data = await api.get<AssetsResponse>('/api/assets');
       setAssets(data.items);
       setTotal(data.total);
+      // Initialize local notes state from fetched assets
+      const notes: Record<string, string> = {};
+      for (const a of data.items) {
+        notes[a.id] = a.notes ?? '';
+      }
+      setNotesLocal(notes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load assets');
     } finally {
@@ -50,6 +62,7 @@ export function MyAssets({ onClose, onUseAsLayer }: MyAssetsProps) {
         const entry = await api.upload<AssetEntry>('/api/assets', file);
         setAssets((prev) => [entry, ...prev]);
         setTotal((prev) => prev + 1);
+        setNotesLocal((prev) => ({ ...prev, [entry.id]: entry.notes ?? '' }));
         setUploadProgress(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Upload failed');
@@ -70,19 +83,67 @@ export function MyAssets({ onClose, onUseAsLayer }: MyAssetsProps) {
     [handleUpload],
   );
 
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm('Delete this asset?')) return;
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
     setDeletingId(id);
+    setDeleteTarget(null);
     try {
       await api.delete(`/api/assets/${id}`);
       setAssets((prev) => prev.filter((f) => f.id !== id));
       setTotal((prev) => prev - 1);
+      onToast?.('Asset deleted');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete asset');
     } finally {
       setDeletingId(null);
     }
-  }, []);
+  }, [deleteTarget, onToast]);
+
+  const handleDuplicate = useCallback(
+    async (entry: AssetEntry) => {
+      setDuplicatingId(entry.id);
+      setError(null);
+      try {
+        const blob = await fetchBlob(`/api/assets/${entry.id}/download`);
+        const newFilename = `Copy of ${entry.filename}`;
+        const file = new File([blob], newFilename, { type: entry.contentType });
+        const newEntry = await api.upload<AssetEntry>('/api/assets', file);
+        setAssets((prev) => [newEntry, ...prev]);
+        setTotal((prev) => prev + 1);
+        setNotesLocal((prev) => ({ ...prev, [newEntry.id]: newEntry.notes ?? '' }));
+        onToast?.('Asset duplicated');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to duplicate asset');
+      } finally {
+        setDuplicatingId(null);
+      }
+    },
+    [onToast],
+  );
+
+  const handleNotesSave = useCallback(
+    async (id: string) => {
+      const value = notesLocal[id] ?? '';
+      const asset = assets.find((a) => a.id === id);
+      // Skip if unchanged
+      if (asset && (asset.notes ?? '') === value) return;
+
+      setSavingNotesId(id);
+      try {
+        const updated = await api.patch<AssetEntry>(`/api/assets/${id}`, {
+          notes: value || null,
+        });
+        setAssets((prev) => prev.map((a) => (a.id === id ? updated : a)));
+        onToast?.('Note saved');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save note');
+      } finally {
+        setSavingNotesId(null);
+      }
+    },
+    [notesLocal, assets, onToast],
+  );
 
   const handleUseAsset = useCallback(
     async (entry: AssetEntry) => {
@@ -166,19 +227,66 @@ export function MyAssets({ onClose, onUseAsLayer }: MyAssetsProps) {
                     <span>{new Date(f.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <button
-                  className="gallery-card-delete"
-                  onClick={() => handleDelete(f.id)}
-                  disabled={deletingId === f.id}
-                  title="Delete"
-                >
-                  {deletingId === f.id ? '...' : '\u00d7'}
-                </button>
+                <div className="asset-notes">
+                  <input
+                    type="text"
+                    className="asset-notes-input"
+                    placeholder="Add a note..."
+                    value={notesLocal[f.id] ?? ''}
+                    onChange={(e) =>
+                      setNotesLocal((prev) => ({ ...prev, [f.id]: e.target.value }))
+                    }
+                    onBlur={() => handleNotesSave(f.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    disabled={savingNotesId === f.id}
+                  />
+                </div>
+                <div className="gallery-card-actions">
+                  <button
+                    className="btn gallery-card-action-btn"
+                    onClick={() => handleDuplicate(f)}
+                    disabled={duplicatingId === f.id}
+                  >
+                    {duplicatingId === f.id ? 'Duplicating...' : 'Duplicate'}
+                  </button>
+                  <button
+                    className="btn gallery-card-action-btn gallery-card-action-btn-danger"
+                    onClick={() => setDeleteTarget(f)}
+                    disabled={deletingId === f.id}
+                  >
+                    {deletingId === f.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete Asset"
+          message={`Are you sure you want to delete "${deleteTarget.filename}" (${formatSize(deleteTarget.sizeBytes)})?`}
+          confirmLabel="Delete"
+          confirmVariant="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        >
+          {deleteTarget.contentType.startsWith('image/') && (
+            <div className="confirm-dialog-preview">
+              <img
+                src={`/api/assets/${deleteTarget.id}/download`}
+                alt={deleteTarget.filename}
+                className="confirm-dialog-preview-img"
+              />
+            </div>
+          )}
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

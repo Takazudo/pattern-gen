@@ -1722,6 +1722,7 @@ export function App() {
         <MyAssets
           onClose={() => setShowMyAssets(false)}
           onUseAsLayer={(file) => handleImageImport(file)}
+          onToast={showToast}
         />
       )}
       {showUserPage && (
