@@ -1,7 +1,7 @@
 import { MyCompositions } from './my-compositions';
 import type { Composition } from '../lib/api-types.js';
 
-export const meta = { title: 'UI/MyCompositions' };
+export const meta = { title: 'Data/MyCompositions' };
 
 export const Empty = () => (
   <MyCompositions

@@ -1,6 +1,6 @@
 import { SaveCompositionModal } from './save-composition-modal';
 
-export const meta = { title: 'UI/SaveCompositionModal' };
+export const meta = { title: 'Dialog/SaveCompositionModal' };
 
 export const Default = () => (
   <SaveCompositionModal

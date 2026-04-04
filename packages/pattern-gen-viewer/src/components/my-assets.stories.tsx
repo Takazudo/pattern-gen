@@ -1,6 +1,6 @@
 import { MyAssets } from './my-assets';
 
-export const meta = { title: 'UI/MyAssets' };
+export const meta = { title: 'Data/MyAssets' };
 
 export const Empty = () => (
   <MyAssets
