@@ -1199,10 +1199,12 @@ export function App() {
     const outH = composerOutputSize.height;
     const outputAspect = outW / outH;
 
+    // Ensure the render canvas is large enough that the center crop
+    // region covers the output dimensions with quality headroom
+    const cropAspect = outputAspect >= 1 ? outputAspect : 1 / outputAspect;
     const renderSize = Math.min(4000, Math.max(
       CANVAS_SIZE,
-      Math.ceil(outW),
-      Math.ceil(outH),
+      Math.ceil(Math.max(outW, outH) * cropAspect),
     ));
 
     const hiResCanvas = document.createElement('canvas');
@@ -1216,7 +1218,9 @@ export function App() {
       applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
     }
     applyContrastBrightness(hiResCtx, renderSize, renderSize, contrastBrightness);
-    compositeOverlay(hiResCtx, renderSize, renderSize);
+    // Note: do NOT call compositeOverlay here — the Composer manages its
+    // own layers. Baking viewer image layers into the background would
+    // double-composite them when the Composer re-renders.
 
     // Center crop matching output aspect ratio
     let cropW: number;
@@ -1268,7 +1272,7 @@ export function App() {
     setComposerBgImage(bitmap);
     setComposerBgConfig(config);
     setTweakingPattern(false);
-  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, displayParams, compositeOverlay, composerOutputSize]);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, displayParams, composerOutputSize]);
 
   // Discard working composition and return to background
   const handleDiscardComposition = useCallback(() => {
