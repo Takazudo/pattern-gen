@@ -1,4 +1,5 @@
 import { useMemo, useState, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/auth-context.js';
 import { useFontFavorites } from '../hooks/use-font-favorites.js';
 
@@ -350,7 +351,7 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
           Explore
         </button>
       </div>
-      {showExplorer && (
+      {showExplorer && createPortal(
         <Suspense fallback={null}>
           <FontExplorerModal
             onSelect={(family) => {
@@ -358,7 +359,8 @@ export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
             }}
             onClose={() => setShowExplorer(false)}
           />
-        </Suspense>
+        </Suspense>,
+        document.body,
       )}
     </div>
   );
