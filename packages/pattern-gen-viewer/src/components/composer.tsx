@@ -192,9 +192,10 @@ export function Composer({
       history.flushContinuous();
       const current = historyRef.current;
       history.set({ ...current, gridConfig: config });
+      history.setLabel('Change Grid');
       history.commit();
     },
-    [history.flushContinuous, history.set, history.commit],
+    [history.flushContinuous, history.set, history.setLabel, history.commit],
   );
 
   const setFrameConfig = useCallback(
@@ -202,18 +203,20 @@ export function Composer({
       history.flushContinuous();
       const current = historyRef.current;
       history.set({ ...current, frameConfig: config });
+      history.setLabel('Change Frame');
       history.commit();
     },
-    [history.flushContinuous, history.set, history.commit],
+    [history.flushContinuous, history.set, history.setLabel, history.commit],
   );
 
   const setFrameConfigContinuous = useCallback(
     (config: FrameConfig | null) => {
       const current = historyRef.current;
       history.set({ ...current, frameConfig: config });
+      history.setLabel('Change Frame');
       history.commitContinuous();
     },
-    [history.set, history.commitContinuous],
+    [history.set, history.setLabel, history.commitContinuous],
   );
 
   const flushFrameConfigContinuous = useCallback(() => {
@@ -234,10 +237,11 @@ export function Composer({
         newCrop.x < eps && newCrop.y < eps && newCrop.width > 1 - eps && newCrop.height > 1 - eps;
       const current = historyRef.current;
       history.set({ ...current, crop: isFullCanvas ? undefined : newCrop });
+      history.setLabel('Set Crop');
       history.commit();
       setCropMode(false);
     },
-    [history.flushContinuous, history.set, history.commit],
+    [history.flushContinuous, history.set, history.setLabel, history.commit],
   );
 
   const handleCropCancel = useCallback(() => {
@@ -248,9 +252,10 @@ export function Composer({
     history.flushContinuous();
     const current = historyRef.current;
     history.set({ ...current, crop: undefined });
+    history.setLabel('Clear Crop');
     history.commit();
     setCropMode(false);
-  }, [history.flushContinuous, history.set, history.commit]);
+  }, [history.flushContinuous, history.set, history.setLabel, history.commit]);
 
   const [dragState, setDragState] = useState<
     | {
@@ -726,7 +731,9 @@ export function Composer({
 
     const handleMouseUp = () => {
       if (dragStateRef.current) {
+        const dragType = dragStateRef.current.type;
         history.flushContinuous();
+        history.setLabel(dragType === 'resize' ? 'Resize Layer' : 'Move Layer');
         history.commit();
       }
       setDragState(null);
@@ -739,7 +746,7 @@ export function Composer({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [getCanvasCoords, history.commit]);
+  }, [getCanvasCoords, history.commit, history.setLabel]);
 
   // Layer CRUD
   const handleAddImage = useCallback(() => {
@@ -777,6 +784,7 @@ export function Composer({
                 : l,
             ),
           );
+          history.setLabel('Add Image');
           history.commit();
         };
         img.src = reader.result as string;
@@ -787,7 +795,7 @@ export function Composer({
       reader.readAsDataURL(file);
     };
     input.click();
-  }, [history.flushContinuous, history.commit]);
+  }, [history.flushContinuous, history.setLabel, history.commit]);
 
   // Track a font load: add to loadingFonts, remove when loaded
   const trackFontLoad = useCallback((family: string) => {
@@ -833,8 +841,9 @@ export function Composer({
     setLayers((prev) => [...prev, newLayer]);
     setSelectedIds([id]);
     trackFontLoad('Inter');
+    history.setLabel('Add Text');
     history.commit();
-  }, [trackFontLoad, history.flushContinuous, history.commit]);
+  }, [trackFontLoad, history.flushContinuous, history.setLabel, history.commit]);
 
   const handleLayerUpdate = useCallback(
     (id: string, updates: Partial<EditorLayer>) => {
@@ -861,9 +870,10 @@ export function Composer({
           l.id === id ? ({ ...l, ...updates } as EditorLayer & { id: string }) : l,
         ),
       );
+      history.setLabel('Update Layer');
       history.commit();
     },
-    [trackFontLoad, history.flushContinuous, history.commit],
+    [trackFontLoad, history.flushContinuous, history.setLabel, history.commit],
   );
 
   const handleLayerUpdateContinuous = useCallback(
@@ -873,9 +883,10 @@ export function Composer({
           l.id === id ? ({ ...l, ...updates } as EditorLayer & { id: string }) : l,
         ),
       );
+      history.setLabel('Update Layer');
       history.commitContinuous();
     },
-    [history.commitContinuous],
+    [history.setLabel, history.commitContinuous],
   );
 
   const handleLayerCommitContinuous = useCallback(() => {
@@ -895,6 +906,7 @@ export function Composer({
               : l,
           ),
         );
+        history.setLabel('Toggle BG Removal');
         history.commit();
         return;
       }
@@ -912,6 +924,7 @@ export function Composer({
               : l,
           ),
         );
+        history.setLabel('Toggle BG Removal');
         history.commit();
         return;
       }
@@ -931,6 +944,7 @@ export function Composer({
               : l,
           ),
         );
+        history.setLabel('Toggle BG Removal');
         history.commit();
       } catch (err) {
         console.error('Background removal failed:', err);
@@ -943,7 +957,7 @@ export function Composer({
         });
       }
     },
-    [history.flushContinuous, history.commit],
+    [history.flushContinuous, history.setLabel, history.commit],
   );
 
   const handleBgThresholdChange = useCallback(
@@ -955,9 +969,10 @@ export function Composer({
             : l,
         ),
       );
+      history.setLabel('Adjust BG Threshold');
       history.commitContinuous();
     },
-    [history.commitContinuous],
+    [history.setLabel, history.commitContinuous],
   );
 
   const handleBgThresholdCommit = useCallback(() => {
@@ -1007,8 +1022,9 @@ export function Composer({
     const idSet = new Set(ids);
     setLayers((prev) => prev.filter((l) => !idSet.has(l.id)));
     setSelectedIds([]);
+    history.setLabel('Cut');
     history.commit();
-  }, [handleCopy, history.flushContinuous, history.commit]);
+  }, [handleCopy, history.flushContinuous, history.setLabel, history.commit]);
 
   // Clipboard: Paste
   const handlePaste = useCallback(() => {
@@ -1084,8 +1100,9 @@ export function Composer({
     clipboardImagesRef.current = newClipImages;
     clipboardProcessedRef.current = newClipProcessed;
 
+    history.setLabel('Paste');
     history.commit();
-  }, [trackFontLoad, history.flushContinuous, history.commit]);
+  }, [trackFontLoad, history.flushContinuous, history.setLabel, history.commit]);
 
   const handleLayerDelete = useCallback(
     (id: string) => {
@@ -1094,9 +1111,10 @@ export function Composer({
       loadedImagesRef.current.delete(id);
       processedImagesRef.current.delete(id);
       setSelectedIds((prev) => prev.filter((sid) => sid !== id));
+      history.setLabel('Delete Layer');
       history.commit();
     },
-    [history.flushContinuous, history.commit],
+    [history.flushContinuous, history.setLabel, history.commit],
   );
 
   const handleDuplicateLayer = useCallback(
@@ -1129,9 +1147,10 @@ export function Composer({
         return next;
       });
       setSelectedIds([newId]);
+      history.setLabel('Duplicate Layer');
       history.commit();
     },
-    [history.flushContinuous, history.commit],
+    [history.flushContinuous, history.setLabel, history.commit],
   );
 
   // Cmd+D to duplicate selected layer
@@ -1161,9 +1180,10 @@ export function Composer({
         next.splice(toIndex, 0, moved);
         return next;
       });
+      history.setLabel('Reorder Layer');
       history.commit();
     },
-    [history.flushContinuous, history.commit],
+    [history.flushContinuous, history.setLabel, history.commit],
   );
 
   // Alignment handler
@@ -1178,9 +1198,10 @@ export function Composer({
           return newTransform ? { ...l, transform: newTransform } : l;
         });
       });
+      history.setLabel('Align Layers');
       history.commit();
     },
-    [history.flushContinuous, history.commit],
+    [history.flushContinuous, history.setLabel, history.commit],
   );
 
   // Export handlers
@@ -1275,6 +1296,7 @@ export function Composer({
             crop: config.crop,
           });
           setSelectedIds([]);
+          history.setLabel('Import Config');
           history.commit();
 
           // Load fonts for text layers (with loading state tracking)
@@ -1305,7 +1327,7 @@ export function Composer({
       reader.readAsText(file);
     };
     input.click();
-  }, [trackFontLoad, history.flushContinuous, history.set, history.commit]);
+  }, [trackFontLoad, history.flushContinuous, history.set, history.setLabel, history.commit]);
 
   // Keyboard shortcuts for undo/redo/copy/cut/paste
   useEffect(() => {
@@ -1509,8 +1531,12 @@ export function Composer({
           />
           <ComposerHistoryPanel
             historyEntries={history.historyEntries}
+            historyLabels={history.historyLabels}
+            futureEntries={history.futureEntries}
+            futureLabels={history.futureLabels}
             snapshots={history.snapshots}
             onJumpTo={history.jumpTo}
+            onRedo={history.redo}
             onPinSnapshot={history.pinSnapshot}
             onRemoveSnapshot={history.removeSnapshot}
             onRestoreSnapshot={history.restoreSnapshot}

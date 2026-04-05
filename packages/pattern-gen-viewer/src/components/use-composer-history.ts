@@ -22,6 +22,9 @@ interface HistoryState {
   /** Snapshot of present at last commit (used to detect no-op commits) */
   lastCommitted: ComposerDocumentState;
   snapshots: HistorySnapshot[];
+  pastLabels: string[];
+  futureLabels: string[];
+  pendingLabel: string | null;
 }
 
 type LayerWithId = EditorLayer & { id: string };
@@ -30,6 +33,7 @@ type LayerUpdater = LayerWithId[] | ((prev: LayerWithId[]) => LayerWithId[]);
 export type HistoryAction =
   | { type: 'SET'; state: ComposerDocumentState }
   | { type: 'SET_LAYERS'; updater: LayerUpdater }
+  | { type: 'SET_PENDING_LABEL'; label: string }
   | { type: 'COMMIT' }
   | { type: 'UNDO' }
   | { type: 'REDO' }
@@ -56,17 +60,28 @@ export function historyReducer(
       return { ...current, present: { ...current.present, layers: newLayers } };
     }
 
+    case 'SET_PENDING_LABEL':
+      return { ...current, pendingLabel: action.label };
+
     case 'COMMIT': {
       // Skip if nothing changed since last commit
       if (current.present === current.lastCommitted) return current;
+      const label = current.pendingLabel || 'Edit';
       const newPast = [...current.past, current.lastCommitted];
-      if (newPast.length > MAX_HISTORY) newPast.shift();
+      const newPastLabels = [...current.pastLabels, label];
+      if (newPast.length > MAX_HISTORY) {
+        newPast.shift();
+        newPastLabels.shift();
+      }
       return {
         ...current,
         past: newPast,
+        pastLabels: newPastLabels,
         present: current.present,
         future: [],
+        futureLabels: [],
         lastCommitted: current.present,
+        pendingLabel: null,
       };
     }
 
@@ -74,11 +89,15 @@ export function historyReducer(
       if (current.past.length === 0) return current;
       const newPast = [...current.past];
       const previous = newPast.pop()!;
+      const newPastLabels = [...current.pastLabels];
+      const poppedLabel = newPastLabels.pop()!;
       return {
         ...current,
         past: newPast,
+        pastLabels: newPastLabels,
         present: previous,
         future: [current.present, ...current.future],
+        futureLabels: [poppedLabel, ...current.futureLabels],
         lastCommitted: previous,
       };
     }
@@ -87,11 +106,14 @@ export function historyReducer(
       if (current.future.length === 0) return current;
       const newFuture = [...current.future];
       const next = newFuture.shift()!;
+      const [redoLabel, ...restFutureLabels] = current.futureLabels;
       return {
         ...current,
         past: [...current.past, current.present],
+        pastLabels: [...current.pastLabels, redoLabel || 'Edit'],
         present: next,
         future: newFuture,
+        futureLabels: restFutureLabels,
         lastCommitted: next,
       };
     }
@@ -102,12 +124,18 @@ export function historyReducer(
       const target = current.past[index];
       // Keep past up to the jump point, append current present for undo
       const newPast = [...current.past.slice(0, index), current.present];
-      if (newPast.length > MAX_HISTORY) newPast.shift();
+      const newPastLabels = [...current.pastLabels.slice(0, index), 'Current'];
+      if (newPast.length > MAX_HISTORY) {
+        newPast.shift();
+        newPastLabels.shift();
+      }
       return {
         ...current,
         past: newPast,
+        pastLabels: newPastLabels,
         present: target,
         future: [],
+        futureLabels: [],
         lastCommitted: target,
       };
     }
@@ -143,14 +171,26 @@ export function historyReducer(
       const newPast = current.present !== current.lastCommitted
         ? [...current.past, current.lastCommitted]
         : [...current.past];
-      if (newPast.length > MAX_HISTORY) newPast.shift();
+      const newPastLabels = current.present !== current.lastCommitted
+        ? [...current.pastLabels, 'Uncommitted']
+        : [...current.pastLabels];
+      if (newPast.length > MAX_HISTORY) {
+        newPast.shift();
+        newPastLabels.shift();
+      }
       const finalPast = [...newPast, current.present];
-      if (finalPast.length > MAX_HISTORY) finalPast.shift();
+      const finalPastLabels = [...newPastLabels, 'Before Restore'];
+      if (finalPast.length > MAX_HISTORY) {
+        finalPast.shift();
+        finalPastLabels.shift();
+      }
       return {
         ...current,
         past: finalPast,
+        pastLabels: finalPastLabels,
         present: action.state,
         future: [],
+        futureLabels: [],
         lastCommitted: action.state,
       };
     }
@@ -164,6 +204,9 @@ export function createInitialHistoryState(initial: ComposerDocumentState): Histo
     future: [],
     lastCommitted: initial,
     snapshots: [],
+    pastLabels: [],
+    futureLabels: [],
+    pendingLabel: null,
   };
 }
 
@@ -182,6 +225,14 @@ export interface ComposerHistory {
   canRedo: boolean;
   /** Past states for history panel display */
   historyEntries: ComposerDocumentState[];
+  /** Labels for past history entries */
+  historyLabels: string[];
+  /** Future (undone) states for display */
+  futureEntries: ComposerDocumentState[];
+  /** Labels for future entries */
+  futureLabels: string[];
+  /** Set a label for the next commit */
+  setLabel: (label: string) => void;
   /** Pinned snapshots */
   snapshots: HistorySnapshot[];
   /** Jump to a specific entry in the past array */
@@ -277,6 +328,10 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     dispatch({ type: 'RESTORE_SNAPSHOT', state });
   }, [flushContinuous]);
 
+  const setLabel = useCallback((label: string) => {
+    dispatch({ type: 'SET_PENDING_LABEL', label });
+  }, []);
+
   return {
     state: history.present,
     set,
@@ -289,6 +344,10 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
     historyEntries: history.past,
+    historyLabels: history.pastLabels,
+    futureEntries: history.future,
+    futureLabels: history.futureLabels,
+    setLabel,
     snapshots: history.snapshots,
     jumpTo,
     pinSnapshot,

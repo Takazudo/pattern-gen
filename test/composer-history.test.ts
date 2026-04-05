@@ -297,4 +297,143 @@ describe('historyReducer', () => {
     // s0 was lastCommitted === present, so commit is a no-op, but restore still works
     expect(state.present).toBe(snapState);
   });
+
+  // --- Labels ---
+
+  it('initial state has empty label arrays and null pendingLabel', () => {
+    const state = createInitialHistoryState(s0);
+    expect(state.pastLabels).toEqual([]);
+    expect(state.futureLabels).toEqual([]);
+    expect(state.pendingLabel).toBeNull();
+  });
+
+  it('SET_PENDING_LABEL sets pendingLabel', () => {
+    let state = createInitialHistoryState(s0);
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Add Text' });
+    expect(state.pendingLabel).toBe('Add Text');
+  });
+
+  it('COMMIT uses pendingLabel and clears it', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Add Text' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    expect(state.pastLabels).toEqual(['Add Text']);
+    expect(state.pendingLabel).toBeNull();
+  });
+
+  it('COMMIT defaults label to Edit when no pendingLabel', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'COMMIT' });
+    expect(state.pastLabels).toEqual(['Edit']);
+  });
+
+  it('COMMIT clears futureLabels', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Add Text' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'UNDO' });
+    expect(state.futureLabels).toEqual(['Add Text']);
+    // New commit clears future labels
+    const s2 = makeState('s2');
+    state = historyReducer(state, { type: 'SET', state: s2 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'New Edit' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    expect(state.futureLabels).toEqual([]);
+  });
+
+  it('UNDO moves label from pastLabels to futureLabels', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Add Image' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'UNDO' });
+    expect(state.pastLabels).toEqual([]);
+    expect(state.futureLabels).toEqual(['Add Image']);
+  });
+
+  it('REDO moves label from futureLabels to pastLabels', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Move Layer' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'UNDO' });
+    state = historyReducer(state, { type: 'REDO' });
+    expect(state.pastLabels).toEqual(['Move Layer']);
+    expect(state.futureLabels).toEqual([]);
+  });
+
+  it('undo/redo round-trip preserves labels', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    const s2 = makeState('s2');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Add Text' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s2 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Add Image' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    // undo twice
+    state = historyReducer(state, { type: 'UNDO' });
+    state = historyReducer(state, { type: 'UNDO' });
+    expect(state.pastLabels).toEqual([]);
+    expect(state.futureLabels).toEqual(['Add Text', 'Add Image']);
+    // redo twice
+    state = historyReducer(state, { type: 'REDO' });
+    state = historyReducer(state, { type: 'REDO' });
+    expect(state.pastLabels).toEqual(['Add Text', 'Add Image']);
+    expect(state.futureLabels).toEqual([]);
+  });
+
+  it('JUMP_TO reorders labels correctly', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    const s2 = makeState('s2');
+    const s3 = makeState('s3');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Step 1' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s2 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Step 2' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s3 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Step 3' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    // past = [s0, s1, s2], pastLabels = ['Step 1', 'Step 2', 'Step 3']
+    // Jump to index 1 (s1)
+    state = historyReducer(state, { type: 'JUMP_TO', index: 1 });
+    expect(state.pastLabels).toEqual(['Step 1', 'Current']);
+    expect(state.futureLabels).toEqual([]);
+  });
+
+  it('pastLabels are trimmed when exceeding MAX_HISTORY', () => {
+    let state = createInitialHistoryState(s0);
+    for (let i = 0; i < 55; i++) {
+      const s = makeState(`s${i}`);
+      state = historyReducer(state, { type: 'SET', state: s });
+      state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: `Step ${i}` });
+      state = historyReducer(state, { type: 'COMMIT' });
+    }
+    expect(state.pastLabels.length).toBeLessThanOrEqual(50);
+    expect(state.pastLabels.length).toBe(state.past.length);
+  });
+
+  it('RESTORE_SNAPSHOT sets labels for past entries', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Add Text' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    const snapState = makeState('snap-restore');
+    state = historyReducer(state, { type: 'RESTORE_SNAPSHOT', state: snapState });
+    expect(state.pastLabels).toEqual(['Add Text', 'Before Restore']);
+    expect(state.futureLabels).toEqual([]);
+  });
 });
