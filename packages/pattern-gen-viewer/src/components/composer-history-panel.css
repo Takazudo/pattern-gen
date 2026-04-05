@@ -121,11 +121,6 @@
   color: oklch(80% 0 0);
 }
 
-.composer-history-entry.is-current {
-  background: oklch(100% 0 0 / 14%);
-  color: oklch(95% 0 0);
-}
-
 .composer-history-entry-label {
   flex: 1;
   overflow: hidden;

@@ -192,8 +192,10 @@ describe('historyReducer', () => {
     expect(state.present).toBe(s1);
     expect(state.future).toHaveLength(0); // future cleared
     expect(state.lastCommitted).toBe(s1);
-    // past should contain entries before the jumped-to index + the old present
-    expect(state.past).toHaveLength(4); // s0 + s1 + s2 + s3 were in past+present, jump puts current to past first
+    // past keeps entries before the jump index + appends old present
+    expect(state.past).toHaveLength(2); // past[0]=s0 (before index 1) + s3 (old present)
+    expect(state.past[0]).toBe(s0);
+    expect(state.past[1]).toBe(s3);
   });
 
   it('JUMP_TO at index 0 goes to earliest history entry', () => {

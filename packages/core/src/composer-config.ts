@@ -454,10 +454,16 @@ export function parseComposerConfig(json: string): ComposerConfig {
     if (cx < 0 || cx > 1 || cy < 0 || cy > 1 || cw <= 0 || cw > 1 || ch <= 0 || ch > 1) {
       throw new Error('Composer config: crop values must be fractions in [0, 1]');
     }
-    if (cx + cw > 1 || cy + ch > 1) {
+    const CROP_EPSILON = 1e-9;
+    if (cx + cw > 1 + CROP_EPSILON || cy + ch > 1 + CROP_EPSILON) {
       throw new Error('Composer config: crop region extends beyond canvas bounds');
     }
-    crop = { x: cx, y: cy, width: cw, height: ch };
+    crop = {
+      x: cx,
+      y: cy,
+      width: Math.min(cw, 1 - cx),
+      height: Math.min(ch, 1 - cy),
+    };
   }
 
   return {

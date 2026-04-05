@@ -71,7 +71,10 @@ export function ComposerHistoryPanel({
             <div
               key={snap.id}
               className="composer-history-snapshot-item"
+              role="button"
+              tabIndex={0}
               onClick={() => onRestoreSnapshot(snap.state)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRestoreSnapshot(snap.state); } }}
               title={`Restore: ${snap.label}`}
             >
               <span className="composer-history-snapshot-icon">
@@ -105,7 +108,10 @@ export function ComposerHistoryPanel({
               <div
                 key={actualIndex}
                 className="composer-history-entry"
+                role="button"
+                tabIndex={0}
                 onClick={() => onJumpTo(actualIndex)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onJumpTo(actualIndex); } }}
                 title={`Restore State ${actualIndex + 1}`}
               >
                 <span className="composer-history-entry-label">

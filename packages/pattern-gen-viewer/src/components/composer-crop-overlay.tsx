@@ -121,9 +121,9 @@ export function ComposerCropOverlay({
     [],
   );
 
-  // Global mouse move/up for dragging
+  // Global pointer move/up for dragging (supports mouse + touch)
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       const drag = dragRef.current;
       if (!drag) return;
       e.preventDefault();
@@ -147,21 +147,22 @@ export function ComposerCropOverlay({
       }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       dragRef.current = null;
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
     };
   }, [getFractionDelta]);
 
-  const handleMoveStart = useCallback((e: React.MouseEvent) => {
+  const handleMoveStart = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = {
       type: 'move',
       startMouseX: e.clientX,
@@ -171,9 +172,10 @@ export function ComposerCropOverlay({
   }, []);
 
   const handleResizeStart = useCallback(
-    (handle: HandleId, e: React.MouseEvent) => {
+    (handle: HandleId, e: React.PointerEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
       dragRef.current = {
         type: 'resize',
         handle,
@@ -228,7 +230,7 @@ export function ComposerCropOverlay({
           width: `${pctW}%`,
           height: `${pctH}%`,
         }}
-        onMouseDown={handleMoveStart}
+        onPointerDown={handleMoveStart}
       >
         {/* Confirm/Cancel toolbar */}
         <div
@@ -248,6 +250,7 @@ export function ComposerCropOverlay({
             className="crop-toolbar-btn crop-toolbar-btn-cancel"
             onClick={(e) => { e.stopPropagation(); onCancel(); }}
             title="Cancel (Esc)"
+            aria-label="Cancel crop"
           >
             &#x2715;
           </button>
@@ -255,6 +258,7 @@ export function ComposerCropOverlay({
             className="crop-toolbar-btn crop-toolbar-btn-confirm"
             onClick={(e) => { e.stopPropagation(); onConfirm(rect); }}
             title="Apply crop (Enter)"
+            aria-label="Apply crop"
           >
             &#x2713;
           </button>
@@ -273,7 +277,7 @@ export function ComposerCropOverlay({
               top: `${topPct}%`,
               cursor: h.cursor,
             }}
-            onMouseDown={(e) => handleResizeStart(h.id, e)}
+            onPointerDown={(e) => handleResizeStart(h.id, e)}
           />
         );
       })}

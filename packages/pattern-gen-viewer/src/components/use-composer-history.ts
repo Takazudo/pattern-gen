@@ -39,6 +39,7 @@ export type HistoryAction =
   | { type: 'RESTORE_SNAPSHOT'; state: ComposerDocumentState };
 
 const MAX_HISTORY = 50;
+const MAX_SNAPSHOTS = 20;
 
 export function historyReducer(
   current: HistoryState,
@@ -99,8 +100,8 @@ export function historyReducer(
       const { index } = action;
       if (index < 0 || index >= current.past.length) return current;
       const target = current.past[index];
-      // Preserve current present in past (like a reflog), then restore target
-      const newPast = [...current.past, current.present];
+      // Keep past up to the jump point, append current present for undo
+      const newPast = [...current.past.slice(0, index), current.present];
       if (newPast.length > MAX_HISTORY) newPast.shift();
       return {
         ...current,
@@ -117,9 +118,11 @@ export function historyReducer(
         label: action.label,
         state: action.state,
       };
+      const newSnapshots = [...current.snapshots, snapshot];
+      if (newSnapshots.length > MAX_SNAPSHOTS) newSnapshots.shift();
       return {
         ...current,
-        snapshots: [...current.snapshots, snapshot],
+        snapshots: newSnapshots,
       };
     }
 

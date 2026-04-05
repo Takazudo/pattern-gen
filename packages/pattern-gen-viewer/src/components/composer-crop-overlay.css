@@ -5,6 +5,7 @@
   inset: 0;
   z-index: 20;
   pointer-events: none;
+  touch-action: none;
 }
 
 /* ── Dim regions around crop rect ── */
@@ -42,6 +43,7 @@
   cursor: move;
   box-sizing: border-box;
   pointer-events: auto;
+  overflow: visible;
 }
 
 /* ── Resize handles ── */
