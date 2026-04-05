@@ -8,12 +8,58 @@ export interface LayerTransform {
   height: number;
 }
 
+export interface LayerFilters {
+  blur?: number; // 0-20 px
+  brightness?: number; // 0-200 (percent, default 100 = no change)
+  contrast?: number; // 0-200 (percent, default 100 = no change)
+  saturate?: number; // 0-200 (percent, default 100 = no change)
+  hueRotate?: number; // 0-360 degrees
+  grayscale?: number; // 0-100 percent
+  sepia?: number; // 0-100 percent
+  invert?: number; // 0-100 percent
+}
+
+export const DEFAULT_LAYER_FILTERS: Required<LayerFilters> = {
+  blur: 0,
+  brightness: 100,
+  contrast: 100,
+  saturate: 100,
+  hueRotate: 0,
+  grayscale: 0,
+  sepia: 0,
+  invert: 0,
+};
+
+/** Fill in defaults for any missing filter properties */
+export function normalizeLayerFilters(
+  filters?: LayerFilters,
+): Required<LayerFilters> {
+  return { ...DEFAULT_LAYER_FILTERS, ...filters };
+}
+
+/** Build a CSS filter string from layer filters. Returns 'none' if all defaults. */
+export function buildFilterString(filters?: LayerFilters): string {
+  if (!filters) return 'none';
+  const f = normalizeLayerFilters(filters);
+  const parts: string[] = [];
+  if (f.blur !== 0) parts.push(`blur(${f.blur}px)`);
+  if (f.brightness !== 100) parts.push(`brightness(${f.brightness}%)`);
+  if (f.contrast !== 100) parts.push(`contrast(${f.contrast}%)`);
+  if (f.saturate !== 100) parts.push(`saturate(${f.saturate}%)`);
+  if (f.hueRotate !== 0) parts.push(`hue-rotate(${f.hueRotate}deg)`);
+  if (f.grayscale !== 0) parts.push(`grayscale(${f.grayscale}%)`);
+  if (f.sepia !== 0) parts.push(`sepia(${f.sepia}%)`);
+  if (f.invert !== 0) parts.push(`invert(${f.invert}%)`);
+  return parts.length > 0 ? parts.join(' ') : 'none';
+}
+
 export interface ImageLayerData {
   type: 'image';
   name: string;
   src: string; // URL or data URI
   transform: LayerTransform;
   opacity: number; // 0-1
+  filters?: LayerFilters;
   bgRemoval?: {
     enabled: boolean;
     threshold: number; // 0-255
@@ -43,6 +89,7 @@ export interface TextLayerData {
   };
   stroke: { enabled: boolean; color: string; width: number };
   transform: LayerTransform;
+  filters?: LayerFilters;
 }
 
 export type EditorLayer = ImageLayerData | TextLayerData;
@@ -93,6 +140,73 @@ function validateTransform(t: unknown, label: string): LayerTransform {
   return { x: raw.x, y: raw.y, width: raw.width, height: raw.height };
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function validateLayerFilters(
+  raw: unknown,
+  label: string,
+): LayerFilters | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw !== 'object') {
+    throw new Error(`${label}: filters must be an object`);
+  }
+  const f = raw as Record<string, unknown>;
+  const result: LayerFilters = {};
+
+  if (f.blur != null) {
+    if (typeof f.blur !== 'number' || !Number.isFinite(f.blur))
+      throw new Error(`${label}: filters.blur must be a finite number`);
+    result.blur = clamp(f.blur, 0, 20);
+  }
+  if (f.brightness != null) {
+    if (typeof f.brightness !== 'number' || !Number.isFinite(f.brightness))
+      throw new Error(
+        `${label}: filters.brightness must be a finite number`,
+      );
+    result.brightness = clamp(f.brightness, 0, 200);
+  }
+  if (f.contrast != null) {
+    if (typeof f.contrast !== 'number' || !Number.isFinite(f.contrast))
+      throw new Error(`${label}: filters.contrast must be a finite number`);
+    result.contrast = clamp(f.contrast, 0, 200);
+  }
+  if (f.saturate != null) {
+    if (typeof f.saturate !== 'number' || !Number.isFinite(f.saturate))
+      throw new Error(`${label}: filters.saturate must be a finite number`);
+    result.saturate = clamp(f.saturate, 0, 200);
+  }
+  if (f.hueRotate != null) {
+    if (typeof f.hueRotate !== 'number' || !Number.isFinite(f.hueRotate))
+      throw new Error(
+        `${label}: filters.hueRotate must be a finite number`,
+      );
+    result.hueRotate = clamp(f.hueRotate, 0, 360);
+  }
+  if (f.grayscale != null) {
+    if (typeof f.grayscale !== 'number' || !Number.isFinite(f.grayscale))
+      throw new Error(
+        `${label}: filters.grayscale must be a finite number`,
+      );
+    result.grayscale = clamp(f.grayscale, 0, 100);
+  }
+  if (f.sepia != null) {
+    if (typeof f.sepia !== 'number' || !Number.isFinite(f.sepia))
+      throw new Error(`${label}: filters.sepia must be a finite number`);
+    result.sepia = clamp(f.sepia, 0, 100);
+  }
+  if (f.invert != null) {
+    if (typeof f.invert !== 'number' || !Number.isFinite(f.invert))
+      throw new Error(`${label}: filters.invert must be a finite number`);
+    result.invert = clamp(f.invert, 0, 100);
+  }
+
+  // Return undefined if all defaults (sparse storage)
+  if (Object.keys(result).length === 0) return undefined;
+  return result;
+}
+
 function validateImageLayer(raw: Record<string, unknown>): ImageLayerData {
   const label = `Image layer "${raw.name ?? ''}"`;
   if (typeof raw.name !== 'string' || raw.name.length === 0) {
@@ -110,12 +224,14 @@ function validateImageLayer(raw: Record<string, unknown>): ImageLayerData {
     throw new Error(`${label}: opacity must be a number in [0, 1]`);
   }
   const transform = validateTransform(raw.transform, label);
+  const filters = validateLayerFilters(raw.filters, label);
   return {
     type: 'image',
     name: raw.name,
     src: raw.src,
     transform,
     opacity: raw.opacity,
+    ...(filters ? { filters } : {}),
   };
 }
 
@@ -231,6 +347,7 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
   }
 
   const transform = validateTransform(raw.transform, label);
+  const filters = validateLayerFilters(raw.filters, label);
 
   return {
     type: 'text',
@@ -259,6 +376,7 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
       width: stroke.width as number,
     },
     transform,
+    ...(filters ? { filters } : {}),
   };
 }
 

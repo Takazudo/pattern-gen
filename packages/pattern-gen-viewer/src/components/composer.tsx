@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { parseComposerConfig, hashString, createRandom } from '@takazudo/pattern-gen-core';
+import { parseComposerConfig, hashString, createRandom, buildFilterString } from '@takazudo/pattern-gen-core';
 import type {
   OgpConfig,
   ComposerConfig,
@@ -8,6 +8,7 @@ import type {
   ImageLayerData,
   TextLayerData,
   LayerTransform,
+  LayerFilters,
 } from '@takazudo/pattern-gen-core';
 import { framesByName } from '@takazudo/pattern-gen-generators';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
@@ -301,6 +302,12 @@ export function Composer({
         ctx.save();
         const isLoading = loadingFontSet && layer.type === 'text' && loadingFontSet.has(layer.fontFamily);
         ctx.globalAlpha = isLoading ? layer.opacity * LOADING_FONT_DIM_FACTOR : layer.opacity;
+
+        // Apply per-layer CSS filters
+        const filterStr = buildFilterString(layer.filters);
+        if (filterStr !== 'none') {
+          ctx.filter = filterStr;
+        }
 
         if (layer.type === 'image' && images.has(layer.id)) {
           const t = layer.transform;
