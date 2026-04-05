@@ -37,6 +37,7 @@ export type HistoryAction =
   | { type: 'COMMIT' }
   | { type: 'UNDO' }
   | { type: 'REDO' }
+  | { type: 'REDO_TO'; index: number }
   | { type: 'JUMP_TO'; index: number }
   | { type: 'PIN_SNAPSHOT'; state: ComposerDocumentState; label: string }
   | { type: 'REMOVE_SNAPSHOT'; id: string }
@@ -115,6 +116,27 @@ export function historyReducer(
         future: newFuture,
         futureLabels: restFutureLabels,
         lastCommitted: next,
+      };
+    }
+
+    case 'REDO_TO': {
+      const { index } = action;
+      if (index < 0 || index >= current.future.length) return current;
+      const target = current.future[index];
+      const redone = current.future.slice(0, index + 1);
+      const remaining = current.future.slice(index + 1);
+      const redoneLabels = current.futureLabels.slice(0, index + 1);
+      const remainingLabels = current.futureLabels.slice(index + 1);
+      const newPast = [...current.past, current.present, ...redone.slice(0, -1)];
+      const newPastLabels = [...current.pastLabels, ...redoneLabels];
+      return {
+        ...current,
+        past: newPast,
+        pastLabels: newPastLabels,
+        present: target,
+        future: remaining,
+        futureLabels: remainingLabels,
+        lastCommitted: target,
       };
     }
 
@@ -221,6 +243,8 @@ export interface ComposerHistory {
   flushContinuous: () => void;
   undo: () => void;
   redo: () => void;
+  /** Redo to a specific future entry by index (atomic, single dispatch) */
+  redoTo: (index: number) => void;
   canUndo: boolean;
   canRedo: boolean;
   /** Past states for history panel display */
@@ -310,6 +334,11 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     dispatch({ type: 'REDO' });
   }, [flushContinuous]);
 
+  const redoTo = useCallback((index: number) => {
+    flushContinuous();
+    dispatch({ type: 'REDO_TO', index });
+  }, [flushContinuous]);
+
   const jumpTo = useCallback((index: number) => {
     flushContinuous();
     dispatch({ type: 'JUMP_TO', index });
@@ -341,6 +370,7 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     flushContinuous,
     undo,
     redo,
+    redoTo,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
     historyEntries: history.past,

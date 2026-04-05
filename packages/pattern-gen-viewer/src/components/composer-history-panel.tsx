@@ -29,7 +29,7 @@ interface ComposerHistoryPanelProps {
   futureLabels: string[];
   snapshots: HistorySnapshot[];
   onJumpTo: (index: number) => void;
-  onRedo: () => void;
+  onRedoTo: (index: number) => void;
   onPinSnapshot: (state: ComposerDocumentState, label: string) => void;
   onRemoveSnapshot: (id: string) => void;
   onRestoreSnapshot: (state: ComposerDocumentState) => void;
@@ -46,7 +46,7 @@ export function ComposerHistoryPanel({
   futureLabels,
   snapshots,
   onJumpTo,
-  onRedo,
+  onRedoTo,
   onPinSnapshot,
   onRemoveSnapshot,
   onRestoreSnapshot,
@@ -154,13 +154,11 @@ export function ComposerHistoryPanel({
               className="composer-history-entry composer-history-entry--future"
               role="button"
               tabIndex={0}
-              onClick={() => {
-                for (let r = 0; r <= i; r++) onRedo();
-              }}
+              onClick={() => onRedoTo(i)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  for (let r = 0; r <= i; r++) onRedo();
+                  onRedoTo(i);
                 }
               }}
               title={`Redo: ${label}`}

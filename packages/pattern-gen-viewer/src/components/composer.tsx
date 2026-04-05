@@ -773,7 +773,7 @@ export function Composer({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [getCanvasCoords, history.commit, history.setLabel]);
+  }, [getCanvasCoords, history.flushContinuous, history.commit, history.setLabel]);
 
   // Layer CRUD
   const handleAddImage = useCallback(() => {
@@ -1563,7 +1563,7 @@ export function Composer({
             futureLabels={history.futureLabels}
             snapshots={history.snapshots}
             onJumpTo={history.jumpTo}
-            onRedo={history.redo}
+            onRedoTo={history.redoTo}
             onPinSnapshot={history.pinSnapshot}
             onRemoveSnapshot={history.removeSnapshot}
             onRestoreSnapshot={history.restoreSnapshot}
