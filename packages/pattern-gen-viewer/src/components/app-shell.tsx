@@ -61,21 +61,21 @@ export function AppShell() {
 
   const handleSelectPattern = useCallback((patternType: string, slug: string, colorSchemeIndex: number) => {
     const tabName = patternType.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    tabCounterRef.current++;
-    const newTabId = `tab-${Date.now()}`;
+    const tabData = { name: tabName, initialPatternType: patternType, initialSlug: slug, initialColorSchemeIndex: colorSchemeIndex };
+    let selectedTabId: string;
     setTabs((prev) => {
       // If there's only the default empty tab, replace it
       if (prev.length === 1 && prev[0].id === 'tab-1') {
-        return [{ id: prev[0].id, name: tabName, initialPatternType: patternType, initialSlug: slug, initialColorSchemeIndex: colorSchemeIndex }];
+        selectedTabId = prev[0].id;
+        return [{ ...tabData, id: prev[0].id }];
       }
-      return [...prev, { id: newTabId, name: tabName, initialPatternType: patternType, initialSlug: slug, initialColorSchemeIndex: colorSchemeIndex }];
+      tabCounterRef.current++;
+      selectedTabId = `tab-${Date.now()}`;
+      return [...prev, { ...tabData, id: selectedTabId }];
     });
-    setActiveTabId((prev) => {
-      // If replacing default tab, keep its id
-      return tabs.length === 1 && tabs[0].id === 'tab-1' ? 'tab-1' : newTabId;
-    });
+    setActiveTabId(selectedTabId!);
     setCurrentPage('editor');
-  }, [tabs]);
+  }, []);
 
   const handleNavigateHome = useCallback(() => {
     setCurrentPage('home');
