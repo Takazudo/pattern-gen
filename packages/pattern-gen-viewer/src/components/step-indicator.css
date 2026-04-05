@@ -2,7 +2,7 @@
 
 .step-indicator {
   position: fixed;
-  top: calc(var(--global-header-height) + var(--tab-bar-height));
+  top: var(--chrome-height);
   left: 0;
   right: 0;
   z-index: 20;

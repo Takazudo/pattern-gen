@@ -21,15 +21,18 @@ export function AppShell() {
 
   const handleCloseTab = useCallback(
     (tabId: string) => {
-      if (tabs.length <= 1) return;
-      const idx = tabs.findIndex((t) => t.id === tabId);
-      setTabs((prev) => prev.filter((t) => t.id !== tabId));
-      if (activeTabId === tabId) {
-        const newActive = tabs[idx > 0 ? idx - 1 : 1];
-        setActiveTabId(newActive.id);
-      }
+      setTabs((prev) => {
+        if (prev.length <= 1) return prev;
+        const idx = prev.findIndex((t) => t.id === tabId);
+        const next = prev.filter((t) => t.id !== tabId);
+        if (activeTabId === tabId) {
+          const newActive = next[Math.min(idx, next.length - 1)];
+          setActiveTabId(newActive.id);
+        }
+        return next;
+      });
     },
-    [tabs, activeTabId],
+    [activeTabId],
   );
 
   const handleSwitchTab = useCallback((tabId: string) => {

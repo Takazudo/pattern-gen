@@ -56,11 +56,13 @@ export function TabBar({ tabs, activeTabId, onSwitch, onClose, onAdd, onRename }
   return (
     <div className="tab-bar">
       {tabs.map((tab) => (
-        <button
+        <div
           key={tab.id}
           className={`tab-bar-tab${tab.id === activeTabId ? ' active' : ''}`}
           onClick={() => onSwitch(tab.id)}
           onDoubleClick={() => handleDoubleClick(tab)}
+          role="tab"
+          aria-selected={tab.id === activeTabId}
         >
           {editingId === tab.id ? (
             <input
@@ -76,18 +78,18 @@ export function TabBar({ tabs, activeTabId, onSwitch, onClose, onAdd, onRename }
             <span className="tab-bar-tab-name">{tab.name}</span>
           )}
           {tabs.length > 1 && (
-            <span
+            <button
               className="tab-bar-close"
-              role="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onClose(tab.id);
               }}
+              aria-label={`Close ${tab.name}`}
             >
               ×
-            </span>
+            </button>
           )}
-        </button>
+        </div>
       ))}
       <button className="tab-bar-add" onClick={onAdd} title="New tab">
         +
