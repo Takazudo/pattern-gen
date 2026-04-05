@@ -21,9 +21,8 @@
 }
 
 .preset-size-modal {
-  width: 95vw;
-  max-width: 960px;
-  max-height: 85vh;
+  width: 90vw;
+  height: 90vh;
   display: flex;
   flex-direction: column;
   background: var(--color-surface-glass);
@@ -236,7 +235,6 @@
   .preset-size-modal {
     width: 100vw;
     height: 100vh;
-    max-height: 100vh;
     border-radius: 0;
   }
 
