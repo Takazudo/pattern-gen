@@ -1,8 +1,41 @@
+import { useState, useRef, useEffect } from 'react';
 import { centerDetentToZoom } from '@takazudo/pattern-gen-core';
-import * as Popover from '@radix-ui/react-popover';
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function InfoPopover({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div className="info-popover-wrapper" ref={ref}>
+      <button
+        className="info-trigger"
+        type="button"
+        aria-label="More info"
+        onClick={() => setOpen((v) => !v)}
+      >
+        &#9432;
+      </button>
+      {open && (
+        <div className="info-popover">
+          {text}
+          <div className="info-popover-arrow" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ViewTransformPanelProps {
   zoomSlider: number; // 0-100 slider value
@@ -169,19 +202,7 @@ export function ViewTransformPanel({
             />
             <span>Use big canvas</span>
           </label>
-          <Popover.Root>
-            <Popover.Trigger asChild>
-              <button className="info-trigger" type="button" aria-label="What is big canvas?">
-                &#9432;
-              </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content className="info-popover" side="top" sideOffset={5}>
-                Renders patterns on a larger canvas for smooth panning and rotation. Uses more memory and may be slower on some devices.
-                <Popover.Arrow className="info-popover-arrow" />
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
+          <InfoPopover text="Renders patterns on a larger canvas for smooth panning and rotation. Uses more memory and may be slower on some devices." />
         </div>
       )}
 

@@ -1,0 +1,34 @@
+---
+import DocLayout from '../layouts/doc-layout.astro';
+import SiteTreeNav from '../components/site-tree-nav';
+import { getStorySidebarNodes } from '../utils/story-sidebar';
+import { settings } from '../config/settings';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const storyTree = getStorySidebarNodes(base);
+
+// Build a top-level tree: Tokens section + Component categories
+const siteTree = [
+  {
+    slug: 'tokens',
+    label: 'Tokens',
+    position: 0,
+    href: `${base}/tokens`,
+    hasPage: true,
+    children: [],
+    description: 'Colors, spacing, typography, borders',
+  },
+  ...storyTree,
+];
+---
+
+<DocLayout title={settings.siteName} hideToc={true} hideSidebar={true}>
+  <div class="max-w-[60rem] mx-auto">
+    <h1 class="font-bold text-heading pb-vsp-3xs">
+      {settings.siteName}
+    </h1>
+    <p class="text-muted text-small pb-vsp-lg">Component catalog and design token reference</p>
+
+    <SiteTreeNav tree={siteTree} client:load />
+  </div>
+</DocLayout>

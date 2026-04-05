@@ -1,0 +1,18 @@
+---
+import SidebarTree from '../components/sidebar-tree';
+import { getSidebarNodes } from '../config/sidebars';
+import type { Locale } from '../config/i18n';
+
+interface Props {
+  currentSlug?: string;
+  lang?: Locale;
+  navSection?: string;
+}
+
+const { currentSlug, navSection } = Astro.props;
+
+const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+const nodes = getSidebarNodes(base, navSection);
+---
+
+<SidebarTree nodes={nodes} currentSlug={currentSlug} client:load />

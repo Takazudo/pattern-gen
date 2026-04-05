@@ -1,0 +1,354 @@
+---
+import "../styles/global.css";
+import Header from "../components/header.astro";
+import Sidebar from "../components/sidebar.astro";
+import { Toc } from "../components/toc";
+import { MobileToc } from "../components/mobile-toc";
+import ColorSchemeProvider from "../components/color-scheme-provider.astro";
+import CodeBlockEnhancer from "../components/code-block-enhancer.astro";
+import TabsInit from "../components/tabs-init.astro";
+import PageLoadingOverlay from "../components/page-loading-overlay.astro";
+import { ClientRouter } from "astro:transitions";
+import { settings } from "../config/settings";
+import type { Heading } from "../types/heading";
+import { getNavSectionForSlug } from "../utils/nav-scope";
+import { defaultLocale, t, type Locale } from "../config/i18n";
+import { withBase } from "../utils/base";
+import Footer from "../components/footer.astro";
+import TokenTweakPanel from "../features/token-tweak/token-tweak-panel";
+import DesktopSidebarToggle from "../components/desktop-sidebar-toggle";
+import { SEMANTIC_DEFAULTS, SEMANTIC_CSS_NAMES } from "../config/color-scheme-utils";
+
+interface Props {
+  title: string;
+  description?: string;
+  lang?: Locale;
+  currentSlug?: string;
+  headings?: Heading[];
+  unlisted?: boolean;
+  hideSidebar?: boolean;
+  hideToc?: boolean;
+  showCodePanelToggle?: boolean;
+}
+
+const {
+  title,
+  description,
+  lang = defaultLocale,
+  currentSlug,
+  headings = [],
+  unlisted = false,
+  hideSidebar = false,
+  hideToc = false,
+  showCodePanelToggle = false,
+} = Astro.props;
+const fullTitle = title === settings.siteName ? title : `${title} | ${settings.siteName}`;
+const navSection = currentSlug ? getNavSectionForSlug(currentSlug) : undefined;
+const currentPath = Astro.url.pathname;
+const contentAnim = {
+  old: {
+    name: "contentFadeOut",
+    duration: 0,
+    easing: "ease-in",
+    fillMode: "both",
+  },
+  new: {
+    name: "contentFadeIn",
+    duration: 300,
+    easing: "ease-out",
+    fillMode: "both",
+  },
+};
+const contentTransition = {
+  forwards: contentAnim,
+  backwards: contentAnim,
+};
+---
+
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    {description && <meta name="description" content={description} />}
+    {settings.noindex && <meta name="robots" content="noindex, nofollow" />}
+    {!settings.noindex && unlisted && <meta name="robots" content="noindex" />}
+    <meta property="og:title" content={fullTitle} />
+    {description && <meta property="og:description" content={description} />}
+    <ColorSchemeProvider />
+    <script is:inline>
+      (function () {
+        // Key must match SIDEBAR_STORAGE_KEY in desktop-sidebar-toggle.tsx
+        function applySidebarState() {
+          if (localStorage.getItem('styleguide-sidebar-visible') === 'false') {
+            document.documentElement.setAttribute('data-sidebar-hidden', '');
+          } else {
+            document.documentElement.removeAttribute('data-sidebar-hidden');
+          }
+          // Restore persisted sidebar width
+          try {
+            var w = localStorage.getItem('styleguide-sidebar-width');
+            if (w && !isNaN(Number(w)))
+              document.documentElement.style.setProperty('--desktop-sidebar-w', w + 'px');
+          } catch (e) {}
+          // Restore persisted code panel width
+          try {
+            var cw = localStorage.getItem('styleguide-code-panel-width');
+            if (cw && !isNaN(Number(cw)))
+              document.documentElement.style.setProperty('--code-panel-w', cw + 'px');
+          } catch (e) {}
+        }
+        applySidebarState();
+        if (!window.__sgSidebarApplied) {
+          document.addEventListener('astro:after-swap', applySidebarState);
+          window.__sgSidebarApplied = true;
+        }
+      })();
+    </script>
+    {settings.colorTweakPanel && (
+      <script is:inline define:vars={{ tweakSemanticDefaults: SEMANTIC_DEFAULTS, tweakSemanticCss: SEMANTIC_CSS_NAMES }}>
+        (function () {
+          function applyTweakState() {
+            var raw = localStorage.getItem("zudo-doc-tweak-state");
+            if (!raw) return;
+            try {
+              var s = JSON.parse(raw);
+              if (!s.palette || !s.semanticMappings) return;
+              var root = document.documentElement;
+              // Apply base vars
+              var bg = s.semanticMappings.bg !== undefined ? s.palette[s.semanticMappings.bg] : (s.background !== undefined ? s.palette[s.background] : null);
+              var fg = s.semanticMappings.fg !== undefined ? s.palette[s.semanticMappings.fg] : (s.foreground !== undefined ? s.palette[s.foreground] : null);
+              if (bg) root.style.setProperty("--pg-bg", bg);
+              if (fg) root.style.setProperty("--pg-fg", fg);
+              if (s.cursor !== undefined) root.style.setProperty("--pg-cursor", s.palette[s.cursor]);
+              if (s.selectionBg !== undefined) root.style.setProperty("--pg-sel-bg", s.palette[s.selectionBg]);
+              if (s.selectionFg !== undefined) root.style.setProperty("--pg-sel-fg", s.palette[s.selectionFg]);
+              // Apply semantic overrides
+              for (var key in tweakSemanticCss) {
+                var m = s.semanticMappings && s.semanticMappings[key];
+                if (m === undefined) m = tweakSemanticDefaults[key];
+                if (m !== undefined && s.palette[m]) {
+                  root.style.setProperty(tweakSemanticCss[key], s.palette[m]);
+                }
+              }
+            } catch (e) { localStorage.removeItem("zudo-doc-tweak-state"); }
+          }
+          applyTweakState();
+          document.addEventListener("astro:after-swap", applyTweakState);
+        })();
+      </script>
+    )}
+    <ClientRouter />
+  </head>
+  <body class="min-h-screen antialiased">
+    <Header lang={lang} currentPath={currentPath} showCodePanelToggle={showCodePanelToggle}>
+      <Sidebar slot="sidebar" currentSlug={currentSlug} lang={lang} navSection={navSection} />
+    </Header>
+
+    <div class="flex min-h-[calc(100vh-3.5rem)]">
+      {/* Desktop sidebar */}
+      {!hideSidebar && (
+        <aside
+          id="desktop-sidebar"
+          transition:persist={`sidebar-${lang}-${navSection ?? "default"}`}
+          class="hidden lg:block w-[var(--desktop-sidebar-w)] shrink-0 border-r border-muted sticky top-[3.5rem] h-[calc(100vh-3.5rem)] overflow-y-auto relative"
+        >
+          <Sidebar currentSlug={currentSlug} lang={lang} navSection={navSection} />
+        </aside>
+      )}
+      {!hideSidebar && (
+        <DesktopSidebarToggle
+          client:load
+          transition:persist="desktop-sidebar-toggle"
+        />
+      )}
+
+      {/* Content + TOC wrapper */}
+      <div class="flex-1 min-w-0 flex justify-center">
+        <div class:list={[
+          "flex w-full gap-[clamp(1.5rem,3vw,4rem)]",
+          hideSidebar ? "max-w-[80rem]" : "max-w-[clamp(50rem,75vw,90rem)]",
+        ]}>
+          {/* Main content */}
+          <main class="flex-1 min-w-0 px-hsp-xl py-vsp-xl lg:px-hsp-2xl lg:py-vsp-2xl" transition:animate={contentTransition}>
+            <slot name="breadcrumb" />
+            {!hideToc && <MobileToc headings={headings} title={t("toc.title", lang)} client:load />}
+            <article class="zd-content max-w-none">
+              <slot />
+            </article>
+          </main>
+
+          {/* Table of contents */}
+          {!hideToc && <Toc headings={headings} client:load />}
+        </div>
+      </div>
+
+      {/* Right-side panel (e.g. code panel on story pages) */}
+      <slot name="aside-right" />
+    </div>
+    {settings.colorTweakPanel && <TokenTweakPanel client:only="react" />}
+    <Footer lang={lang} />
+    <CodeBlockEnhancer />
+    <TabsInit />
+    <PageLoadingOverlay />
+    <script>
+      let _sidebarScrollTop = 0;
+      document.addEventListener("astro:before-swap", () => {
+        const el = document.getElementById("desktop-sidebar");
+        if (el) _sidebarScrollTop = el.scrollTop;
+      });
+      document.addEventListener("astro:after-swap", () => {
+        const el = document.getElementById("desktop-sidebar");
+        if (el) el.scrollTop = _sidebarScrollTop;
+      });
+    </script>
+    <script>
+      /**
+       * Generic panel resizer — creates a draggable edge handle with ghost line feedback.
+       * Used for both the left sidebar and the right code panel.
+       */
+      function initPanelResizer(opts: {
+        elementId: string;
+        edge: 'right' | 'left';
+        cssVar: string;
+        storageKey: string;
+        minPx: number;
+        maxPx: number;
+      }) {
+        const panel = document.getElementById(opts.elementId);
+        if (!panel || panel.querySelector(`[data-resizer="${opts.elementId}"]`)) return;
+
+        const handle = document.createElement('div');
+        handle.setAttribute(`data-resizer`, opts.elementId);
+        Object.assign(handle.style, {
+          position: 'absolute',
+          top: '0',
+          [opts.edge]: '0',
+          width: '6px',
+          height: '100%',
+          cursor: 'col-resize',
+          zIndex: '10',
+          transition: 'background 0.15s',
+        });
+
+        let dragging = false;
+
+        handle.addEventListener('mouseenter', () => {
+          if (!dragging) handle.style.background = 'var(--pg-accent, rgba(128,128,128,0.3))';
+        });
+        handle.addEventListener('mouseleave', () => {
+          if (!dragging) handle.style.background = '';
+        });
+
+        handle.addEventListener('pointerdown', (e: PointerEvent) => {
+          e.preventDefault();
+          handle.setPointerCapture(e.pointerId);
+          dragging = true;
+          handle.style.background = 'var(--pg-accent, rgba(128,128,128,0.3))';
+          document.documentElement.style.cursor = 'col-resize';
+          document.documentElement.style.userSelect = 'none';
+
+          const ghost = document.createElement('div');
+          Object.assign(ghost.style, {
+            position: 'fixed',
+            top: '0',
+            width: '2px',
+            height: '100vh',
+            background: 'var(--pg-accent, rgba(128,128,128,0.5))',
+            pointerEvents: 'none',
+            zIndex: '9999',
+          });
+          const panelRect = panel!.getBoundingClientRect();
+          ghost.style.left =
+            opts.edge === 'right'
+              ? panelRect.right + 'px'
+              : panelRect.left + 'px';
+          document.body.appendChild(ghost);
+          let targetWidth = 0;
+
+          const onMove = (ev: PointerEvent) => {
+            if (opts.edge === 'right') {
+              // Sidebar: drag right edge → width = clientX - panelLeft
+              targetWidth = Math.max(opts.minPx, Math.min(opts.maxPx, ev.clientX - panelRect.left));
+              ghost.style.left = panelRect.left + targetWidth + 'px';
+            } else {
+              // Code panel (right side): drag left edge → width = panelRight - clientX
+              targetWidth = Math.max(opts.minPx, Math.min(opts.maxPx, panelRect.right - ev.clientX));
+              ghost.style.left = panelRect.right - targetWidth + 'px';
+            }
+          };
+
+          const cleanup = () => {
+            dragging = false;
+            handle.style.background = '';
+            document.documentElement.style.cursor = '';
+            document.documentElement.style.userSelect = '';
+            ghost.remove();
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup', onUp);
+            handle.removeEventListener('pointercancel', onCancel);
+            handle.removeEventListener('lostpointercapture', onCancel);
+          };
+
+          const onUp = (ev: PointerEvent) => {
+            handle.releasePointerCapture(ev.pointerId);
+            cleanup();
+            if (targetWidth > 0) {
+              document.documentElement.style.setProperty(opts.cssVar, targetWidth + 'px');
+              try {
+                localStorage.setItem(opts.storageKey, String(Math.round(targetWidth)));
+              } catch (e) {}
+            }
+          };
+
+          const onCancel = () => {
+            cleanup();
+          };
+
+          handle.addEventListener('pointermove', onMove);
+          handle.addEventListener('pointerup', onUp);
+          handle.addEventListener('pointercancel', onCancel);
+          handle.addEventListener('lostpointercapture', onCancel);
+        });
+
+        panel.appendChild(handle);
+      }
+
+      function initAllResizers() {
+        initPanelResizer({
+          elementId: 'desktop-sidebar',
+          edge: 'right',
+          cssVar: '--desktop-sidebar-w',
+          storageKey: 'styleguide-sidebar-width',
+          minPx: 192,
+          maxPx: 448,
+        });
+        initPanelResizer({
+          elementId: 'code-panel',
+          edge: 'left',
+          cssVar: '--code-panel-w',
+          storageKey: 'styleguide-code-panel-width',
+          minPx: 256,
+          maxPx: Math.floor(window.innerWidth * 0.5),
+        });
+      }
+
+      // Run after initial load + after Astro page transitions.
+      // Use requestIdleCallback to wait for Preact islands (code-panel) to mount.
+      function scheduleResizers() {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(() => initAllResizers());
+        } else {
+          setTimeout(initAllResizers, 200);
+        }
+      }
+      scheduleResizers();
+      document.addEventListener('astro:after-swap', scheduleResizers);
+      // Also retry when a new island hydrates (code-panel appears later)
+      new MutationObserver(() => initAllResizers()).observe(
+        document.body,
+        { childList: true, subtree: true },
+      );
+    </script>
+  </body>
+</html>

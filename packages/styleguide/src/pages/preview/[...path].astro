@@ -1,0 +1,23 @@
+---
+import PreviewLayout from '../../layouts/preview-layout.astro';
+import { VariantRenderer } from '../../features/preview/variant-renderer';
+import { getAllSlugs, getModuleBySlugSync, getStoryPath } from '../../data/stories';
+
+export function getStaticPaths() {
+  return getAllSlugs().flatMap((slug) => {
+    const mod = getModuleBySlugSync(slug);
+    if (!mod) return [];
+    const storyPath = getStoryPath(slug) ?? '';
+    return mod.variants.map((v) => ({
+      params: { path: `${slug}/${v.name}` },
+      props: { slug, variantName: v.name, storyPath },
+    }));
+  });
+}
+
+const { slug, variantName, storyPath } = Astro.props;
+---
+
+<PreviewLayout>
+  <VariantRenderer slug={slug} variant={variantName} storyPath={storyPath} client:only="react" />
+</PreviewLayout>

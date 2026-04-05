@@ -13,6 +13,7 @@ interface ImageLayerPanelProps {
   onThresholdChange: (id: string, value: number) => void;
   onBgRemovalToggle: (id: string, enabled: boolean) => void;
   onKeepAspectRatioChange: (id: string, keep: boolean) => void;
+  onBrowseFiles?: (layerId: string) => void;
 }
 
 export function ImageLayerPanel({
@@ -27,6 +28,7 @@ export function ImageLayerPanel({
   onThresholdChange,
   onBgRemovalToggle,
   onKeepAspectRatioChange,
+  onBrowseFiles,
 }: ImageLayerPanelProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -153,6 +155,19 @@ export function ImageLayerPanel({
               >
                 {!layer.hasBgRemovalData ? 'BG\u00A0Rm' : 'BG'}
               </button>
+              {onBrowseFiles && (
+                <button
+                  className="image-layer-browse"
+                  aria-label={`Browse assets for ${layer.name}`}
+                  title="Browse My Assets"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBrowseFiles(layer.id);
+                  }}
+                >
+                  ⬒
+                </button>
+              )}
               <button
                 className="image-layer-duplicate"
                 aria-label={`Duplicate ${layer.name}`}

@@ -6,6 +6,7 @@ import {
   applyHslAdjust,
   getEffectiveParams,
   centerDetentToZoom,
+  zoomToCenterDetent,
   serializeOgpConfig,
   OGP_WIDTH,
   OGP_HEIGHT,
@@ -29,6 +30,18 @@ import type { AppStep } from './components/step-indicator.js';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { downloadBlob, triggerDownload } from './utils/trigger-download.js';
+import { useAuth } from './contexts/auth-context.js';
+import { AuthButton } from './components/auth-button.js';
+import { SaveCompositionModal } from './components/save-composition-modal.js';
+import { MyCompositions } from './components/my-compositions.js';
+import { MyAssets } from './components/my-assets.js';
+import { ImageUpload } from './components/image-upload.js';
+import { UserPage } from './components/user-page.js';
+import { MediaBrowserDialog } from './components/media-browser-dialog.js';
+import { CompositionMenu } from './components/composition-menu.js';
+import { DiscardConfirmationDialog } from './components/discard-confirmation-dialog.js';
+import { api } from './lib/api-client.js';
+import type { AssetEntry, Composition } from './lib/api-types.js';
 
 const CANVAS_SIZE = 1200;
 const DPR = window.devicePixelRatio || 1;
@@ -272,6 +285,7 @@ function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
 }
 
 export function App() {
+  const { isAuthenticated } = useAuth();
   const [slug, setSlug] = useState(randomSlug);
   const [patternType, setPatternType] = useState(patternRegistry[0].name);
   const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
@@ -284,6 +298,7 @@ export function App() {
   const [skewY, setSkewY] = useState(0);
   const [currentStep, setCurrentStep] = useState<AppStep>('background');
   const [composerActive, setComposerActive] = useState(false);
+  const [tweakingPattern, setTweakingPattern] = useState(false);
   const [composerBgImage, setComposerBgImage] = useState<ImageBitmap | null>(null);
   const [composerBgConfig, setComposerBgConfig] = useState<OgpConfig | null>(null);
   const [composerOutputSize, setComposerOutputSize] = useState({ width: OGP_WIDTH, height: OGP_HEIGHT });
@@ -302,6 +317,21 @@ export function App() {
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState('');
   const [urlCopied, setUrlCopied] = useState(false);
+  // Auth-related UI state
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModalData, setSaveModalData] = useState<{ configJson: string; previewDataUrl?: string } | null>(null);
+  const [showMyCompositions, setShowMyCompositions] = useState(false);
+  const [showMyAssets, setShowMyAssets] = useState(false);
+  const [showUserPage, setShowUserPage] = useState(false);
+  const [mediaBrowserLayerId, setMediaBrowserLayerId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  // Composition tracking
+  const [currentCompositionId, setCurrentCompositionId] = useState<string | null>(null);
+  const [compositionTitle, setCompositionTitle] = useState('Untitled');
+  const [isDirty, setIsDirty] = useState(false);
+  const [discardAction, setDiscardAction] = useState<'new' | 'open' | null>(null);
+  const suppressDirtyCountRef = useRef(0);
+  const lastSeenSuppressRef = useRef(0);
   const skipResetRef = useRef(0);
   // Image layers state (multi-image)
   const [imageLayers, setImageLayers] = useState<ViewerImageLayer[]>([]);
@@ -351,6 +381,7 @@ export function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('slug')) return; // No URL params, use defaults
+    suppressDirtyCountRef.current += 1;
 
     const urlSlug = params.get('slug');
     const urlType = params.get('type');
@@ -524,6 +555,23 @@ export function App() {
     }
   }, [restoreColorAdjusted, applyContrastBrightnessAndCache, applyHslAndCache, generateAndCache, imageLayers]);
 
+  // Track dirty state for composition changes.
+  // Counter-based suppression: suppressDirty() increments a counter.
+  // The first effect firing after the counter changes consumes the
+  // suppression and skips marking dirty. Real user edits after that
+  // immediately set isDirty = true.
+  useEffect(() => {
+    if (suppressDirtyCountRef.current !== lastSeenSuppressRef.current) {
+      lastSeenSuppressRef.current = suppressDirtyCountRef.current;
+      return;
+    }
+    setIsDirty(true);
+  }, [slug, patternType, colorSchemeIndex, zoomSlider, translateX, translateY, useTranslate, rotate, skewX, skewY, userOverrides, hslAdjust, contrastBrightness, compositionTitle, imageLayers]);
+
+  const suppressDirty = useCallback(() => {
+    suppressDirtyCountRef.current += 1;
+  }, []);
+
   const handleParamChange = useCallback((key: string, value: number) => {
     setUserOverrides((prev) => ({ ...prev, [key]: value }));
   }, []);
@@ -610,6 +658,11 @@ export function App() {
     setShowUrlModal(true);
   }, [slug, patternType, colorSchemeIndex, zoomSlider, useTranslate, translateX, translateY, rotate, skewX, skewY, userOverrides, hslAdjust, contrastBrightness]);
 
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2000);
+  }, []);
+
   // Layer counter for unique naming
   const layerCounterRef = useRef(0);
 
@@ -681,7 +734,15 @@ export function App() {
 
     setImageLayers((prev) => [newLayer, ...prev]);
     setSelectedLayerId(newId);
-  }, []);
+
+    // Auto-save for authenticated users (non-blocking)
+    if (isAuthenticated) {
+      api.upload<AssetEntry>('/api/assets', file).then(
+        () => showToast('Image saved to My Assets'),
+        () => { /* silent failure for auto-save */ },
+      );
+    }
+  }, [isAuthenticated, showToast]);
 
   const handleDeleteLayer = useCallback((id: string) => {
     setImageLayers((prev) => prev.filter((l) => l.id !== id));
@@ -824,6 +885,53 @@ export function App() {
       prev.map((l) => (l.id === id ? { ...l, transform } : l)),
     );
   }, []);
+
+  // Replace a specific layer's image from media browser
+  const handleMediaBrowserSelect = useCallback(async (file: File) => {
+    const layerId = mediaBrowserLayerId;
+    if (!layerId) return;
+    setMediaBrowserLayerId(null);
+
+    let img: ImageBitmap;
+    try {
+      img = await createImageBitmap(file);
+    } catch {
+      return;
+    }
+
+    const rawCanvas = new OffscreenCanvas(img.width, img.height);
+    const rawCtx = rawCanvas.getContext('2d');
+    if (!rawCtx) return;
+    rawCtx.drawImage(img, 0, 0);
+    const imageData = rawCtx.getImageData(0, 0, img.width, img.height);
+
+    const processed: ProcessedImage = {
+      original: imageData,
+      alphaMask: new Uint8ClampedArray(img.width * img.height).fill(255),
+      width: img.width,
+      height: img.height,
+    };
+
+    setImageLayers((prev) =>
+      prev.map((l) => {
+        if (l.id !== layerId) return l;
+        const updated: ViewerImageLayer = {
+          ...l,
+          processed,
+          originalFile: file,
+          name: file.name,
+          bgRemovalEnabled: false,
+          hasBgRemovalData: false,
+          bgThreshold: 0,
+          isProcessing: false,
+          error: null,
+          thresholdedCache: null,
+        };
+        updated.thresholdedCache = computeThresholdedCache(updated);
+        return updated;
+      }),
+    );
+  }, [mediaBrowserLayerId]);
 
   // Randomize changes slug (seed) and color scheme
   const randomize = useCallback(() => {
@@ -1062,14 +1170,376 @@ export function App() {
   const currentPalette = COLOR_SCHEMES[colorSchemeIndex].palette;
 
   const handleStepChange = useCallback((step: AppStep) => {
+    // During tweaking, block all step changes — use
+    // "Return to Composer" or "Discard" buttons instead
+    if (tweakingPattern) return;
     setCurrentStep(step);
+    setComposerActive(false);
+  }, [tweakingPattern]);
+
+  const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
+  const handleExitComposer = useCallback(() => {
+    setTweakingPattern(false);
     setComposerActive(false);
   }, []);
 
-  const handleExitToBackground = useCallback(() => setCurrentStep('background'), []);
-  const handleExitComposer = useCallback(() => setComposerActive(false), []);
+  // Tweak Pattern: go back to background view while keeping Composer mounted
+  const handleTweakPattern = useCallback(() => {
+    setTweakingPattern(true);
+    setCurrentStep('background');
+  }, []);
 
-  const showStepIndicator = !composerActive;
+  // Return to Composer: re-render background with current pattern settings
+  const handleReturnToComposer = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const outW = composerOutputSize.width;
+    const outH = composerOutputSize.height;
+    const outputAspect = outW / outH;
+
+    // Ensure the render canvas is large enough that the center crop
+    // region covers the output dimensions with quality headroom
+    const cropAspect = outputAspect >= 1 ? outputAspect : 1 / outputAspect;
+    const renderSize = Math.min(4000, Math.max(
+      CANVAS_SIZE,
+      Math.ceil(Math.max(outW, outH) * cropAspect),
+    ));
+
+    const hiResCanvas = document.createElement('canvas');
+    hiResCanvas.width = renderSize;
+    hiResCanvas.height = renderSize;
+    generateOnCanvas(hiResCanvas, slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY);
+
+    const hiResCtx = hiResCanvas.getContext('2d');
+    if (!hiResCtx) return;
+    if (hslAdjust.h !== 0 || hslAdjust.s !== 0 || hslAdjust.l !== 0) {
+      applyHslAdjust(hiResCtx, renderSize, renderSize, hslAdjust);
+    }
+    applyContrastBrightness(hiResCtx, renderSize, renderSize, contrastBrightness);
+    // Note: do NOT call compositeOverlay here — the Composer manages its
+    // own layers. Baking viewer image layers into the background would
+    // double-composite them when the Composer re-renders.
+
+    // Reuse existing crop from composerBgConfig if available (preserves
+    // the original selection framing during tweak mode), otherwise center crop.
+    let cropX: number;
+    let cropY: number;
+    let cropW: number;
+    let cropH: number;
+    if (composerBgConfig?.crop) {
+      cropX = composerBgConfig.crop.x * renderSize;
+      cropY = composerBgConfig.crop.y * renderSize;
+      cropW = composerBgConfig.crop.width * renderSize;
+      cropH = composerBgConfig.crop.height * renderSize;
+    } else {
+      const outputAspectFallback = outW / outH;
+      if (outputAspectFallback >= 1) {
+        cropW = renderSize;
+        cropH = renderSize / outputAspectFallback;
+      } else {
+        cropH = renderSize;
+        cropW = renderSize * outputAspectFallback;
+      }
+      cropX = (renderSize - cropW) / 2;
+      cropY = (renderSize - cropH) / 2;
+    }
+
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = outW;
+    bgCanvas.height = outH;
+    const bgCtx = bgCanvas.getContext('2d');
+    if (!bgCtx) return;
+    bgCtx.drawImage(hiResCanvas, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
+
+    const bitmap = await createImageBitmap(bgCanvas);
+
+    const cb = contrastBrightness;
+    const hasContrastBrightness = cb.contrast !== 0 || cb.brightness !== 0;
+    const config: OgpConfig = {
+      version: 1,
+      slug,
+      type: patternType,
+      colorScheme: COLOR_SCHEMES[colorSchemeIndex].name,
+      zoom,
+      translateX: txVal,
+      translateY: tyVal,
+      useTranslate,
+      ...(rotate !== 0 ? { rotate } : {}),
+      ...(skewX !== 0 ? { skewX } : {}),
+      ...(skewY !== 0 ? { skewY } : {}),
+      params: { ...displayParams },
+      hsl: { ...hslAdjust },
+      ...(hasContrastBrightness ? { contrastBrightness: { ...cb } } : {}),
+      crop: {
+        x: cropX / renderSize,
+        y: cropY / renderSize,
+        width: cropW / renderSize,
+        height: cropH / renderSize,
+      },
+    };
+
+    setComposerBgImage(bitmap);
+    setComposerBgConfig(config);
+    setCurrentStep('compose');
+    setTweakingPattern(false);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, userOverrides, useTranslate, rotate, skewX, skewY, hslAdjust, contrastBrightness, displayParams, composerOutputSize, composerBgConfig]);
+
+  // Discard working composition and return to background
+  const handleDiscardComposition = useCallback(() => {
+    setTweakingPattern(false);
+    setComposerActive(false);
+    setCurrentStep('background');
+  }, []);
+
+  const getSaveConfigJson = useCallback((): string => {
+    const canvas = canvasRef.current;
+    if (!canvas) return '{}';
+    const rect = canvas.getBoundingClientRect();
+    const config = buildBackgroundConfig(
+      { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+      canvas,
+      {
+        slug,
+        patternType,
+        colorSchemeName: COLOR_SCHEMES[colorSchemeIndex].name,
+        zoom,
+        txVal,
+        tyVal,
+        useTranslate,
+        rotate,
+        skewX,
+        skewY,
+        displayParams,
+        hslAdjust,
+        contrastBrightness,
+      },
+    );
+    return serializeOgpConfig(config);
+  }, [slug, patternType, colorSchemeIndex, zoom, txVal, tyVal, useTranslate, rotate, skewX, skewY, displayParams, hslAdjust, contrastBrightness]);
+
+  const getSavePreviewDataUrl = useCallback((): string | undefined => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const preview = document.createElement('canvas');
+    preview.width = 300;
+    preview.height = 300;
+    const pCtx = preview.getContext('2d');
+    if (!pCtx) return undefined;
+    pCtx.drawImage(canvas, 0, 0, 300, 300);
+    return preview.toDataURL('image/png');
+  }, []);
+
+  // ── Composition management ──
+
+  const resetToFreshState = useCallback(() => {
+    suppressDirty();
+    setIsDirty(false);
+    setCurrentCompositionId(null);
+    setCompositionTitle('Untitled');
+    setSlug(randomSlug());
+    setPatternType(patternRegistry[0].name);
+    setColorSchemeIndex(0);
+    setZoomSlider(50);
+    setTranslateX(0);
+    setTranslateY(0);
+    setUseTranslate(false);
+    setRotate(0);
+    setSkewX(0);
+    setSkewY(0);
+    setUserOverrides({});
+    setFixedParams(new Set());
+    setHslAdjust({ h: 0, s: 0, l: 0 });
+    setContrastBrightness({ contrast: 0, brightness: 0 });
+    setImageLayers([]);
+    setSelectedLayerId(null);
+    setCurrentStep('background');
+    setComposerActive(false);
+    setTweakingPattern(false);
+    setComposerBgImage(null);
+    setComposerBgConfig(null);
+  }, [suppressDirty]);
+
+  const handleLoadComposition = useCallback((composition: Composition) => {
+    suppressDirty();
+    setIsDirty(false);
+    try {
+      const config = JSON.parse(composition.configJson) as OgpConfig;
+
+      // Only promote to current composition after config parses successfully.
+      // This prevents corrupted state if configJson is malformed.
+      setCurrentCompositionId(composition.id);
+      setCompositionTitle(composition.name);
+
+      // Prevent reset effect from overriding loaded state.
+      // React 18 batches all state updates into one render, so the effect
+      // fires exactly once. Always set to 1 to skip that single firing.
+      if (config.slug || config.type) skipResetRef.current = 1;
+
+      if (config.slug) setSlug(config.slug);
+      if (config.type) setPatternType(config.type);
+      if (config.colorScheme) {
+        const idx = COLOR_SCHEMES.findIndex((s) => s.name === config.colorScheme);
+        if (idx >= 0) setColorSchemeIndex(idx);
+      }
+      if (config.zoom != null) {
+        setZoomSlider(Math.round(zoomToCenterDetent(config.zoom)));
+      }
+      if (config.useTranslate) {
+        setUseTranslate(true);
+        if (config.translateX != null) setTranslateX(config.translateX * 100);
+        if (config.translateY != null) setTranslateY(config.translateY * 100);
+      }
+      if (config.rotate) setRotate(config.rotate);
+      if (config.skewX) setSkewX(config.skewX);
+      if (config.skewY) setSkewY(config.skewY);
+      if (config.params) setUserOverrides(config.params);
+      if (config.hsl) setHslAdjust(config.hsl);
+      if (config.contrastBrightness) setContrastBrightness(config.contrastBrightness);
+      showToast('Composition loaded');
+    } catch {
+      showToast('Failed to load composition config');
+    }
+  }, [suppressDirty, showToast]);
+
+  const handleMenuNew = useCallback(() => {
+    if (isDirty) {
+      setDiscardAction('new');
+    } else {
+      resetToFreshState();
+    }
+  }, [isDirty, resetToFreshState]);
+
+  const handleMenuOpen = useCallback(() => {
+    if (isDirty) {
+      setDiscardAction('open');
+    } else {
+      setShowMyCompositions(true);
+    }
+  }, [isDirty]);
+
+  const handleMenuSave = useCallback(async () => {
+    if (currentCompositionId) {
+      try {
+        const configJson = getSaveConfigJson();
+        const previewDataUrl = getSavePreviewDataUrl();
+        await api.put<Composition>(`/api/compositions/${currentCompositionId}`, {
+          name: compositionTitle,
+          configJson,
+          patternType,
+          previewDataUrl,
+        });
+        suppressDirty();
+        setIsDirty(false);
+        showToast('Composition saved');
+      } catch {
+        showToast('Failed to save composition');
+      }
+    } else {
+      // No ID — show Save As modal
+      setSaveModalData({
+        configJson: getSaveConfigJson(),
+        previewDataUrl: getSavePreviewDataUrl(),
+      });
+      setShowSaveModal(true);
+    }
+  }, [currentCompositionId, compositionTitle, patternType, getSaveConfigJson, getSavePreviewDataUrl, suppressDirty, showToast]);
+
+  const handleMenuSaveAs = useCallback(() => {
+    setSaveModalData({
+      configJson: getSaveConfigJson(),
+      previewDataUrl: getSavePreviewDataUrl(),
+    });
+    setShowSaveModal(true);
+  }, [getSaveConfigJson, getSavePreviewDataUrl]);
+
+  const handleMenuDuplicate = useCallback(async () => {
+    try {
+      const configJson = getSaveConfigJson();
+      const previewDataUrl = getSavePreviewDataUrl();
+      const composition = await api.post<Composition>('/api/compositions', {
+        name: `${compositionTitle} (copy)`,
+        configJson,
+        patternType,
+        previewDataUrl,
+      });
+      suppressDirty();
+      setCurrentCompositionId(composition.id);
+      setCompositionTitle(composition.name);
+      setIsDirty(false);
+      showToast('Composition duplicated');
+    } catch {
+      showToast('Failed to duplicate composition');
+    }
+  }, [compositionTitle, patternType, getSaveConfigJson, getSavePreviewDataUrl, suppressDirty, showToast]);
+
+  const handleDiscard = useCallback(() => {
+    const action = discardAction;
+    setDiscardAction(null);
+    resetToFreshState();
+    if (action === 'open') {
+      setTimeout(() => setShowMyCompositions(true), 0);
+    }
+  }, [discardAction, resetToFreshState]);
+
+  const handleKeep = useCallback(async () => {
+    const action = discardAction;
+    setDiscardAction(null);
+    try {
+      const configJson = getSaveConfigJson();
+      const previewDataUrl = getSavePreviewDataUrl();
+      if (currentCompositionId) {
+        await api.put<Composition>(`/api/compositions/${currentCompositionId}`, {
+          name: compositionTitle,
+          configJson,
+          patternType,
+          previewDataUrl,
+        });
+      } else {
+        const composition = await api.post<Composition>('/api/compositions', {
+          name: compositionTitle,
+          configJson,
+          patternType,
+          previewDataUrl,
+        });
+        setCurrentCompositionId(composition.id);
+      }
+      showToast('Composition saved');
+    } catch {
+      showToast('Failed to save composition');
+      return;
+    }
+
+    if (action === 'new') {
+      resetToFreshState();
+    } else if (action === 'open') {
+      suppressDirty();
+      setIsDirty(false);
+      setShowMyCompositions(true);
+    }
+  }, [discardAction, currentCompositionId, compositionTitle, patternType, getSaveConfigJson, getSavePreviewDataUrl, suppressDirty, showToast, resetToFreshState]);
+
+  const handleCancelDiscard = useCallback(() => {
+    setDiscardAction(null);
+  }, []);
+
+  const handleCompositionTitleChange = useCallback(async (newTitle: string) => {
+    if (currentCompositionId) {
+      // Title will be persisted to server — suppress dirty so the UI
+      // doesn't show "unsaved changes" just because the name was renamed.
+      suppressDirty();
+    }
+    setCompositionTitle(newTitle);
+    if (currentCompositionId) {
+      try {
+        await api.put(`/api/compositions/${currentCompositionId}`, { name: newTitle });
+      } catch {
+        // Silent failure for title update
+      }
+    }
+  }, [currentCompositionId, suppressDirty]);
+
+  const showStepIndicator = !composerActive || tweakingPattern;
 
   return (
     <div className="app">
@@ -1088,6 +1558,23 @@ export function App() {
 
       {currentStep === 'background' && (
         <>
+          {/* Auth button (top-right, before site link) */}
+          <AuthButton
+            onOpenUserPage={() => setShowUserPage(true)}
+          />
+
+          {/* Composition menu (authenticated only) */}
+          {isAuthenticated && (
+            <CompositionMenu
+              compositionTitle={compositionTitle}
+              onNew={handleMenuNew}
+              onOpen={handleMenuOpen}
+              onSave={handleMenuSave}
+              onSaveAs={handleMenuSaveAs}
+              onDuplicate={handleMenuDuplicate}
+            />
+          )}
+
           {/* Site logo link (top-right) */}
           <a
             className="floating-link site-link"
@@ -1136,18 +1623,37 @@ export function App() {
       )}
 
       {composerActive && (
-        <Composer
-          backgroundImage={composerBgImage}
-          backgroundConfig={composerBgConfig}
-          outputWidth={composerOutputSize.width}
-          outputHeight={composerOutputSize.height}
-          onExit={handleExitComposer}
-        />
+        <div style={{ display: tweakingPattern ? 'none' : 'contents' }}>
+          <Composer
+            backgroundImage={composerBgImage}
+            backgroundConfig={composerBgConfig}
+            outputWidth={composerOutputSize.width}
+            outputHeight={composerOutputSize.height}
+            compositionTitle={isAuthenticated ? compositionTitle : undefined}
+            onTitleChange={isAuthenticated ? handleCompositionTitleChange : undefined}
+            onExit={handleExitComposer}
+            onTweakPattern={handleTweakPattern}
+          />
+        </div>
       )}
 
       {currentStep === 'background' && (
         <div className="controls">
           <h1>zudo-pattern-gen</h1>
+
+          {tweakingPattern && (
+            <div className="tweak-banner">
+              <div className="tweak-banner-label">Tweaking pattern for Composer</div>
+              <div className="tweak-banner-actions">
+                <button className="btn tweak-banner-btn-return" onClick={handleReturnToComposer}>
+                  Return to Composer
+                </button>
+                <button className="btn tweak-banner-btn-discard" onClick={handleDiscardComposition}>
+                  Discard Composition
+                </button>
+              </div>
+            </div>
+          )}
 
           <CollapsibleSection title="Pattern Generation" defaultOpen={true}>
             <div className="control-group">
@@ -1252,7 +1758,13 @@ export function App() {
               onThresholdChange={handleLayerThresholdChange}
               onBgRemovalToggle={handleLayerBgRemovalToggle}
               onKeepAspectRatioChange={handleLayerKeepAspectRatioChange}
+              onBrowseFiles={isAuthenticated ? (id) => setMediaBrowserLayerId(id) : undefined}
             />
+            {selectedLayerId && (
+              <ImageUpload
+                file={imageLayers.find((l) => l.id === selectedLayerId)?.originalFile ?? null}
+              />
+            )}
           </CollapsibleSection>
 
           <CollapsibleSection title="Color Tweak">
@@ -1322,6 +1834,61 @@ export function App() {
           </div>
         </div>
       )}
+      {showSaveModal && saveModalData && (
+        <SaveCompositionModal
+          patternType={patternType}
+          configJson={saveModalData.configJson}
+          previewDataUrl={saveModalData.previewDataUrl}
+          defaultName={compositionTitle !== 'Untitled' ? compositionTitle : undefined}
+          onClose={() => {
+            setShowSaveModal(false);
+            setSaveModalData(null);
+          }}
+          onSaved={(composition) => {
+            setShowSaveModal(false);
+            setSaveModalData(null);
+            suppressDirty();
+            setCurrentCompositionId(composition.id);
+            setCompositionTitle(composition.name);
+            setIsDirty(false);
+            showToast('Composition saved!');
+          }}
+        />
+      )}
+      {showMyCompositions && (
+        <MyCompositions
+          onClose={() => setShowMyCompositions(false)}
+          onLoadComposition={handleLoadComposition}
+        />
+      )}
+      {showMyAssets && (
+        <MyAssets
+          onClose={() => setShowMyAssets(false)}
+          onUseAsLayer={(file) => handleImageImport(file)}
+          onToast={showToast}
+        />
+      )}
+      {showUserPage && (
+        <UserPage
+          onClose={() => setShowUserPage(false)}
+          onLoadComposition={handleLoadComposition}
+          onUseAsLayer={(file) => handleImageImport(file)}
+        />
+      )}
+      {mediaBrowserLayerId && (
+        <MediaBrowserDialog
+          onClose={() => setMediaBrowserLayerId(null)}
+          onSelect={handleMediaBrowserSelect}
+        />
+      )}
+      {discardAction && (
+        <DiscardConfirmationDialog
+          onDiscard={handleDiscard}
+          onKeep={handleKeep}
+          onCancel={handleCancelDiscard}
+        />
+      )}
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }

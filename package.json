@@ -14,11 +14,14 @@
   "bin": {
     "pattern-gen": "dist/cli.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build:deps": "pnpm --filter @takazudo/pattern-gen-core run build && pnpm --filter @takazudo/pattern-gen-image-processor run build && pnpm --filter @takazudo/pattern-gen-generators run build",
     "build": "pnpm run build:deps && tsup",
     "test": "vitest run",
+    "test:functions": "vitest run --config vitest.config.functions.ts",
     "test:watch": "vitest --watch",
     "prepublishOnly": "pnpm run build && vitest run",
     "// ── Viewer ──────────────────────────────────────": "",
@@ -27,6 +30,11 @@
     "previewer:dev:net": "lsof -ti :14362 | xargs kill 2>/dev/null; true",
     "viewer:dev:net": "pnpm --filter pattern-gen-viewer dev -- --host 0.0.0.0",
     "viewer:build": "pnpm --filter pattern-gen-viewer build",
+    "prestyleguide:dev": "lsof -ti :14400 | xargs kill 2>/dev/null; true",
+    "styleguide:dev": "pnpm --filter pattern-gen-styleguide dev",
+    "prestyleguide:dev:net": "lsof -ti :14400 | xargs kill 2>/dev/null; true",
+    "styleguide:dev:net": "pnpm --filter pattern-gen-styleguide dev -- --host 0.0.0.0",
+    "styleguide:build": "pnpm --filter pattern-gen-styleguide build",
     "// ── Doc site ────────────────────────────────────": "",
     "predoc:dev": "lsof -ti :4321 | xargs kill 2>/dev/null; true",
     "doc:dev": "cd doc && pnpm run dev",
@@ -37,9 +45,18 @@
     "// ── Validation ──────────────────────────────────": "",
     "b4push": "./scripts/run-b4push.sh",
     "// ── Typecheck ───────────────────────────────────": "",
-    "typecheck": "pnpm --filter @takazudo/pattern-gen-core run typecheck && pnpm --filter @takazudo/pattern-gen-image-processor run typecheck && pnpm --filter @takazudo/pattern-gen-generators run typecheck && tsc --noEmit"
+    "typecheck": "pnpm --filter @takazudo/pattern-gen-core run typecheck && pnpm --filter @takazudo/pattern-gen-image-processor run typecheck && pnpm --filter @takazudo/pattern-gen-generators run typecheck && tsc --noEmit",
+    "// ── Styleguide ──────────────────────────────────": ""
   },
-  "keywords": ["pattern", "generative", "geometric", "texture", "canvas", "cli", "deterministic"],
+  "keywords": [
+    "pattern",
+    "generative",
+    "geometric",
+    "texture",
+    "canvas",
+    "cli",
+    "deterministic"
+  ],
   "author": "Takazudo",
   "license": "MIT",
   "repository": {
@@ -59,7 +76,12 @@
     "canvas": "^3.1.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260403.1",
     "@types/node": "^22.0.0",
+    "hono": "^4.12.10",
+    "jose": "^6.2.2",
+    "miniflare": "^4.20260401.0",
+    "msw": "^2.12.14",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0",
@@ -74,6 +96,11 @@
       "canvas",
       "esbuild",
       "workerd"
+    ]
+  },
+  "msw": {
+    "workerDirectory": [
+      "packages/pattern-gen-viewer/public"
     ]
   }
 }

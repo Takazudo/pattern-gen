@@ -1,4 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState, useRef, useCallback, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
+import { useAuth } from '../contexts/auth-context.js';
+import { useFontFavorites } from '../hooks/use-font-favorites.js';
+
+const FontExplorerModal = lazy(() =>
+  import('./font-explorer-modal.js').then((m) => ({ default: m.FontExplorerModal })),
+);
 
 const CURATED_FONTS = [
   'Inter',
@@ -193,6 +200,50 @@ export function loadGoogleFont(family: string): Promise<void> {
   return promise;
 }
 
+function sortWithFavorites(fonts: string[], favorites: Set<string>): { favoriteFonts: string[]; otherFonts: string[] } {
+  const favoriteFonts: string[] = [];
+  const otherFonts: string[] = [];
+  for (const f of fonts) {
+    if (favorites.has(f)) {
+      favoriteFonts.push(f);
+    } else {
+      otherFonts.push(f);
+    }
+  }
+  return { favoriteFonts, otherFonts };
+}
+
+interface FontItemProps {
+  family: string;
+  isActive: boolean;
+  isFavorite: boolean;
+  showStar: boolean;
+  onSelect: () => void;
+  onToggleFavorite: (e: React.MouseEvent) => void;
+}
+
+function FontItem({ family, isActive, isFavorite, showStar, onSelect, onToggleFavorite }: FontItemProps) {
+  return (
+    <div className="composer-font-item-row">
+      <button
+        className={`composer-font-item ${isActive ? 'active' : ''}`}
+        onClick={onSelect}
+      >
+        {family}
+      </button>
+      {showStar && (
+        <button
+          className="composer-font-star-btn"
+          onClick={onToggleFavorite}
+          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          {isFavorite ? '\u2605' : '\u2606'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface FontPickerProps {
   id?: string;
   value: string;
@@ -200,73 +251,133 @@ interface FontPickerProps {
 }
 
 export function ComposerFontPicker({ id, value, onChange }: FontPickerProps) {
-  const [showMore, setShowMore] = useState(false);
+  const [showExplorer, setShowExplorer] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated } = useAuth();
+  const { isFavorite, toggleFavorite, favorites } = useFontFavorites();
 
-  const allFonts = showMore
-    ? [...CURATED_FONTS, ...EXTENDED_FONTS]
-    : CURATED_FONTS;
-  const filtered = showMore
-    ? allFonts.filter((f) =>
-        f.toLowerCase().includes(search.toLowerCase()),
-      )
-    : allFonts;
+  const handleFocus = useCallback(() => {
+    setListOpen(true);
+  }, []);
+
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    // If focus moves to another element inside the container, keep open
+    if (containerRef.current?.contains(e.relatedTarget as Node)) return;
+    setListOpen(false);
+  }, []);
+
+  const hasFavorites = favorites.size > 0;
+
+  const allFonts = useMemo(() => {
+    const base = [...CURATED_FONTS, ...EXTENDED_FONTS];
+    // Ensure the currently selected font is always in the list (e.g. from FontExplorerModal)
+    if (value && !base.includes(value)) {
+      base.push(value);
+    }
+    return base;
+  }, [value]);
+
+  const filtered = useMemo(
+    () =>
+      search
+        ? allFonts.filter((f) => f.toLowerCase().includes(search.toLowerCase()))
+        : allFonts,
+    [allFonts, search],
+  );
+
+  const sortedFiltered = useMemo(() => {
+    if (!hasFavorites) return { favoriteFonts: [], otherFonts: filtered };
+    return sortWithFavorites(filtered, favorites);
+  }, [filtered, favorites, hasFavorites]);
+
+  // Ensure the active font is always in the displayed portion
+  const displayFavs = sortedFiltered.favoriteFonts.slice(0, 50);
+  const displayOthers = sortedFiltered.otherFonts.slice(0, 50);
+  const activeVisible =
+    displayFavs.includes(value) || displayOthers.includes(value);
+  const showActiveExtra = value && !activeVisible && filtered.includes(value);
 
   return (
-    <div className="composer-font-picker">
-      {!showMore ? (
-        <>
-          <select
-            id={id}
-            value={value}
-            onChange={(e) => {
-              onChange(e.target.value);
-            }}
-          >
-            {CURATED_FONTS.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-            {!CURATED_FONTS.includes(value) && (
-              <option value={value}>{value}</option>
-            )}
-          </select>
-          <button
-            className="btn composer-font-more-btn"
-            onClick={() => setShowMore(true)}
-          >
-            More...
-          </button>
-        </>
-      ) : (
-        <>
-          <input
-            id={id}
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search fonts..."
-            className="composer-font-search"
-          />
-          <div className="composer-font-list">
-            {filtered.slice(0, 50).map((f) => (
-              <button
+    <div
+      className="composer-font-picker"
+      ref={containerRef}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+    >
+      <input
+        id={id}
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={value || 'Search fonts...'}
+        className="composer-font-search"
+      />
+      {listOpen && <div className="composer-font-list">
+        {showActiveExtra && (
+          <>
+            <div className="composer-font-section-label">Current</div>
+            <FontItem
+              family={value}
+              isActive={true}
+              isFavorite={isFavorite(value)}
+              showStar={isAuthenticated}
+              onSelect={() => {}}
+              onToggleFavorite={(e) => { e.stopPropagation(); toggleFavorite(value); }}
+            />
+            <div className="composer-font-section-divider" />
+          </>
+        )}
+        {displayFavs.length > 0 && (
+          <>
+            <div className="composer-font-section-label">Favorites</div>
+            {displayFavs.map((f) => (
+              <FontItem
                 key={f}
-                className={`composer-font-item ${f === value ? 'active' : ''}`}
-                onClick={() => {
-                  onChange(f);
-                  setShowMore(false);
-                }}
-              >
-                {f}
-              </button>
+                family={f}
+                isActive={f === value}
+                isFavorite={true}
+                showStar={isAuthenticated}
+                onSelect={() => { onChange(f); }}
+                onToggleFavorite={(e) => { e.stopPropagation(); toggleFavorite(f); }}
+              />
             ))}
-          </div>
-          <button className="btn" onClick={() => setShowMore(false)}>
-            Back
-          </button>
-        </>
+            {displayOthers.length > 0 && (
+              <div className="composer-font-section-divider" />
+            )}
+          </>
+        )}
+        {displayOthers.map((f) => (
+          <FontItem
+            key={f}
+            family={f}
+            isActive={f === value}
+            isFavorite={false}
+            showStar={isAuthenticated}
+            onSelect={() => { onChange(f); }}
+            onToggleFavorite={(e) => { e.stopPropagation(); toggleFavorite(f); }}
+          />
+        ))}
+      </div>}
+      <div className="composer-font-btn-row">
+        <button
+          className="btn composer-font-explore-btn"
+          onClick={() => setShowExplorer(true)}
+        >
+          Explore
+        </button>
+      </div>
+      {showExplorer && createPortal(
+        <Suspense fallback={null}>
+          <FontExplorerModal
+            onSelect={(family) => {
+              onChange(family);
+            }}
+            onClose={() => setShowExplorer(false)}
+          />
+        </Suspense>,
+        document.body,
       )}
     </div>
   );

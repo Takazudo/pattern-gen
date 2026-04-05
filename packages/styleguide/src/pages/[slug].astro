@@ -1,0 +1,43 @@
+---
+import DocLayout from '../layouts/doc-layout.astro';
+import { VariantTabs } from '../features/preview/variant-tabs';
+import CodePanel from '../features/code-panel/code-panel';
+import { getAllSlugs, getModuleBySlug } from '../data/stories';
+
+export function getStaticPaths() {
+  return getAllSlugs().map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+const module = await getModuleBySlug(slug!);
+
+if (!module) {
+  return Astro.redirect(import.meta.env.BASE_URL);
+}
+
+const title = module.title;
+const variantNames = module.variants.map((v) => v.name);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const source = module.source;
+const relatedSources = module.relatedSources;
+const hasCodePanelContent = relatedSources.length > 0 || !!source;
+---
+
+<DocLayout
+  title={title}
+  currentSlug={slug}
+  hideToc={true}
+  showCodePanelToggle={hasCodePanelContent}
+>
+  <div class="pb-vsp-sm border-b border-muted mb-vsp-md">
+    <h1 class="font-sans font-bold text-xl">{title}</h1>
+  </div>
+  <VariantTabs
+    variants={variantNames}
+    baseUrl={`${base}/preview/${slug}`}
+    controls={module.controls ? JSON.stringify(module.controls) : undefined}
+    client:load
+  />
+
+  <CodePanel slot="aside-right" relatedSources={relatedSources} storySource={source} client:load />
+</DocLayout>

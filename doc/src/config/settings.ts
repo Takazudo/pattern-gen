@@ -26,7 +26,7 @@ export const settings = {
   } satisfies ColorModeConfig,
   siteName: "pattern-gen",
   siteDescription: "Deterministic visual pattern generator — 30 algorithms from geometric tiles to noise-based textures" as string,
-  base: "/",
+  base: "/pj/pattern-gen/doc",
   trailingSlash: false as boolean,
   noindex: false as boolean,
   editUrl: false as string | false,

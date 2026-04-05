@@ -1,6 +1,6 @@
 # Pull request quality checks and preview deployment.
 #
-# Triggered on PRs targeting `main`. The pipeline:
+# Triggered on PRs targeting `main` or `base/*` branches. The pipeline:
 #   1. Build the viewer app and doc site
 #   2. Deploy a preview to Cloudflare Pages
 #   3. Post the preview URL as a PR comment
@@ -13,6 +13,7 @@ on:
   pull_request:
     branches:
       - main
+      - 'base/**'
 
 concurrency:
   group: pr-checks-${{ github.event.pull_request.number }}
@@ -62,6 +63,9 @@ jobs:
       - name: Build doc site
         run: pnpm run doc:build
 
+      - name: Build styleguide
+        run: pnpm run styleguide:build
+
       - name: Upload viewer artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
@@ -74,6 +78,13 @@ jobs:
         with:
           name: dist-doc
           path: doc/dist/
+          retention-days: 1
+
+      - name: Upload styleguide artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: dist-styleguide
+          path: packages/styleguide/dist/
           retention-days: 1
 
   # ---------------------------------------------------------------------------
@@ -98,11 +109,18 @@ jobs:
           name: dist-doc
           path: dist-doc/
 
+      - name: Download styleguide artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: dist-styleguide
+          path: dist-styleguide/
+
       - name: Prepare deploy directory
         run: |
           mkdir -p deploy/pj/pattern-gen
           cp -r dist-viewer/. deploy/pj/pattern-gen/
           cp -r dist-doc/. deploy/pj/pattern-gen/doc/
+          cp -r dist-styleguide/. deploy/pj/pattern-gen/styleguide/
           echo '/ /pj/pattern-gen/ 302' > deploy/_redirects
 
       - name: Deploy preview to Cloudflare Pages
@@ -154,6 +172,7 @@ jobs:
               `|---|---|`,
               `| Viewer | ${deployUrl}/pj/pattern-gen/ |`,
               `| Doc | ${deployUrl}/pj/pattern-gen/doc/ |`,
+              `| Styleguide | ${deployUrl}/pj/pattern-gen/styleguide/ |`,
               '',
               `Built from commit: \`${context.sha.substring(0, 7)}\``,
             ].join('\n');

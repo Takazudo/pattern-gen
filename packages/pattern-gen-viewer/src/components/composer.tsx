@@ -31,7 +31,62 @@ interface ComposerProps {
   backgroundConfig: OgpConfig | null;
   outputWidth: number;
   outputHeight: number;
+  compositionTitle?: string;
+  onTitleChange?: (title: string) => void;
   onExit: () => void;
+  onTweakPattern?: () => void;
+}
+
+/* ── Editable title sub-component ── */
+
+function EditableTitle({ title, onChange }: { title: string; onChange: (title: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setValue(title);
+  }, [title]);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const handleCommit = () => {
+    setEditing(false);
+    const trimmed = value.trim() || 'Untitled';
+    setValue(trimmed);
+    onChange(trimmed);
+  };
+
+  if (!editing) {
+    return (
+      <span
+        className="composer-title composer-title-editable"
+        onClick={() => { setValue(title); setEditing(true); }}
+        title="Click to rename"
+      >
+        {title}
+      </span>
+    );
+  }
+
+  return (
+    <input
+      ref={inputRef}
+      className="composer-title-input"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={handleCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') handleCommit();
+        if (e.key === 'Escape') { setValue(title); setEditing(false); }
+      }}
+    />
+  );
 }
 
 /* ── Grid types ── */
@@ -88,7 +143,10 @@ export function Composer({
   backgroundConfig,
   outputWidth,
   outputHeight,
+  compositionTitle,
+  onTitleChange,
   onExit,
+  onTweakPattern,
 }: ComposerProps) {
   const history = useComposerHistory({
     layers: [],
@@ -1074,7 +1132,11 @@ export function Composer({
   return (
     <div className="overlay-root composer">
       <div className="overlay-toolbar composer-toolbar">
-        <span className="composer-title">Composer</span>
+        {onTitleChange ? (
+          <EditableTitle title={compositionTitle ?? 'Untitled'} onChange={onTitleChange} />
+        ) : (
+          <span className="composer-title">Composer</span>
+        )}
         <div className="composer-history-actions">
           <button
             className="btn composer-history-btn"
@@ -1128,6 +1190,11 @@ export function Composer({
           >
             ⚙
           </button>
+          {onTweakPattern && (
+            <button className="btn composer-btn-tweak" onClick={onTweakPattern}>
+              Tweak Pattern
+            </button>
+          )}
           <button className="btn composer-btn-exit" onClick={onExit}>
             Exit Editor
           </button>

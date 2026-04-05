@@ -1,0 +1,304 @@
+---
+import DocLayout from '../layouts/doc-layout.astro';
+---
+
+<DocLayout title="Design Tokens" currentSlug="tokens" hideToc={true}>
+  <div class="px-hsp-lg py-vsp-lg">
+    <h1 class="font-bold text-heading pb-vsp-sm">Design Tokens</h1>
+    <p class="text-muted pb-vsp-lg text-small">
+      Three-tier token reference for the Pattern Gen viewer — Palette, Theme, and Component patterns.
+    </p>
+
+    {/* ===== Tier 1: Palette — Raw Color Values ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-2xs">Tier 1: Palette</h2>
+      <p class="text-muted text-small pb-vsp-sm">
+        Raw oklch values defined in <code class="font-mono text-caption bg-code-bg text-code-fg rounded px-hsp-xs py-[2px]">:root</code>. Never referenced directly by components.
+      </p>
+
+      {/* Solid Neutrals */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Solid Neutrals</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-hsp-xs gap-y-vsp-xs pb-vsp-md">
+        {
+          [
+            { name: '--palette-neutral-950', value: 'oklch(14% 0 0)', hex: '#111' },
+            { name: '--palette-neutral-600', value: 'oklch(53% 0 0)', hex: '#777' },
+            { name: '--palette-neutral-500', value: 'oklch(60% 0 0)', hex: '#888' },
+            { name: '--palette-neutral-400', value: 'oklch(66% 0 0)', hex: '#999' },
+            { name: '--palette-neutral-300', value: 'oklch(73% 0 0)', hex: '#aaa' },
+            { name: '--palette-neutral-100', value: 'oklch(90% 0 0)', hex: '#e0e0e0' },
+          ].map((c) => (
+            <div class="rounded-md overflow-hidden border border-muted">
+              <div class="h-[60px]" style={`background-color: ${c.value}`} />
+              <div class="p-hsp-xs bg-surface">
+                <div class="font-mono text-caption font-bold break-all">{c.name.replace('--palette-', '')}</div>
+                <div class="text-caption text-muted">{c.value}</div>
+                <div class="text-caption text-muted">{c.hex}</div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      {/* Glass Transparency */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Glass Transparency</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-hsp-xs gap-y-vsp-xs pb-vsp-md">
+        {
+          [
+            { name: '--palette-glass-bg', value: 'oklch(0% 0 0 / 75%)', desc: 'Panel background' },
+            { name: '--palette-glass-light-8', value: 'oklch(100% 0 0 / 8%)', desc: 'Control default' },
+            { name: '--palette-glass-light-10', value: 'oklch(100% 0 0 / 10%)', desc: 'Faint border' },
+            { name: '--palette-glass-light-12', value: 'oklch(100% 0 0 / 12%)', desc: 'Standard border' },
+            { name: '--palette-glass-light-15', value: 'oklch(100% 0 0 / 15%)', desc: 'Hover border' },
+            { name: '--palette-glass-light-30', value: 'oklch(100% 0 0 / 30%)', desc: 'Focus border' },
+          ].map((c) => (
+            <div class="rounded-md overflow-hidden border border-muted">
+              <div class="h-[60px] relative" style="background: repeating-conic-gradient(#555 0% 25%, #888 0% 50%) 0 0 / 12px 12px">
+                <div class="absolute inset-0" style={`background-color: ${c.value}`} />
+              </div>
+              <div class="p-hsp-xs bg-surface">
+                <div class="font-mono text-caption font-bold break-all">{c.name.replace('--palette-', '')}</div>
+                <div class="text-caption text-muted">{c.desc}</div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    {/* ===== Tier 2: Theme — Semantic Tokens ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-2xs">Tier 2: Theme (Semantic Tokens)</h2>
+      <p class="text-muted text-small pb-vsp-sm">
+        Defined in <code class="font-mono text-caption bg-code-bg text-code-fg rounded px-hsp-xs py-[2px]">@theme</code>. Maps palette to roles. Components reference these tokens.
+      </p>
+
+      {/* Semantic Colors */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Colors</h3>
+      <div class="overflow-x-auto pb-vsp-md">
+        <table class="w-full text-small border-collapse">
+          <thead>
+            <tr class="border-b-2 border-muted">
+              <th class="text-left py-vsp-2xs px-hsp-xs font-semibold">Swatch</th>
+              <th class="text-left py-vsp-2xs px-hsp-xs font-semibold">Token</th>
+              <th class="text-left py-vsp-2xs px-hsp-xs font-semibold">Maps To</th>
+              <th class="text-left py-vsp-2xs px-hsp-xs font-semibold">Usage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              [
+                { token: '--color-bg', maps: '--palette-neutral-950', usage: 'Page background', color: 'oklch(14% 0 0)' },
+                { token: '--color-fg', maps: '--palette-neutral-100', usage: 'Primary text', color: 'oklch(90% 0 0)' },
+                { token: '--color-fg-muted', maps: '--palette-neutral-300', usage: 'Secondary text', color: 'oklch(73% 0 0)' },
+                { token: '--color-fg-subtle', maps: '--palette-neutral-400', usage: 'Tertiary text, labels', color: 'oklch(66% 0 0)' },
+                { token: '--color-fg-faint', maps: '--palette-neutral-600', usage: 'Disabled, decorative', color: 'oklch(53% 0 0)' },
+                { token: '--color-accent', maps: '--palette-neutral-500', usage: 'Accent (sliders, links)', color: 'oklch(60% 0 0)' },
+                { token: '--color-surface-glass', maps: '--palette-glass-bg', usage: 'Glass panel background', color: 'oklch(0% 0 0 / 75%)', checker: true },
+                { token: '--color-control-bg', maps: '--palette-glass-light-8', usage: 'Button/input default', color: 'oklch(100% 0 0 / 8%)', checker: true },
+                { token: '--color-control-bg-hover', maps: '--palette-glass-light-15', usage: 'Button/input hover', color: 'oklch(100% 0 0 / 15%)', checker: true },
+                { token: '--color-border', maps: '--palette-glass-light-12', usage: 'Default borders', color: 'oklch(100% 0 0 / 12%)', checker: true },
+                { token: '--color-border-hover', maps: '--palette-glass-light-15', usage: 'Hovered borders', color: 'oklch(100% 0 0 / 15%)', checker: true },
+                { token: '--color-border-focus', maps: '--palette-glass-light-30', usage: 'Focused borders', color: 'oklch(100% 0 0 / 30%)', checker: true },
+                { token: '--color-border-subtle', maps: '--palette-glass-light-8', usage: 'Section dividers', color: 'oklch(100% 0 0 / 8%)', checker: true },
+                { token: '--color-border-faint', maps: '--palette-glass-light-10', usage: 'Faint separators', color: 'oklch(100% 0 0 / 10%)', checker: true },
+              ].map((c) => (
+                <tr class="border-b border-muted/30">
+                  <td class="py-vsp-2xs px-hsp-xs">
+                    {c.checker ? (
+                      <div class="w-[36px] h-[24px] rounded-sm relative overflow-hidden" style="background: repeating-conic-gradient(#555 0% 25%, #888 0% 50%) 0 0 / 12px 12px">
+                        <div class="absolute inset-0" style={`background-color: ${c.color}`} />
+                      </div>
+                    ) : (
+                      <div class="w-[36px] h-[24px] rounded-sm" style={`background-color: ${c.color}`} />
+                    )}
+                  </td>
+                  <td class="py-vsp-2xs px-hsp-xs font-mono text-caption font-bold">{c.token}</td>
+                  <td class="py-vsp-2xs px-hsp-xs font-mono text-caption text-muted">{c.maps}</td>
+                  <td class="py-vsp-2xs px-hsp-xs text-caption text-muted">{c.usage}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+
+      {/* Spacing */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Spacing</h3>
+      <p class="text-muted text-caption pb-vsp-xs">
+        Single <code class="font-mono bg-code-bg text-code-fg rounded px-hsp-xs py-[2px]">sp-*</code> scale — compact for tool UI.
+      </p>
+      <div class="flex flex-col gap-vsp-2xs pb-vsp-md">
+        {
+          [
+            { name: 'sp-3xs', value: '3px' },
+            { name: 'sp-2xs', value: '4px' },
+            { name: 'sp-xs', value: '6px' },
+            { name: 'sp-sm', value: '8px' },
+            { name: 'sp-md', value: '12px' },
+            { name: 'sp-lg', value: '16px' },
+            { name: 'sp-xl', value: '20px' },
+            { name: 'sp-2xl', value: '28px' },
+          ].map((s) => (
+            <div class="flex items-center gap-hsp-xs">
+              <div class="w-[120px] shrink-0 text-right">
+                <span class="font-mono text-caption font-bold text-accent">{s.name}</span>
+                <span class="font-mono text-caption text-muted ml-hsp-2xs">{s.value}</span>
+              </div>
+              <div
+                class="h-[24px] bg-accent/20 border-l-3 border-l-accent rounded-r-sm"
+                style={`width: ${s.value}`}
+              />
+            </div>
+          ))
+        }
+      </div>
+
+      {/* Border Radius */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Border Radius</h3>
+      <div class="flex flex-wrap gap-hsp-xl gap-y-vsp-sm pb-vsp-md">
+        {
+          [
+            { name: 'sm', value: '4px', usage: 'Swatches, pills' },
+            { name: 'md', value: '6px', usage: 'Inputs, buttons' },
+            { name: 'lg', value: '12px', usage: 'Panels, modals' },
+          ].map((r) => (
+            <div class="flex flex-col items-center gap-vsp-2xs">
+              <div
+                class="w-[64px] h-[64px] bg-accent/20 border-2 border-accent"
+                style={`border-radius: ${r.value}`}
+              />
+              <div class="font-mono text-caption font-bold text-accent">{r.name}</div>
+              <div class="font-mono text-caption text-muted">{r.value}</div>
+              <div class="text-caption text-muted">{r.usage}</div>
+            </div>
+          ))
+        }
+      </div>
+
+      {/* Font Sizes */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Font Sizes</h3>
+      <div class="flex flex-col gap-vsp-xs">
+        {
+          [
+            { name: '2xs', size: '10px', usage: 'Tiny labels, chevrons' },
+            { name: 'xs', size: '11px', usage: 'Section headers, uppercase labels' },
+            { name: 'sm', size: '12px', usage: 'Buttons, range values' },
+            { name: 'base', size: '13px', usage: 'Inputs, body text' },
+            { name: 'lg', size: '18px', usage: 'Panel headings' },
+          ].map((t) => (
+            <div class="flex items-baseline gap-hsp-lg border-b border-muted/30 pb-vsp-2xs">
+              <div class="w-[100px] shrink-0">
+                <span class="font-mono text-caption font-bold text-accent">{t.name}</span>
+                <span class="font-mono text-caption text-muted block">{t.size}</span>
+              </div>
+              <div
+                class="overflow-hidden text-ellipsis whitespace-nowrap flex-1"
+                style={`font-size: ${t.size}`}
+              >
+                The quick brown fox
+              </div>
+              <div class="text-caption text-muted shrink-0 hidden md:block">{t.usage}</div>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    {/* ===== Tier 3: Component Patterns ===== */}
+    <section class="pb-vsp-xl">
+      <h2 class="font-bold text-subheading pb-vsp-2xs">Tier 3: Component Patterns</h2>
+      <p class="text-muted text-small pb-vsp-sm">
+        How theme tokens are composed in component CSS. One-off values (widths, blur radii) stay as literals.
+      </p>
+
+      {/* Glass Morphism */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Glass Morphism Panel</h3>
+      <div class="flex gap-hsp-lg flex-col lg:flex-row pb-vsp-md">
+        <div class="flex-1">
+          <pre class="font-mono text-caption bg-surface border border-muted rounded-md p-hsp-md overflow-x-auto"><code>{`.controls {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sp-xl);
+}`}</code></pre>
+        </div>
+        <div class="w-full lg:w-[240px] shrink-0">
+          <div class="relative h-[120px] rounded-md overflow-hidden" style="background: repeating-conic-gradient(#555 0% 25%, #888 0% 50%) 0 0 / 12px 12px">
+            <div class="absolute inset-[12px] rounded-[12px] flex items-center justify-center text-caption text-muted" style="background: oklch(0% 0 0 / 75%); backdrop-filter: blur(12px); border: 1px solid oklch(100% 0 0 / 12%)">
+              Glass panel
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Button Pattern */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Button</h3>
+      <div class="flex gap-hsp-lg flex-col lg:flex-row pb-vsp-md">
+        <div class="flex-1">
+          <pre class="font-mono text-caption bg-surface border border-muted rounded-md p-hsp-md overflow-x-auto"><code>{`.btn {
+  padding: var(--spacing-sp-xs) var(--spacing-sp-md);
+  border: 1px solid var(--color-border-hover);
+  border-radius: var(--radius-md);
+  background: var(--color-control-bg);
+  color: var(--color-fg);
+  font-size: var(--font-size-sm);
+}
+.btn:hover {
+  background: var(--color-control-bg-hover);
+}`}</code></pre>
+        </div>
+        <div class="w-full lg:w-[240px] shrink-0 flex items-center justify-center">
+          <div class="inline-flex gap-hsp-sm">
+            <div class="px-hsp-md py-vsp-2xs rounded-md text-caption" style="background: oklch(100% 0 0 / 8%); border: 1px solid oklch(100% 0 0 / 15%); color: oklch(90% 0 0)">
+              Default
+            </div>
+            <div class="px-hsp-md py-vsp-2xs rounded-md text-caption" style="background: oklch(100% 0 0 / 15%); border: 1px solid oklch(100% 0 0 / 15%); color: oklch(90% 0 0)">
+              Hover
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Input Pattern */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Input</h3>
+      <div class="flex gap-hsp-lg flex-col lg:flex-row pb-vsp-md">
+        <div class="flex-1">
+          <pre class="font-mono text-caption bg-surface border border-muted rounded-md p-hsp-md overflow-x-auto"><code>{`input[type="text"], select {
+  padding: var(--spacing-sp-xs) var(--spacing-sp-sm);
+  background: var(--color-control-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  font-size: var(--font-size-base);
+}
+input:focus {
+  border-color: var(--color-border-focus);
+}`}</code></pre>
+        </div>
+        <div class="w-full lg:w-[240px] shrink-0 flex flex-col items-center justify-center gap-vsp-2xs">
+          <div class="w-full max-w-[200px] px-hsp-sm py-vsp-2xs rounded-md text-caption" style="background: oklch(100% 0 0 / 8%); border: 1px solid oklch(100% 0 0 / 12%); color: oklch(66% 0 0)">
+            Default state
+          </div>
+          <div class="w-full max-w-[200px] px-hsp-sm py-vsp-2xs rounded-md text-caption" style="background: oklch(100% 0 0 / 8%); border: 1px solid oklch(100% 0 0 / 30%); color: oklch(90% 0 0)">
+            Focused state
+          </div>
+        </div>
+      </div>
+
+      {/* Modal/Overlay Pattern */}
+      <h3 class="font-semibold text-body pb-vsp-2xs pt-vsp-xs">Modal / Overlay</h3>
+      <pre class="font-mono text-caption bg-surface border border-muted rounded-md p-hsp-md overflow-x-auto"><code>{`.modal-overlay {
+  background: oklch(0% 0 0 / 60%);    /* literal — backdrop dim */
+  backdrop-filter: blur(4px);           /* literal — subtle blur */
+}
+.modal-content {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sp-xl);
+}`}</code></pre>
+    </section>
+  </div>
+</DocLayout>
