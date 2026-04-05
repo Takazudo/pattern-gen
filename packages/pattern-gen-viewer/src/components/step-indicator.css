@@ -2,7 +2,7 @@
 
 .step-indicator {
   position: fixed;
-  top: 0;
+  top: var(--chrome-height);
   left: 0;
   right: 0;
   z-index: 20;

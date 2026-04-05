@@ -1,0 +1,19 @@
+/* ── App Shell ── */
+
+.app-shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-content-wrapper {
+  width: 100%;
+  height: 100%;
+}
