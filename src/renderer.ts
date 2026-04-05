@@ -413,6 +413,24 @@ export async function renderComposerFromConfig(
     }
   }
 
+  // 5. Apply crop if set
+  if (config.crop) {
+    const sx = Math.round(config.crop.x * OGP_WIDTH);
+    const sy = Math.round(config.crop.y * OGP_HEIGHT);
+    const sw = Math.round(config.crop.width * OGP_WIDTH);
+    const sh = Math.round(config.crop.height * OGP_HEIGHT);
+    const croppedCanvas = createCanvas(sw, sh);
+    const cctx = croppedCanvas.getContext('2d');
+    cctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    return {
+      buffer: croppedCanvas.toBuffer('image/png'),
+      patternName: config.background.type,
+      colorSchemeName: bgResult.colorSchemeName,
+      width: sw,
+      height: sh,
+    };
+  }
+
   return {
     buffer: canvas.toBuffer('image/png'),
     patternName: config.background.type,

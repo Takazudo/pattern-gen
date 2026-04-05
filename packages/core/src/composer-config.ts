@@ -99,11 +99,19 @@ export interface FrameConfig {
   params: Record<string, number | string>;
 }
 
+export interface CropRect {
+  x: number; // fraction 0-1 of outputWidth
+  y: number; // fraction 0-1 of outputHeight
+  width: number; // fraction 0-1 of outputWidth
+  height: number; // fraction 0-1 of outputHeight
+}
+
 export interface ComposerConfig {
   version: 1;
   background: OgpConfig;
   layers: EditorLayer[];
   frame?: FrameConfig;
+  crop?: CropRect;
 }
 
 export function serializeComposerConfig(config: ComposerConfig): string {
@@ -427,10 +435,33 @@ export function parseComposerConfig(json: string): ComposerConfig {
     };
   }
 
+  // Validate optional crop
+  let crop: CropRect | undefined;
+  if (raw.crop != null) {
+    if (typeof raw.crop !== 'object' || Array.isArray(raw.crop)) {
+      throw new Error('Composer config: crop must be an object');
+    }
+    const c = raw.crop as Record<string, unknown>;
+    for (const key of ['x', 'y', 'width', 'height'] as const) {
+      if (typeof c[key] !== 'number' || !Number.isFinite(c[key] as number)) {
+        throw new Error(`Composer config: crop.${key} must be a finite number`);
+      }
+    }
+    const cx = c.x as number;
+    const cy = c.y as number;
+    const cw = c.width as number;
+    const ch = c.height as number;
+    if (cx < 0 || cx > 1 || cy < 0 || cy > 1 || cw <= 0 || cw > 1 || ch <= 0 || ch > 1) {
+      throw new Error('Composer config: crop values must be fractions in [0, 1]');
+    }
+    crop = { x: cx, y: cy, width: cw, height: ch };
+  }
+
   return {
     version: 1 as const,
     background,
     layers,
     ...(frame ? { frame } : {}),
+    ...(crop ? { crop } : {}),
   };
 }

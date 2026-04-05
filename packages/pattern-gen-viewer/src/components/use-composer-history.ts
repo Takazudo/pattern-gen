@@ -1,11 +1,12 @@
 import { useReducer, useCallback, useRef, useEffect } from 'react';
-import type { EditorLayer, FrameConfig } from '@takazudo/pattern-gen-core';
+import type { EditorLayer, FrameConfig, CropRect } from '@takazudo/pattern-gen-core';
 import type { GridConfig } from './composer.js';
 
 export interface ComposerDocumentState {
   layers: (EditorLayer & { id: string })[];
   frameConfig: FrameConfig | null;
   gridConfig: GridConfig;
+  crop?: CropRect;
 }
 
 interface HistoryState {

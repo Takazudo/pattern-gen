@@ -73,6 +73,7 @@ export {
 } from './composer-config.js';
 export type {
   ComposerConfig,
+  CropRect,
   EditorLayer,
   ImageLayerData,
   TextLayerData,
