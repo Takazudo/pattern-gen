@@ -22,9 +22,13 @@ interface HistoryState {
   /** Snapshot of present at last commit (used to detect no-op commits) */
   lastCommitted: ComposerDocumentState;
   snapshots: HistorySnapshot[];
+  /** Labels describing each past state (what action produced it) */
   pastLabels: string[];
+  /** Labels describing each future state (what action produced it) */
   futureLabels: string[];
   pendingLabel: string | null;
+  /** Label describing the current present state */
+  presentLabel: string;
 }
 
 type LayerWithId = EditorLayer & { id: string };
@@ -69,7 +73,7 @@ export function historyReducer(
       if (current.present === current.lastCommitted) return current;
       const label = current.pendingLabel || 'Edit';
       const newPast = [...current.past, current.lastCommitted];
-      const newPastLabels = [...current.pastLabels, label];
+      const newPastLabels = [...current.pastLabels, current.presentLabel];
       if (newPast.length > MAX_HISTORY) {
         newPast.shift();
         newPastLabels.shift();
@@ -83,6 +87,7 @@ export function historyReducer(
         futureLabels: [],
         lastCommitted: current.present,
         pendingLabel: null,
+        presentLabel: label,
       };
     }
 
@@ -98,8 +103,9 @@ export function historyReducer(
         pastLabels: newPastLabels,
         present: previous,
         future: [current.present, ...current.future],
-        futureLabels: [poppedLabel, ...current.futureLabels],
+        futureLabels: [current.presentLabel, ...current.futureLabels],
         lastCommitted: previous,
+        presentLabel: poppedLabel,
       };
     }
 
@@ -111,11 +117,12 @@ export function historyReducer(
       return {
         ...current,
         past: [...current.past, current.present],
-        pastLabels: [...current.pastLabels, redoLabel || 'Edit'],
+        pastLabels: [...current.pastLabels, current.presentLabel],
         present: next,
         future: newFuture,
         futureLabels: restFutureLabels,
         lastCommitted: next,
+        presentLabel: redoLabel || 'Edit',
       };
     }
 
@@ -128,7 +135,7 @@ export function historyReducer(
       const redoneLabels = current.futureLabels.slice(0, index + 1);
       const remainingLabels = current.futureLabels.slice(index + 1);
       const newPast = [...current.past, current.present, ...redone.slice(0, -1)];
-      const newPastLabels = [...current.pastLabels, ...redoneLabels];
+      const newPastLabels = [...current.pastLabels, current.presentLabel, ...redoneLabels.slice(0, -1)];
       return {
         ...current,
         past: newPast,
@@ -137,6 +144,7 @@ export function historyReducer(
         future: remaining,
         futureLabels: remainingLabels,
         lastCommitted: target,
+        presentLabel: redoneLabels[index] || 'Edit',
       };
     }
 
@@ -144,21 +152,23 @@ export function historyReducer(
       const { index } = action;
       if (index < 0 || index >= current.past.length) return current;
       const target = current.past[index];
-      // Keep past up to the jump point, append current present for undo
-      const newPast = [...current.past.slice(0, index), current.present];
-      const newPastLabels = [...current.pastLabels.slice(0, index), 'Current'];
-      if (newPast.length > MAX_HISTORY) {
-        newPast.shift();
-        newPastLabels.shift();
-      }
+      // Keep past entries before the jump point
+      const newPast = current.past.slice(0, index);
+      const newPastLabels = current.pastLabels.slice(0, index);
+      // Entries after the jump point + current present become future (Photoshop-like)
+      const afterJump = current.past.slice(index + 1);
+      const afterJumpLabels = current.pastLabels.slice(index + 1);
+      const newFuture = [...afterJump, current.present, ...current.future];
+      const newFutureLabels = [...afterJumpLabels, current.presentLabel, ...current.futureLabels];
       return {
         ...current,
         past: newPast,
         pastLabels: newPastLabels,
         present: target,
-        future: [],
-        futureLabels: [],
+        future: newFuture,
+        futureLabels: newFutureLabels,
         lastCommitted: target,
+        presentLabel: current.pastLabels[index] || 'Edit',
       };
     }
 
@@ -201,7 +211,7 @@ export function historyReducer(
         newPastLabels.shift();
       }
       const finalPast = [...newPast, current.present];
-      const finalPastLabels = [...newPastLabels, 'Before Restore'];
+      const finalPastLabels = [...newPastLabels, current.presentLabel];
       if (finalPast.length > MAX_HISTORY) {
         finalPast.shift();
         finalPastLabels.shift();
@@ -214,6 +224,7 @@ export function historyReducer(
         future: [],
         futureLabels: [],
         lastCommitted: action.state,
+        presentLabel: 'Restore Snapshot',
       };
     }
   }
@@ -229,6 +240,7 @@ export function createInitialHistoryState(initial: ComposerDocumentState): Histo
     pastLabels: [],
     futureLabels: [],
     pendingLabel: null,
+    presentLabel: 'Initial',
   };
 }
 
@@ -257,6 +269,8 @@ export interface ComposerHistory {
   futureLabels: string[];
   /** Set a label for the next commit */
   setLabel: (label: string) => void;
+  /** Label describing the current present state */
+  presentLabel: string;
   /** Pinned snapshots */
   snapshots: HistorySnapshot[];
   /** Jump to a specific entry in the past array */
@@ -378,6 +392,7 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     futureEntries: history.future,
     futureLabels: history.futureLabels,
     setLabel,
+    presentLabel: history.presentLabel,
     snapshots: history.snapshots,
     jumpTo,
     pinSnapshot,
