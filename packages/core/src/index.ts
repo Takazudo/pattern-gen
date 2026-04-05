@@ -73,6 +73,7 @@ export {
 } from './composer-config.js';
 export type {
   ComposerConfig,
+  CropRect,
   EditorLayer,
   ImageLayerData,
   TextLayerData,
@@ -95,3 +96,7 @@ export type {
 // Aspect config
 export { getAspect, getOutputDimensions } from './aspect-config.js';
 export type { AspectMode, AspectConfig } from './aspect-config.js';
+
+// Preset sizes
+export { PRESET_SIZES, PRESET_SIZE_CATEGORIES } from './preset-sizes.js';
+export type { PresetSize, PresetSizeCategory } from './preset-sizes.js';

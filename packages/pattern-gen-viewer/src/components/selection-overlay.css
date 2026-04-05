@@ -133,6 +133,11 @@
   color: oklch(95% 0 0);
 }
 
+.selection-presets-btn {
+  margin-left: auto;
+  border-style: dashed;
+}
+
 .selection-detail {
   display: flex;
   gap: 4px;

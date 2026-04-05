@@ -1,11 +1,18 @@
 import { useReducer, useCallback, useRef, useEffect } from 'react';
-import type { EditorLayer, FrameConfig } from '@takazudo/pattern-gen-core';
+import type { EditorLayer, FrameConfig, CropRect } from '@takazudo/pattern-gen-core';
 import type { GridConfig } from './composer.js';
 
 export interface ComposerDocumentState {
   layers: (EditorLayer & { id: string })[];
   frameConfig: FrameConfig | null;
   gridConfig: GridConfig;
+  crop?: CropRect;
+}
+
+export interface HistorySnapshot {
+  id: string;
+  label: string;
+  state: ComposerDocumentState;
 }
 
 interface HistoryState {
@@ -14,6 +21,7 @@ interface HistoryState {
   future: ComposerDocumentState[];
   /** Snapshot of present at last commit (used to detect no-op commits) */
   lastCommitted: ComposerDocumentState;
+  snapshots: HistorySnapshot[];
 }
 
 type LayerWithId = EditorLayer & { id: string };
@@ -24,9 +32,14 @@ export type HistoryAction =
   | { type: 'SET_LAYERS'; updater: LayerUpdater }
   | { type: 'COMMIT' }
   | { type: 'UNDO' }
-  | { type: 'REDO' };
+  | { type: 'REDO' }
+  | { type: 'JUMP_TO'; index: number }
+  | { type: 'PIN_SNAPSHOT'; state: ComposerDocumentState; label: string }
+  | { type: 'REMOVE_SNAPSHOT'; id: string }
+  | { type: 'RESTORE_SNAPSHOT'; state: ComposerDocumentState };
 
 const MAX_HISTORY = 50;
+const MAX_SNAPSHOTS = 20;
 
 export function historyReducer(
   current: HistoryState,
@@ -49,6 +62,7 @@ export function historyReducer(
       const newPast = [...current.past, current.lastCommitted];
       if (newPast.length > MAX_HISTORY) newPast.shift();
       return {
+        ...current,
         past: newPast,
         present: current.present,
         future: [],
@@ -61,6 +75,7 @@ export function historyReducer(
       const newPast = [...current.past];
       const previous = newPast.pop()!;
       return {
+        ...current,
         past: newPast,
         present: previous,
         future: [current.present, ...current.future],
@@ -73,10 +88,70 @@ export function historyReducer(
       const newFuture = [...current.future];
       const next = newFuture.shift()!;
       return {
+        ...current,
         past: [...current.past, current.present],
         present: next,
         future: newFuture,
         lastCommitted: next,
+      };
+    }
+
+    case 'JUMP_TO': {
+      const { index } = action;
+      if (index < 0 || index >= current.past.length) return current;
+      const target = current.past[index];
+      // Keep past up to the jump point, append current present for undo
+      const newPast = [...current.past.slice(0, index), current.present];
+      if (newPast.length > MAX_HISTORY) newPast.shift();
+      return {
+        ...current,
+        past: newPast,
+        present: target,
+        future: [],
+        lastCommitted: target,
+      };
+    }
+
+    case 'PIN_SNAPSHOT': {
+      const snapshot: HistorySnapshot = {
+        id: crypto.randomUUID(),
+        label: action.label,
+        state: action.state,
+      };
+      const newSnapshots = [...current.snapshots, snapshot];
+      if (newSnapshots.length > MAX_SNAPSHOTS) newSnapshots.shift();
+      return {
+        ...current,
+        snapshots: newSnapshots,
+      };
+    }
+
+    case 'REMOVE_SNAPSHOT': {
+      const filtered = current.snapshots.filter((s) => s.id !== action.id);
+      if (filtered.length === current.snapshots.length) return current;
+      return {
+        ...current,
+        snapshots: filtered,
+      };
+    }
+
+    case 'RESTORE_SNAPSHOT': {
+      // If there are uncommitted changes (present !== lastCommitted), push
+      // lastCommitted to past first, then push current present. This preserves
+      // both the last committed state and any uncommitted work so the user
+      // can jump back to either via undo/history.
+      const newPast = current.present !== current.lastCommitted
+        ? [...current.past, current.lastCommitted]
+        : [...current.past];
+      if (newPast.length > MAX_HISTORY) newPast.shift();
+      const finalPast = [...newPast, current.present];
+      if (finalPast.length > MAX_HISTORY) finalPast.shift();
+      return {
+        ...current,
+        past: finalPast,
+        present: action.state,
+        future: [],
+        lastCommitted: action.state,
       };
     }
   }
@@ -88,10 +163,11 @@ export function createInitialHistoryState(initial: ComposerDocumentState): Histo
     present: initial,
     future: [],
     lastCommitted: initial,
+    snapshots: [],
   };
 }
 
-interface ComposerHistory {
+export interface ComposerHistory {
   state: ComposerDocumentState;
   set: (newState: ComposerDocumentState) => void;
   setLayers: (updater: LayerUpdater) => void;
@@ -104,6 +180,18 @@ interface ComposerHistory {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  /** Past states for history panel display */
+  historyEntries: ComposerDocumentState[];
+  /** Pinned snapshots */
+  snapshots: HistorySnapshot[];
+  /** Jump to a specific entry in the past array */
+  jumpTo: (index: number) => void;
+  /** Pin a state as a named snapshot */
+  pinSnapshot: (state: ComposerDocumentState, label: string) => void;
+  /** Remove a snapshot by id */
+  removeSnapshot: (id: string) => void;
+  /** Restore a snapshot state (commits current, then sets present) */
+  restoreSnapshot: (state: ComposerDocumentState) => void;
 }
 
 export function useComposerHistory(initial: ComposerDocumentState): ComposerHistory {
@@ -171,6 +259,24 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     dispatch({ type: 'REDO' });
   }, [flushContinuous]);
 
+  const jumpTo = useCallback((index: number) => {
+    flushContinuous();
+    dispatch({ type: 'JUMP_TO', index });
+  }, [flushContinuous]);
+
+  const pinSnapshot = useCallback((state: ComposerDocumentState, label: string) => {
+    dispatch({ type: 'PIN_SNAPSHOT', state, label });
+  }, []);
+
+  const removeSnapshot = useCallback((id: string) => {
+    dispatch({ type: 'REMOVE_SNAPSHOT', id });
+  }, []);
+
+  const restoreSnapshot = useCallback((state: ComposerDocumentState) => {
+    flushContinuous();
+    dispatch({ type: 'RESTORE_SNAPSHOT', state });
+  }, [flushContinuous]);
+
   return {
     state: history.present,
     set,
@@ -182,5 +288,11 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     redo,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
+    historyEntries: history.past,
+    snapshots: history.snapshots,
+    jumpTo,
+    pinSnapshot,
+    removeSnapshot,
+    restoreSnapshot,
   };
 }

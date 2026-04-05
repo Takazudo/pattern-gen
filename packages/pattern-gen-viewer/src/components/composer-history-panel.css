@@ -1,0 +1,187 @@
+/* ── Composer History Panel ── */
+
+.composer-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.composer-history-section-header {
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: oklch(60% 0 0);
+  margin: 0;
+}
+
+/* ── Snapshots section ── */
+
+.composer-history-snapshots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid oklch(100% 0 0 / 8%);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.composer-history-snapshot-empty {
+  padding: 6px 8px;
+  text-align: center;
+  color: oklch(45% 0 0);
+  font-size: var(--font-size-2xs);
+}
+
+.composer-history-snapshot-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  color: oklch(80% 0 0);
+  transition: background 0.1s;
+}
+
+.composer-history-snapshot-item:hover {
+  background: oklch(100% 0 0 / 8%);
+}
+
+.composer-history-snapshot-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: oklch(70% 0.12 250);
+}
+
+.composer-history-snapshot-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-history-snapshot-delete {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: oklch(50% 0 0);
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+}
+
+.composer-history-snapshot-delete:hover {
+  background: oklch(100% 0 0 / 10%);
+  color: oklch(75% 0.08 25);
+}
+
+.composer-history-snapshot-delete svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ── History entries list ── */
+
+.composer-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid oklch(100% 0 0 / 8%);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.composer-history-entry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-2xs);
+  color: oklch(65% 0 0);
+  transition: background 0.1s;
+  font-variant-numeric: tabular-nums;
+}
+
+.composer-history-entry:hover {
+  background: oklch(100% 0 0 / 8%);
+  color: oklch(80% 0 0);
+}
+
+.composer-history-entry-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-history-entry-pin {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: oklch(40% 0 0);
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.composer-history-entry:hover .composer-history-entry-pin {
+  opacity: 1;
+}
+
+.composer-history-entry-pin:hover {
+  background: oklch(100% 0 0 / 10%);
+  color: oklch(70% 0.12 250);
+}
+
+.composer-history-entry-pin svg {
+  width: 12px;
+  height: 12px;
+}
+
+.composer-history-empty {
+  padding: 8px;
+  text-align: center;
+  color: oklch(45% 0 0);
+  font-size: var(--font-size-2xs);
+}
+
+/* ── Current state marker ── */
+
+.composer-history-current {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  font-size: var(--font-size-2xs);
+  color: oklch(70% 0.06 250);
+  font-weight: 500;
+}
+
+.composer-history-current-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: oklch(70% 0.12 250);
+  flex-shrink: 0;
+}

@@ -169,4 +169,132 @@ describe('historyReducer', () => {
     expect(state.past).toHaveLength(1);
     expect(state.past[0]).toBe(s0); // original state before drag
   });
+
+  // --- JUMP_TO ---
+
+  it('JUMP_TO restores a past state and clears future', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    const s2 = makeState('s2');
+    const s3 = makeState('s3');
+    // Build history: s0 -> s1 -> s2 -> s3 (present)
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s2 });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s3 });
+    state = historyReducer(state, { type: 'COMMIT' });
+    // past = [s0, s1, s2], present = s3
+    expect(state.past).toHaveLength(3);
+
+    // Jump to index 1 (s1)
+    state = historyReducer(state, { type: 'JUMP_TO', index: 1 });
+    expect(state.present).toBe(s1);
+    expect(state.future).toHaveLength(0); // future cleared
+    expect(state.lastCommitted).toBe(s1);
+    // past keeps entries before the jump index + appends old present
+    expect(state.past).toHaveLength(2); // past[0]=s0 (before index 1) + s3 (old present)
+    expect(state.past[0]).toBe(s0);
+    expect(state.past[1]).toBe(s3);
+  });
+
+  it('JUMP_TO at index 0 goes to earliest history entry', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    const s2 = makeState('s2');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s2 });
+    state = historyReducer(state, { type: 'COMMIT' });
+    // past = [s0, s1], present = s2
+
+    state = historyReducer(state, { type: 'JUMP_TO', index: 0 });
+    expect(state.present).toBe(s0);
+    expect(state.future).toHaveLength(0);
+  });
+
+  it('JUMP_TO with out-of-range index is a no-op', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'COMMIT' });
+    const before = state;
+    state = historyReducer(state, { type: 'JUMP_TO', index: 99 });
+    expect(state).toBe(before);
+  });
+
+  // --- PIN_SNAPSHOT ---
+
+  it('PIN_SNAPSHOT adds a snapshot to the list', () => {
+    let state = createInitialHistoryState(s0);
+    expect(state.snapshots).toHaveLength(0);
+
+    const snap = makeState('snap1');
+    state = historyReducer(state, { type: 'PIN_SNAPSHOT', state: snap, label: 'My Snapshot' });
+    expect(state.snapshots).toHaveLength(1);
+    expect(state.snapshots[0].label).toBe('My Snapshot');
+    expect(state.snapshots[0].state).toBe(snap);
+    expect(state.snapshots[0].id).toBeTruthy();
+  });
+
+  it('PIN_SNAPSHOT preserves existing snapshots', () => {
+    let state = createInitialHistoryState(s0);
+    const snap1 = makeState('snap1');
+    const snap2 = makeState('snap2');
+    state = historyReducer(state, { type: 'PIN_SNAPSHOT', state: snap1, label: 'First' });
+    state = historyReducer(state, { type: 'PIN_SNAPSHOT', state: snap2, label: 'Second' });
+    expect(state.snapshots).toHaveLength(2);
+    expect(state.snapshots[0].label).toBe('First');
+    expect(state.snapshots[1].label).toBe('Second');
+  });
+
+  // --- REMOVE_SNAPSHOT ---
+
+  it('REMOVE_SNAPSHOT removes a snapshot by id', () => {
+    let state = createInitialHistoryState(s0);
+    const snap1 = makeState('snap1');
+    const snap2 = makeState('snap2');
+    state = historyReducer(state, { type: 'PIN_SNAPSHOT', state: snap1, label: 'First' });
+    state = historyReducer(state, { type: 'PIN_SNAPSHOT', state: snap2, label: 'Second' });
+    const idToRemove = state.snapshots[0].id;
+    state = historyReducer(state, { type: 'REMOVE_SNAPSHOT', id: idToRemove });
+    expect(state.snapshots).toHaveLength(1);
+    expect(state.snapshots[0].label).toBe('Second');
+  });
+
+  it('REMOVE_SNAPSHOT with unknown id is a no-op', () => {
+    let state = createInitialHistoryState(s0);
+    const snap1 = makeState('snap1');
+    state = historyReducer(state, { type: 'PIN_SNAPSHOT', state: snap1, label: 'First' });
+    const before = state;
+    state = historyReducer(state, { type: 'REMOVE_SNAPSHOT', id: 'nonexistent' });
+    expect(state).toBe(before);
+  });
+
+  // --- RESTORE_SNAPSHOT ---
+
+  it('RESTORE_SNAPSHOT commits current state and sets present to snapshot', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'COMMIT' });
+    // past = [s0], present = s1
+
+    const snapState = makeState('snap-restore');
+    state = historyReducer(state, { type: 'RESTORE_SNAPSHOT', state: snapState });
+    expect(state.present).toBe(snapState);
+    expect(state.lastCommitted).toBe(snapState);
+    // s1 should be in past (committed before restore)
+    expect(state.past).toHaveLength(2); // s0, s1
+    expect(state.past[1]).toBe(s1);
+    expect(state.future).toHaveLength(0);
+  });
+
+  it('RESTORE_SNAPSHOT from initial state commits and restores', () => {
+    let state = createInitialHistoryState(s0);
+    const snapState = makeState('snap-restore');
+    state = historyReducer(state, { type: 'RESTORE_SNAPSHOT', state: snapState });
+    // s0 was lastCommitted === present, so commit is a no-op, but restore still works
+    expect(state.present).toBe(snapState);
+  });
 });
