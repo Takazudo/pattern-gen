@@ -1,5 +1,5 @@
-import { TabContent } from './components/tab-content.js';
+import { AppShell } from './components/app-shell.js';
 
 export function App() {
-  return <TabContent tabId="default" isActive={true} />;
+  return <AppShell />;
 }
