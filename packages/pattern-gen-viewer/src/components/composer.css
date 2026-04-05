@@ -126,6 +126,28 @@
   border-color: oklch(100% 0 0 / 35%);
 }
 
+/* ── Sidebar container (wraps layer panel + history panel) ── */
+
+.composer-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.composer-sidebar > .composer-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.composer-sidebar > .composer-history-panel {
+  flex-shrink: 0;
+  border-top: 1px solid oklch(100% 0 0 / 10%);
+  padding-top: 10px;
+}
+
 /* ── Canvas area ── */
 
 .composer-canvas-area {

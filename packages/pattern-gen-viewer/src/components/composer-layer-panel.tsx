@@ -239,7 +239,7 @@ export function ComposerLayerPanel({
     : null;
 
   return (
-    <div className="overlay-panel composer-panel">
+    <div className="composer-panel">
       {/* Layers section (actions + list) */}
       <ComposerCollapsibleSection title="Layers" defaultOpen={true}>
         <div className="composer-panel-actions">

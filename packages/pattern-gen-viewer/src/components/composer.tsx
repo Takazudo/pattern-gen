@@ -14,6 +14,7 @@ import { framesByName } from '@takazudo/pattern-gen-generators';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { ComposerLayerPanel } from './composer-layer-panel.js';
+import { ComposerHistoryPanel } from './composer-history-panel.js';
 import { EditMenu } from './edit-menu.js';
 import { ImageTracePreview } from './image-trace-preview.js';
 import { useComposerHistory } from './use-composer-history.js';
@@ -1411,31 +1412,41 @@ export function Composer({
             onMouseDown={handleCanvasMouseDown}
           />
         </div>
-        <ComposerLayerPanel
-          layers={layers}
-          selectedIds={selectedIds}
-          onSelect={setSelectedIds}
-          onUpdate={handleLayerUpdate}
-          onUpdateContinuous={handleLayerUpdateContinuous}
-          onCommitContinuous={handleLayerCommitContinuous}
-          onDelete={handleLayerDelete}
-          onDuplicate={handleDuplicateLayer}
-          onReorder={handleReorder}
-          onAddImage={handleAddImage}
-          onAddText={handleAddText}
-          onImportJson={handleImportJson}
-          onAlignLayers={handleAlignLayers}
-          gridConfig={gridConfig}
-          onGridConfigChange={setGridConfig}
-          frameConfig={frameConfig}
-          onFrameConfigChange={setFrameConfig}
-          onFrameConfigChangeContinuous={setFrameConfigContinuous}
-          onFrameConfigCommitContinuous={flushFrameConfigContinuous}
-          processingLayers={processingLayers}
-          onBgRemovalToggle={handleBgRemovalToggle}
-          onBgThresholdChange={handleBgThresholdChange}
-          onBgThresholdCommit={handleBgThresholdCommit}
-        />
+        <div className="overlay-panel composer-sidebar">
+          <ComposerLayerPanel
+            layers={layers}
+            selectedIds={selectedIds}
+            onSelect={setSelectedIds}
+            onUpdate={handleLayerUpdate}
+            onUpdateContinuous={handleLayerUpdateContinuous}
+            onCommitContinuous={handleLayerCommitContinuous}
+            onDelete={handleLayerDelete}
+            onDuplicate={handleDuplicateLayer}
+            onReorder={handleReorder}
+            onAddImage={handleAddImage}
+            onAddText={handleAddText}
+            onImportJson={handleImportJson}
+            onAlignLayers={handleAlignLayers}
+            gridConfig={gridConfig}
+            onGridConfigChange={setGridConfig}
+            frameConfig={frameConfig}
+            onFrameConfigChange={setFrameConfig}
+            onFrameConfigChangeContinuous={setFrameConfigContinuous}
+            onFrameConfigCommitContinuous={flushFrameConfigContinuous}
+            processingLayers={processingLayers}
+            onBgRemovalToggle={handleBgRemovalToggle}
+            onBgThresholdChange={handleBgThresholdChange}
+            onBgThresholdCommit={handleBgThresholdCommit}
+          />
+          <ComposerHistoryPanel
+            historyEntries={history.historyEntries}
+            snapshots={history.snapshots}
+            onJumpTo={history.jumpTo}
+            onPinSnapshot={history.pinSnapshot}
+            onRemoveSnapshot={history.removeSnapshot}
+            onRestoreSnapshot={history.restoreSnapshot}
+          />
+        </div>
       </div>
       {showImageTrace && (
         <ImageTracePreview
