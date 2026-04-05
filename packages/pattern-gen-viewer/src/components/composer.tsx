@@ -401,16 +401,17 @@ export function Composer({
 
     drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, processedImagesRef.current, frameConfig, loadingFonts);
 
-    // Draw crop overlay (dim area outside crop)
-    if (crop) {
+    // Draw crop overlay (dim area outside crop), suppressed during crop mode
+    // since ComposerCropOverlay provides its own visual feedback
+    if (crop && !cropMode) {
       ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       const cx = Math.round(crop.x * outputWidth);
       const cy = Math.round(crop.y * outputHeight);
       const cx2 = Math.round((crop.x + crop.width) * outputWidth);
       const cy2 = Math.round((crop.y + crop.height) * outputHeight);
-      const cw = cx2 - cx;
-      const ch = cy2 - cy;
+      const cw = Math.max(1, cx2 - cx);
+      const ch = Math.max(1, cy2 - cy);
       // Top
       ctx.fillRect(0, 0, outputWidth, cy);
       // Bottom
@@ -460,7 +461,7 @@ export function Composer({
     ) {
       drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor, outputWidth, outputHeight);
     }
-  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig, isAltResize, crop, outputWidth, outputHeight]);
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig, isAltResize, crop, cropMode, outputWidth, outputHeight]);
 
   // Re-render when state changes
   useEffect(() => {
