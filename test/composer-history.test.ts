@@ -425,6 +425,37 @@ describe('historyReducer', () => {
     expect(state.pastLabels.length).toBe(state.past.length);
   });
 
+  // --- Crop confirm sequence ---
+
+  it('SET + SET_PENDING_LABEL + COMMIT correctly stores crop in present', () => {
+    let state = createInitialHistoryState(s0);
+    const cropRect = { x: 0.1, y: 0.1, width: 0.8, height: 0.8 };
+    const stateWithCrop = { ...s0, crop: cropRect };
+    state = historyReducer(state, { type: 'SET', state: stateWithCrop });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Set Crop' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    expect(state.present.crop).toEqual(cropRect);
+    expect(state.lastCommitted.crop).toEqual(cropRect);
+    expect(state.past).toHaveLength(1);
+    expect(state.past[0]).toBe(s0);
+    expect(state.pastLabels).toEqual(['Set Crop']);
+  });
+
+  it('crop survives undo and redo round-trip', () => {
+    let state = createInitialHistoryState(s0);
+    const cropRect = { x: 0.2, y: 0.2, width: 0.6, height: 0.6 };
+    const stateWithCrop = { ...s0, crop: cropRect };
+    state = historyReducer(state, { type: 'SET', state: stateWithCrop });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Set Crop' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    // Undo should remove crop
+    state = historyReducer(state, { type: 'UNDO' });
+    expect(state.present.crop).toBeUndefined();
+    // Redo should restore crop
+    state = historyReducer(state, { type: 'REDO' });
+    expect(state.present.crop).toEqual(cropRect);
+  });
+
   it('RESTORE_SNAPSHOT sets labels for past entries', () => {
     let state = createInitialHistoryState(s0);
     const s1 = makeState('s1');

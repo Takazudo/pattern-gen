@@ -236,6 +236,7 @@ export function ComposerCropOverlay({
         <div
           className="crop-toolbar"
           style={toolbarOnTop ? { bottom: 'auto', top: -36 } : undefined}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           {hasCrop && (
             <button
