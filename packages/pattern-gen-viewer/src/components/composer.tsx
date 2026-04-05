@@ -297,11 +297,14 @@ export function Composer({
       history.set({ ...current, layers: adjustedLayers, crop: undefined });
       history.setLabel('Crop Canvas');
       history.commit();
+      // Crop is destructive (changes canvas dimensions outside history) — reset
+      // history so undo cannot restore pre-crop layer positions on a different-size canvas.
+      history.reset();
 
       onCropApply({ cropRect, newWidth, newHeight, offsetX, offsetY });
       setCropMode(false);
     },
-    [onCropApply, history.flushContinuous, history.set, history.setLabel, history.commit, outputWidth, outputHeight],
+    [onCropApply, history.flushContinuous, history.set, history.setLabel, history.commit, history.reset, outputWidth, outputHeight],
   );
 
   const handleOverlayCancel = useCallback(() => {
