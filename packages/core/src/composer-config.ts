@@ -90,6 +90,7 @@ export interface TextLayerData {
   stroke: { enabled: boolean; color: string; width: number };
   filters?: LayerFilters;
   transform: LayerTransform;
+  filters?: LayerFilters;
 }
 
 export type EditorLayer = ImageLayerData | TextLayerData;
@@ -377,6 +378,7 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
     },
     ...(filters ? { filters } : {}),
     transform,
+    ...(raw.filters != null ? { filters: raw.filters as LayerFilters } : {}),
   };
 }
 

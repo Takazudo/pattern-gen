@@ -79,6 +79,7 @@ export type {
   LayerTransform,
   LayerFilters,
   FrameConfig,
+  LayerFilters,
 } from './composer-config.js';
 
 // Frame types

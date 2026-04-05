@@ -90,6 +90,12 @@
   outline-offset: 2px;
 }
 
+.composer-btn-small {
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-sp-xs) var(--spacing-sp-sm);
+  margin-top: var(--spacing-sp-sm);
+}
+
 /* ── Editable title ── */
 
 .composer-title-editable {
