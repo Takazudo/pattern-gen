@@ -401,6 +401,30 @@ export function Composer({
 
     drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, processedImagesRef.current, frameConfig, loadingFonts);
 
+    // Draw crop overlay (dim area outside crop)
+    if (crop) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      const cx = Math.round(crop.x * outputWidth);
+      const cy = Math.round(crop.y * outputHeight);
+      const cw = Math.round(crop.width * outputWidth);
+      const ch = Math.round(crop.height * outputHeight);
+      // Top
+      ctx.fillRect(0, 0, outputWidth, cy);
+      // Bottom
+      ctx.fillRect(0, cy + ch, outputWidth, outputHeight - cy - ch);
+      // Left
+      ctx.fillRect(0, cy, cx, ch);
+      // Right
+      ctx.fillRect(cx + cw, cy, outputWidth - cx - cw, ch);
+      // Dashed border around crop region
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(cx + 0.5, cy + 0.5, cw - 1, ch - 1);
+      ctx.restore();
+    }
+
     // Draw selection handles for all selected layers
     for (const id of selectedIds) {
       const layer = layers.find((l) => l.id === id);
@@ -434,7 +458,7 @@ export function Composer({
     ) {
       drawGrid(ctx, xGridPositions, yGridPositions, gridConfig.lineColor, outputWidth, outputHeight);
     }
-  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig, isAltResize]);
+  }, [layers, backgroundImage, selectedIds, drawLayers, gridConfig, xGridPositions, yGridPositions, loadingFonts, frameConfig, isAltResize, crop, outputWidth, outputHeight]);
 
   // Re-render when state changes
   useEffect(() => {
