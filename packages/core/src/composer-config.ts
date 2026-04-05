@@ -149,7 +149,7 @@ function validateLayerFilters(
   label: string,
 ): LayerFilters | undefined {
   if (raw == null) return undefined;
-  if (typeof raw !== 'object') {
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
     throw new Error(`${label}: filters must be an object`);
   }
   const f = raw as Record<string, unknown>;
