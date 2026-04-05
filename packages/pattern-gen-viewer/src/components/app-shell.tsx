@@ -3,6 +3,7 @@ import { GlobalHeader } from './global-header.js';
 import { TabBar } from './tab-bar.js';
 import type { Tab } from './tab-bar.js';
 import { TabContent } from './tab-content.js';
+import type { TabContentHandle } from './tab-content.js';
 import { UserPage } from './user-page.js';
 import './app-shell.css';
 
@@ -12,6 +13,7 @@ export function AppShell() {
   const [showUserPage, setShowUserPage] = useState(false);
 
   const tabCounterRef = useRef(1);
+  const tabRefsMap = useRef<Map<string, TabContentHandle>>(new Map());
 
   const handleAddTab = useCallback(() => {
     tabCounterRef.current++;
@@ -30,6 +32,7 @@ export function AppShell() {
           const newActive = next[Math.min(idx, next.length - 1)];
           setActiveTabId(newActive.id);
         }
+        tabRefsMap.current.delete(tabId);
         return next;
       });
     },
@@ -42,6 +45,14 @@ export function AppShell() {
 
   const handleRenameTab = useCallback((tabId: string, newName: string) => {
     setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, name: newName } : t)));
+  }, []);
+
+  const setTabRef = useCallback((tabId: string) => (handle: TabContentHandle | null) => {
+    if (handle) {
+      tabRefsMap.current.set(tabId, handle);
+    } else {
+      tabRefsMap.current.delete(tabId);
+    }
   }, []);
 
   return (
@@ -59,6 +70,7 @@ export function AppShell() {
         {tabs.map((tab) => (
           <TabContent
             key={tab.id}
+            ref={setTabRef(tab.id)}
             tabId={tab.id}
             isActive={tab.id === activeTabId}
           />
@@ -67,8 +79,8 @@ export function AppShell() {
       {showUserPage && (
         <UserPage
           onClose={() => setShowUserPage(false)}
-          onLoadComposition={() => {}}
-          onUseAsLayer={() => {}}
+          onLoadComposition={(comp) => tabRefsMap.current.get(activeTabId)?.loadComposition(comp)}
+          onUseAsLayer={(file) => tabRefsMap.current.get(activeTabId)?.importImageAsLayer(file)}
         />
       )}
     </div>

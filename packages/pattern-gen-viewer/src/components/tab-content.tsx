@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import {
   hashString,
   createRandom,
@@ -287,7 +287,12 @@ export interface TabContentProps {
   isActive: boolean;
 }
 
-export function TabContent({ tabId, isActive }: TabContentProps) {
+export interface TabContentHandle {
+  loadComposition: (composition: Composition) => void;
+  importImageAsLayer: (file: File) => void;
+}
+
+export const TabContent = forwardRef<TabContentHandle, TabContentProps>(function TabContent({ tabId, isActive }, ref) {
   const { isAuthenticated } = useAuth();
   const [slug, setSlug] = useState(randomSlug);
   const [patternType, setPatternType] = useState(patternRegistry[0].name);
@@ -1409,6 +1414,12 @@ export function TabContent({ tabId, isActive }: TabContentProps) {
     }
   }, [suppressDirty, showToast]);
 
+  // Expose handlers for global UI (e.g. UserPage in AppShell)
+  useImperativeHandle(ref, () => ({
+    loadComposition: handleLoadComposition,
+    importImageAsLayer: handleImageImport,
+  }), [handleLoadComposition, handleImageImport]);
+
   const handleMenuNew = useCallback(() => {
     if (isDirty) {
       setDiscardAction('new');
@@ -1610,6 +1621,7 @@ export function TabContent({ tabId, isActive }: TabContentProps) {
             onTitleChange={isAuthenticated ? handleCompositionTitleChange : undefined}
             onExit={handleExitComposer}
             onTweakPattern={handleTweakPattern}
+            isActive={isActive}
           />
         </div>
       )}
@@ -1861,4 +1873,4 @@ export function TabContent({ tabId, isActive }: TabContentProps) {
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
-}
+});

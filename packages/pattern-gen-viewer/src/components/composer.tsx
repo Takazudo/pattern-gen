@@ -36,6 +36,7 @@ interface ComposerProps {
   onTitleChange?: (title: string) => void;
   onExit: () => void;
   onTweakPattern?: () => void;
+  isActive?: boolean;
 }
 
 /* ── Editable title sub-component ── */
@@ -148,6 +149,7 @@ export function Composer({
   onTitleChange,
   onExit,
   onTweakPattern,
+  isActive = true,
 }: ComposerProps) {
   const history = useComposerHistory({
     layers: [],
@@ -1073,6 +1075,7 @@ export function Composer({
 
   // Cmd+D to duplicate selected layer
   useEffect(() => {
+    if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'd' && e.key !== 'D') return;
       if (!e.metaKey && !e.ctrlKey) return;
@@ -1085,7 +1088,7 @@ export function Composer({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleDuplicateLayer]);
+  }, [isActive, handleDuplicateLayer]);
 
   const handleReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
@@ -1154,6 +1157,7 @@ export function Composer({
 
   // Cmd+Delete shortcut — delete all selected layers
   useEffect(() => {
+    if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
@@ -1168,7 +1172,7 @@ export function Composer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIds, handleLayerDelete]);
+  }, [isActive, selectedIds, handleLayerDelete]);
 
   // Click-outside to close settings popover
   useEffect(() => {
@@ -1241,6 +1245,7 @@ export function Composer({
 
   // Keyboard shortcuts for undo/redo/copy/cut/paste
   useEffect(() => {
+    if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       // Guard: don't fire when focus is in form elements
       const tag = (e.target as HTMLElement)?.tagName;
@@ -1271,7 +1276,7 @@ export function Composer({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [history.undo, history.redo, handleCopy, handleCut, handlePaste]);
+  }, [isActive, history.undo, history.redo, handleCopy, handleCut, handlePaste]);
 
   return (
     <div className="overlay-root composer">
