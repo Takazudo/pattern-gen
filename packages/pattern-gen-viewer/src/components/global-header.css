@@ -10,7 +10,7 @@
   background: var(--color-surface-glass);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border);
-  z-index: 50;
+  z-index: 300;
   position: relative;
 }
 

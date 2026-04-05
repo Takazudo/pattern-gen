@@ -7,7 +7,7 @@
   align-items: stretch;
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
-  z-index: 49;
+  z-index: 299;
   position: relative;
   overflow-x: auto;
   overflow-y: hidden;
