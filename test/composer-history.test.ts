@@ -490,7 +490,60 @@ describe('historyReducer', () => {
     expect(state.lastCommitted.crop).toEqual(cropRect);
     expect(state.past).toHaveLength(1);
     expect(state.past[0]).toBe(s0);
-    expect(state.pastLabels).toEqual(['Set Crop']);
+    expect(state.pastLabels).toEqual(['Initial']);
+    expect(state.presentLabel).toBe('Set Crop');
+  });
+
+  it('JUMP_TO followed by new edit clears future', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    const s2 = makeState('s2');
+    const s3 = makeState('s3');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Step 1' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s2 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Step 2' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    // Jump back to s0 — s1, s2 become future
+    state = historyReducer(state, { type: 'JUMP_TO', index: 0 });
+    expect(state.future).toHaveLength(2);
+    // New edit from s0 — should clear future
+    state = historyReducer(state, { type: 'SET', state: s3 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'New Edit' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    expect(state.future).toHaveLength(0);
+    expect(state.futureLabels).toHaveLength(0);
+    expect(state.present).toBe(s3);
+    expect(state.presentLabel).toBe('New Edit');
+  });
+
+  it('REDO_TO preserves labels correctly', () => {
+    let state = createInitialHistoryState(s0);
+    const s1 = makeState('s1');
+    const s2 = makeState('s2');
+    const s3 = makeState('s3');
+    state = historyReducer(state, { type: 'SET', state: s1 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Step 1' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s2 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Step 2' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    state = historyReducer(state, { type: 'SET', state: s3 });
+    state = historyReducer(state, { type: 'SET_PENDING_LABEL', label: 'Step 3' });
+    state = historyReducer(state, { type: 'COMMIT' });
+    // Undo 3 times
+    state = historyReducer(state, { type: 'UNDO' });
+    state = historyReducer(state, { type: 'UNDO' });
+    state = historyReducer(state, { type: 'UNDO' });
+    expect(state.presentLabel).toBe('Initial');
+    expect(state.futureLabels).toEqual(['Step 1', 'Step 2', 'Step 3']);
+    // REDO_TO index 1 (redo to s2)
+    state = historyReducer(state, { type: 'REDO_TO', index: 1 });
+    expect(state.present).toBe(s2);
+    expect(state.presentLabel).toBe('Step 2');
+    expect(state.pastLabels).toEqual(['Initial', 'Step 1']);
+    expect(state.futureLabels).toEqual(['Step 3']);
   });
 
   it('crop survives undo and redo round-trip', () => {
