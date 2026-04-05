@@ -156,8 +156,6 @@ function randomSlug(): string {
   return s;
 }
 
-}
-
 /** Compute thresholded image data for a layer (pure function, no closure deps). */
 function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
   if (!layer.processed) return null;

@@ -101,19 +101,20 @@ export function AppShell() {
         {currentPage === 'home' && (
           <HomePage onSelectPattern={handleSelectPattern} />
         )}
-        {currentPage === 'editor' && (
-          tabs.map((tab) => (
+        {/* Keep tabs mounted but hidden to preserve state when on home page */}
+        <div style={{ display: currentPage === 'editor' ? 'contents' : 'none' }}>
+          {tabs.map((tab) => (
             <TabContent
               key={tab.id}
               ref={setTabRef(tab.id)}
               tabId={tab.id}
-              isActive={tab.id === activeTabId}
+              isActive={currentPage === 'editor' && tab.id === activeTabId}
               initialPatternType={tab.initialPatternType}
               initialSlug={tab.initialSlug}
               initialColorSchemeIndex={tab.initialColorSchemeIndex}
             />
-          ))
-        )}
+          ))}
+        </div>
       </div>
       {showUserPage && (
         <UserPage
