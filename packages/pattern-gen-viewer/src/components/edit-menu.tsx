@@ -11,6 +11,7 @@ interface EditMenuProps {
   onCut: () => void;
   onCopy: () => void;
   onPaste: () => void;
+  onSlice: () => void;
   onCrop: () => void;
 }
 
@@ -24,6 +25,7 @@ export function EditMenu({
   onCut,
   onCopy,
   onPaste,
+  onSlice,
   onCrop,
 }: EditMenuProps) {
   const [open, setOpen] = useState(false);
@@ -108,6 +110,12 @@ export function EditMenu({
             <span className="edit-menu-item-shortcut">{'\u2318'}V</span>
           </button>
           <div className="edit-menu-separator" />
+          <button
+            className="edit-menu-item"
+            onClick={() => handleAction(onSlice)}
+          >
+            <span>Slice</span>
+          </button>
           <button
             className="edit-menu-item"
             onClick={() => handleAction(onCrop)}

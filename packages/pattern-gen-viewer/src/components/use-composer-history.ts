@@ -42,6 +42,7 @@ export type HistoryAction =
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'REDO_TO'; index: number }
+  | { type: 'RESET' }
   | { type: 'JUMP_TO'; index: number }
   | { type: 'PIN_SNAPSHOT'; state: ComposerDocumentState; label: string }
   | { type: 'REMOVE_SNAPSHOT'; id: string }
@@ -227,6 +228,17 @@ export function historyReducer(
         presentLabel: 'Restore Snapshot',
       };
     }
+
+    case 'RESET':
+      return {
+        ...current,
+        past: [],
+        pastLabels: [],
+        future: [],
+        futureLabels: [],
+        lastCommitted: current.present,
+        pendingLabel: null,
+      };
   }
 }
 
@@ -281,6 +293,8 @@ export interface ComposerHistory {
   removeSnapshot: (id: string) => void;
   /** Restore a snapshot state (commits current, then sets present) */
   restoreSnapshot: (state: ComposerDocumentState) => void;
+  /** Reset history — clears past/future, makes current state the new baseline */
+  reset: () => void;
 }
 
 export function useComposerHistory(initial: ComposerDocumentState): ComposerHistory {
@@ -375,6 +389,10 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     dispatch({ type: 'SET_PENDING_LABEL', label });
   }, []);
 
+  const reset = useCallback(() => {
+    dispatch({ type: 'RESET' });
+  }, []);
+
   return {
     state: history.present,
     set,
@@ -398,5 +416,6 @@ export function useComposerHistory(initial: ComposerDocumentState): ComposerHist
     pinSnapshot,
     removeSnapshot,
     restoreSnapshot,
+    reset,
   };
 }

@@ -19,6 +19,7 @@ import { ComposerHistoryPanel } from './composer-history-panel.js';
 import { EditMenu } from './edit-menu.js';
 import { ImageTracePreview } from './image-trace-preview.js';
 import { ComposerCropOverlay } from './composer-crop-overlay.js';
+import type { CropOverlayMode } from './composer-crop-overlay.js';
 import { useComposerHistory } from './use-composer-history.js';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
 import { downloadBlob, triggerDownload } from '../utils/trigger-download.js';
@@ -31,6 +32,14 @@ import './composer.css';
 
 /* ── Props ── */
 
+export interface CropApplyParams {
+  cropRect: CropRect;
+  newWidth: number;
+  newHeight: number;
+  offsetX: number;
+  offsetY: number;
+}
+
 interface ComposerProps {
   backgroundImage: ImageBitmap | null;
   backgroundConfig: OgpConfig | null;
@@ -40,6 +49,7 @@ interface ComposerProps {
   onTitleChange?: (title: string) => void;
   onExit: () => void;
   onTweakPattern?: () => void;
+  onCropApply?: (params: CropApplyParams) => void;
   isActive?: boolean;
 }
 
@@ -153,6 +163,7 @@ export function Composer({
   onTitleChange,
   onExit,
   onTweakPattern,
+  onCropApply,
   isActive = true,
 }: ComposerProps) {
   const history = useComposerHistory({
@@ -171,7 +182,7 @@ export function Composer({
   const [showImageTrace, setShowImageTrace] = useState(false);
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
-  const [cropMode, setCropMode] = useState(false);
+  const [cropMode, setCropMode] = useState<CropOverlayMode | false>(false);
   const cropModeRef = useRef(cropMode);
   cropModeRef.current = cropMode;
 
@@ -223,39 +234,82 @@ export function Composer({
     history.flushContinuous();
   }, [history.flushContinuous]);
 
-  // Crop handlers
-  const handleCropActivate = useCallback(() => {
-    setCropMode(true);
+  // Slice handlers (renamed from crop — slice limits export area without resizing canvas)
+  const handleSliceActivate = useCallback(() => {
+    setCropMode('slice');
   }, []);
 
-  const handleCropConfirm = useCallback(
+  const handleSliceConfirm = useCallback(
     (newCrop: CropRect) => {
       history.flushContinuous();
-      // If crop is effectively full canvas, treat as no crop
+      // If slice is effectively full canvas, treat as no slice
       const eps = 0.005;
       const isFullCanvas =
         newCrop.x < eps && newCrop.y < eps && newCrop.width > 1 - eps && newCrop.height > 1 - eps;
       const current = historyRef.current;
       history.set({ ...current, crop: isFullCanvas ? undefined : newCrop });
-      history.setLabel('Set Crop');
+      history.setLabel('Set Slice');
       history.commit();
       setCropMode(false);
     },
     [history.flushContinuous, history.set, history.setLabel, history.commit],
   );
 
-  const handleCropCancel = useCallback(() => {
-    setCropMode(false);
-  }, []);
-
-  const handleCropClear = useCallback(() => {
+  const handleSliceClear = useCallback(() => {
     history.flushContinuous();
     const current = historyRef.current;
     history.set({ ...current, crop: undefined });
-    history.setLabel('Clear Crop');
+    history.setLabel('Clear Slice');
     history.commit();
     setCropMode(false);
   }, [history.flushContinuous, history.set, history.setLabel, history.commit]);
+
+  // Crop handlers (real crop — resizes canvas to selected region)
+  const handleCropActivate = useCallback(() => {
+    setCropMode('crop');
+  }, []);
+
+  const handleCropConfirm = useCallback(
+    (cropRect: CropRect) => {
+      if (!onCropApply) {
+        setCropMode(false);
+        return;
+      }
+      history.flushContinuous();
+
+      const offsetX = Math.round(cropRect.x * outputWidth);
+      const offsetY = Math.round(cropRect.y * outputHeight);
+      const newWidth = Math.max(1, Math.round(cropRect.width * outputWidth));
+      const newHeight = Math.max(1, Math.round(cropRect.height * outputHeight));
+
+      // Adjust all layer positions by subtracting crop origin offset
+      const current = historyRef.current;
+      const adjustedLayers = current.layers.map((layer) => ({
+        ...layer,
+        transform: {
+          ...layer.transform,
+          x: layer.transform.x - offsetX,
+          y: layer.transform.y - offsetY,
+        },
+      }));
+
+      // Clear any existing slice since canvas changed
+      history.set({ ...current, layers: adjustedLayers, crop: undefined });
+      history.setLabel('Crop Canvas');
+      history.commit();
+      // Crop is destructive (changes canvas dimensions outside history) — reset
+      // history so undo cannot restore pre-crop layer positions on a different-size canvas.
+      history.reset();
+
+      onCropApply({ cropRect, newWidth, newHeight, offsetX, offsetY });
+      setCropMode(false);
+    },
+    [onCropApply, history.flushContinuous, history.set, history.setLabel, history.commit, history.reset, outputWidth, outputHeight],
+  );
+
+  const handleOverlayCancel = useCallback(() => {
+    setCropMode(false);
+  }, []);
 
   const [dragState, setDragState] = useState<
     | {
@@ -1510,6 +1564,7 @@ export function Composer({
             onCut={handleCut}
             onCopy={handleCopy}
             onPaste={handlePaste}
+            onSlice={handleSliceActivate}
             onCrop={handleCropActivate}
           />
           <div className="composer-canvas-wrapper">
@@ -1517,15 +1572,16 @@ export function Composer({
               ref={canvasRef}
               width={outputWidth}
               height={outputHeight}
-              onMouseDown={cropMode ? undefined : handleCanvasMouseDown}
+              onMouseDown={cropMode !== false ? undefined : handleCanvasMouseDown}
             />
-            {cropMode && (
+            {cropMode !== false && (
               <ComposerCropOverlay
-                initialCrop={crop}
-                onConfirm={handleCropConfirm}
-                onCancel={handleCropCancel}
-                onClear={handleCropClear}
+                initialCrop={cropMode === 'slice' ? crop : undefined}
+                onConfirm={cropMode === 'slice' ? handleSliceConfirm : handleCropConfirm}
+                onCancel={handleOverlayCancel}
+                onClear={handleSliceClear}
                 hasCrop={!!crop}
+                mode={cropMode}
               />
             )}
           </div>
@@ -1562,6 +1618,7 @@ export function Composer({
             futureEntries={history.futureEntries}
             futureLabels={history.futureLabels}
             presentLabel={history.presentLabel}
+            currentState={history.state}
             snapshots={history.snapshots}
             onJumpTo={history.jumpTo}
             onRedoTo={history.redoTo}

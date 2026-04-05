@@ -28,6 +28,7 @@ interface ComposerHistoryPanelProps {
   futureEntries: ComposerDocumentState[];
   futureLabels: string[];
   presentLabel: string;
+  currentState: ComposerDocumentState;
   snapshots: HistorySnapshot[];
   onJumpTo: (index: number) => void;
   onRedoTo: (index: number) => void;
@@ -46,6 +47,7 @@ export function ComposerHistoryPanel({
   futureEntries,
   futureLabels,
   presentLabel,
+  currentState,
   snapshots,
   onJumpTo,
   onRedoTo,
@@ -145,7 +147,14 @@ export function ComposerHistoryPanel({
         {/* Current state marker */}
         <div className="composer-history-current">
           <span className="composer-history-current-dot" />
-          <span>{presentLabel}</span>
+          <span className="composer-history-current-label">{presentLabel}</span>
+          <button
+            className="composer-history-entry-pin"
+            onClick={(e) => { e.stopPropagation(); onPinSnapshot(currentState, presentLabel); }}
+            title="Pin as snapshot"
+          >
+            <PinIcon />
+          </button>
         </div>
         {/* Future (undone) entries */}
         {futureEntries.map((_entry, i) => {

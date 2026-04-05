@@ -21,6 +21,7 @@ import { ViewTransformPanel } from './view-transform-panel.js';
 import { SelectionOverlay, getOutputDimensions } from './selection-overlay.js';
 import type { AspectConfig } from './selection-overlay.js';
 import { Composer } from './composer.js';
+import type { CropApplyParams } from './composer.js';
 import { ImageLayerPanel } from './image-layer-panel.js';
 import { ImageOverlayTransform } from './image-overlay-transform.js';
 import type { ImageTransform } from './image-overlay-transform.js';
@@ -1086,6 +1087,41 @@ export const TabContent = forwardRef<TabContentHandle, TabContentProps>(function
     setCurrentStep('background');
   }, []);
 
+  // Crop Apply: resize canvas to selected region
+  const handleCropApply = useCallback(
+    async ({ cropRect, newWidth, newHeight, offsetX, offsetY }: CropApplyParams) => {
+      const currentBg = composerBgImage;
+      if (!currentBg) return;
+
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.width = newWidth;
+      bgCanvas.height = newHeight;
+      const bgCtx = bgCanvas.getContext('2d');
+      if (!bgCtx) return;
+      // Use the integer offsets computed by the Composer to avoid rounding divergence
+      bgCtx.drawImage(currentBg, offsetX, offsetY, newWidth, newHeight, 0, 0, newWidth, newHeight);
+
+      const bitmap = await createImageBitmap(bgCanvas);
+      setComposerBgImage(bitmap);
+      setComposerOutputSize({ width: newWidth, height: newHeight });
+
+      // Update the background config crop to reflect the new region.
+      // Always update so "Tweak Pattern" re-renders at the cropped region.
+      if (composerBgConfig) {
+        const parentCrop = composerBgConfig.crop ?? { x: 0, y: 0, width: 1, height: 1 };
+        const newCropX = parentCrop.x + cropRect.x * parentCrop.width;
+        const newCropY = parentCrop.y + cropRect.y * parentCrop.height;
+        const newCropW = cropRect.width * parentCrop.width;
+        const newCropH = cropRect.height * parentCrop.height;
+        setComposerBgConfig({
+          ...composerBgConfig,
+          crop: { x: newCropX, y: newCropY, width: newCropW, height: newCropH },
+        });
+      }
+    },
+    [composerBgImage, composerBgConfig],
+  );
+
   // Return to Composer: re-render background with current pattern settings
   const handleReturnToComposer = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -1506,6 +1542,7 @@ export const TabContent = forwardRef<TabContentHandle, TabContentProps>(function
             onTitleChange={isAuthenticated ? handleCompositionTitleChange : undefined}
             onExit={handleExitComposer}
             onTweakPattern={handleTweakPattern}
+            onCropApply={handleCropApply}
             isActive={isActive}
           />
         </div>
