@@ -454,6 +454,9 @@ export function parseComposerConfig(json: string): ComposerConfig {
     if (cx < 0 || cx > 1 || cy < 0 || cy > 1 || cw <= 0 || cw > 1 || ch <= 0 || ch > 1) {
       throw new Error('Composer config: crop values must be fractions in [0, 1]');
     }
+    if (cx + cw > 1 || cy + ch > 1) {
+      throw new Error('Composer config: crop region extends beyond canvas bounds');
+    }
     crop = { x: cx, y: cy, width: cw, height: ch };
   }
 

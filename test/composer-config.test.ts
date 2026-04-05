@@ -256,6 +256,17 @@ describe('parseComposerConfig validation', () => {
     );
   });
 
+  it('throws on crop that extends beyond canvas bounds', () => {
+    const config = {
+      ...makeValidComposerConfig(),
+      crop: { x: 0.6, y: 0, width: 0.6, height: 1 },
+    };
+    const json = JSON.stringify(config);
+    expect(() => parseComposerConfig(json)).toThrow(
+      'crop region extends beyond canvas bounds',
+    );
+  });
+
   it('throws on crop with zero width', () => {
     const config = {
       ...makeValidComposerConfig(),

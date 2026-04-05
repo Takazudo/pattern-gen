@@ -171,6 +171,8 @@ export function Composer({
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [cropMode, setCropMode] = useState(false);
+  const cropModeRef = useRef(cropMode);
+  cropModeRef.current = cropMode;
 
   // Clipboard for cut/copy/paste
   const clipboardRef = useRef<(EditorLayer & { id: string })[]>([]);
@@ -225,9 +227,10 @@ export function Composer({
   const handleCropConfirm = useCallback(
     (newCrop: CropRect) => {
       history.flushContinuous();
-      // If crop is full canvas, treat as no crop
+      // If crop is effectively full canvas, treat as no crop
+      const eps = 0.005;
       const isFullCanvas =
-        newCrop.x === 0 && newCrop.y === 0 && newCrop.width === 1 && newCrop.height === 1;
+        newCrop.x < eps && newCrop.y < eps && newCrop.width > 1 - eps && newCrop.height > 1 - eps;
       const current = historyRef.current;
       history.set({ ...current, crop: isFullCanvas ? undefined : newCrop });
       history.commit();
@@ -449,8 +452,8 @@ export function Composer({
     if (crop) {
       const sx = Math.round(crop.x * outputWidth);
       const sy = Math.round(crop.y * outputHeight);
-      const sw = Math.round(crop.width * outputWidth);
-      const sh = Math.round(crop.height * outputHeight);
+      const sw = Math.max(1, Math.round(crop.width * outputWidth));
+      const sh = Math.max(1, Math.round(crop.height * outputHeight));
       const croppedCanvas = document.createElement('canvas');
       croppedCanvas.width = sw;
       croppedCanvas.height = sh;
@@ -1134,6 +1137,7 @@ export function Composer({
   useEffect(() => {
     if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (cropModeRef.current) return;
       if (e.key !== 'd' && e.key !== 'D') return;
       if (!e.metaKey && !e.ctrlKey) return;
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
@@ -1216,6 +1220,7 @@ export function Composer({
   useEffect(() => {
     if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (cropModeRef.current) return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
 
@@ -1305,6 +1310,7 @@ export function Composer({
   useEffect(() => {
     if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (cropModeRef.current) return;
       // Guard: don't fire when focus is in form elements
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;

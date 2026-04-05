@@ -191,8 +191,8 @@ export function ComposerCropOverlay({
   const pctW = rect.width * 100;
   const pctH = rect.height * 100;
 
-  // Use the overlay container dimensions (via %) for position calculations
-  // The overlay is sized to match the canvas via CSS
+  // Flip toolbar to top when crop extends near the bottom edge
+  const toolbarOnTop = rect.y + rect.height > 0.85;
 
   return (
     <div className="crop-overlay" ref={overlayRef}>
@@ -231,7 +231,10 @@ export function ComposerCropOverlay({
         onMouseDown={handleMoveStart}
       >
         {/* Confirm/Cancel toolbar */}
-        <div className="crop-toolbar">
+        <div
+          className="crop-toolbar"
+          style={toolbarOnTop ? { bottom: 'auto', top: -36 } : undefined}
+        >
           {hasCrop && (
             <button
               className="crop-toolbar-btn crop-toolbar-btn-clear"
