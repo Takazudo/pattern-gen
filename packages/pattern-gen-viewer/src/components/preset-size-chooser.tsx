@@ -11,14 +11,13 @@ const MAX_PREVIEW_WIDTH = 80;
 
 function getAspectBoxSize(width: number, height: number) {
   const aspect = width / height;
-  if (aspect >= 1) {
-    const w = MAX_PREVIEW_WIDTH;
-    const h = w / aspect;
-    return { width: w, height: Math.max(h, 4) };
+  let w = MAX_PREVIEW_WIDTH;
+  let h = w / aspect;
+  if (h > MAX_PREVIEW_HEIGHT) {
+    h = MAX_PREVIEW_HEIGHT;
+    w = h * aspect;
   }
-  const h = MAX_PREVIEW_HEIGHT;
-  const w = h * aspect;
-  return { width: Math.max(w, 4), height: h };
+  return { width: Math.max(w, 4), height: Math.max(h, 4) };
 }
 
 interface PresetSizeChooserProps {
@@ -38,22 +37,20 @@ export function PresetSizeChooser({ onSelect, onClose }: PresetSizeChooserProps)
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const filtered = useMemo(() => {
-    if (!activeCategory) return PRESET_SIZES;
-    return PRESET_SIZES.filter((p) => p.category === activeCategory);
-  }, [activeCategory]);
-
-  // Group by category for display
+  // Group presets by category, filtering by active tab
   const grouped = useMemo(() => {
+    const categories = activeCategory
+      ? PRESET_SIZE_CATEGORIES.filter((c) => c.id === activeCategory)
+      : PRESET_SIZE_CATEGORIES;
     const groups: { category: PresetSizeCategory; label: string; items: PresetSize[] }[] = [];
-    for (const cat of PRESET_SIZE_CATEGORIES) {
-      const items = filtered.filter((p) => p.category === cat.id);
+    for (const cat of categories) {
+      const items = PRESET_SIZES.filter((p) => p.category === cat.id);
       if (items.length > 0) {
         groups.push({ category: cat.id, label: cat.label, items });
       }
     }
     return groups;
-  }, [filtered]);
+  }, [activeCategory]);
 
   const handleSelect = useCallback(
     (preset: PresetSize) => {
@@ -142,6 +139,7 @@ function PresetCard({
   return (
     <div
       className="preset-size-card"
+      role="button"
       onClick={() => onClick(preset)}
       tabIndex={0}
       onKeyDown={(e) => {

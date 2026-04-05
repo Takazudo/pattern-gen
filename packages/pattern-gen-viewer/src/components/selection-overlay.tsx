@@ -287,6 +287,8 @@ export function SelectionOverlay({
 }: SelectionOverlayProps) {
   const [aspectConfig, setAspectConfig] = useState<AspectConfig>(DEFAULT_ASPECT_CONFIG);
   const [showPresets, setShowPresets] = useState(false);
+  const showPresetsRef = useRef(showPresets);
+  showPresetsRef.current = showPresets;
   const aspect = getAspect(aspectConfig);
   const aspectRef = useRef(aspect);
   aspectRef.current = aspect;
@@ -319,6 +321,7 @@ export function SelectionOverlay({
       ) {
         return;
       }
+      if (showPresetsRef.current) return;
       if (e.key === 'Enter') {
         e.preventDefault();
         onGenerate(rectRef.current);
