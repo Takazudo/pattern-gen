@@ -13,6 +13,7 @@ import { framesByName } from '@takazudo/pattern-gen-generators';
 import { removeBackgroundViaWorker, applyThreshold } from '@takazudo/pattern-gen-image-processor';
 import type { ProcessedImage } from '@takazudo/pattern-gen-image-processor';
 import { ComposerLayerPanel } from './composer-layer-panel.js';
+import { EditMenu } from './edit-menu.js';
 import { ImageTracePreview } from './image-trace-preview.js';
 import { useComposerHistory } from './use-composer-history.js';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
@@ -158,10 +159,16 @@ export function Composer({
   const layersRef = useRef(layers);
   layersRef.current = layers;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [showImageTrace, setShowImageTrace] = useState(false);
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
+
+  // Clipboard for cut/copy/paste
+  const clipboardRef = useRef<(EditorLayer & { id: string })[]>([]);
+  const [hasClipboard, setHasClipboard] = useState(false);
 
   // Helpers to update document state through history
   const historyRef = useRef(history.state);
@@ -892,6 +899,87 @@ export function Composer({
     history.flushContinuous();
   }, [history.flushContinuous]);
 
+  // Clipboard: Copy
+  const handleCopy = useCallback(() => {
+    const ids = selectedIdsRef.current;
+    if (ids.length === 0) return;
+    const selectedSet = new Set(ids);
+    const selected = layersRef.current.filter((l) => selectedSet.has(l.id));
+    const cloned: (EditorLayer & { id: string })[] = JSON.parse(JSON.stringify(selected));
+    clipboardRef.current = cloned;
+    setHasClipboard(true);
+
+    // Also write to system clipboard for cross-tab potential
+    try {
+      const data = cloned.map(({ id: _id, ...rest }) => rest);
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2)).catch(() => {});
+    } catch {
+      // clipboard API not available
+    }
+  }, []);
+
+  // Clipboard: Cut
+  const handleCut = useCallback(() => {
+    handleCopy();
+    // Delete selected layers
+    history.flushContinuous();
+    const ids = selectedIdsRef.current;
+    for (const id of ids) {
+      loadedImagesRef.current.delete(id);
+      processedImagesRef.current.delete(id);
+    }
+    const idSet = new Set(ids);
+    setLayers((prev) => prev.filter((l) => !idSet.has(l.id)));
+    setSelectedIds([]);
+    history.commit();
+  }, [handleCopy, history.flushContinuous, history.commit]);
+
+  // Clipboard: Paste
+  const handlePaste = useCallback(() => {
+    const clipboard = clipboardRef.current;
+    if (clipboard.length === 0) return;
+    history.flushContinuous();
+
+    const newIds: string[] = [];
+    const newLayers: (EditorLayer & { id: string })[] = clipboard.map((layer) => {
+      const newId = crypto.randomUUID();
+      newIds.push(newId);
+      const cloned: EditorLayer & { id: string } = JSON.parse(JSON.stringify(layer));
+      cloned.id = newId;
+      cloned.transform = {
+        ...cloned.transform,
+        x: cloned.transform.x + 20,
+        y: cloned.transform.y + 20,
+      };
+      return cloned;
+    });
+
+    setLayers((prev) => [...prev, ...newLayers]);
+    setSelectedIds(newIds);
+
+    // Load images and fonts for pasted layers
+    for (const layer of newLayers) {
+      if (layer.type === 'image') {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        const layerId = layer.id;
+        img.onload = () => {
+          loadedImagesRef.current.set(layerId, img);
+          setLayers((prev) => [...prev]);
+        };
+        img.src = layer.src;
+      }
+      if (layer.type === 'text') {
+        trackFontLoad(layer.fontFamily);
+      }
+    }
+
+    // Update clipboard with offset positions so successive pastes cascade
+    clipboardRef.current = newLayers.map((l) => JSON.parse(JSON.stringify(l)));
+
+    history.commit();
+  }, [trackFontLoad, history.flushContinuous, history.commit]);
+
   const handleLayerDelete = useCallback(
     (id: string) => {
       history.flushContinuous();
@@ -940,9 +1028,6 @@ export function Composer({
   );
 
   // Cmd+D to duplicate selected layer
-  const selectedIdsRef = useRef(selectedIds);
-  selectedIdsRef.current = selectedIds;
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'd' && e.key !== 'D') return;
@@ -1110,7 +1195,7 @@ export function Composer({
     input.click();
   }, [trackFontLoad, history.flushContinuous, history.set, history.commit]);
 
-  // Keyboard shortcuts for undo/redo
+  // Keyboard shortcuts for undo/redo/copy/cut/paste
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Guard: don't fire when focus is in form elements
@@ -1123,11 +1208,26 @@ export function Composer({
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
         e.preventDefault();
         history.redo();
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === 'c' || e.key === 'C') && !e.shiftKey) {
+        if (selectedIdsRef.current.length > 0) {
+          e.preventDefault();
+          handleCopy();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === 'x' || e.key === 'X') && !e.shiftKey) {
+        if (selectedIdsRef.current.length > 0) {
+          e.preventDefault();
+          handleCut();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === 'v' || e.key === 'V') && !e.shiftKey) {
+        if (clipboardRef.current.length > 0) {
+          e.preventDefault();
+          handlePaste();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [history.undo, history.redo]);
+  }, [history.undo, history.redo, handleCopy, handleCut, handlePaste]);
 
   return (
     <div className="overlay-root composer">
@@ -1219,12 +1319,35 @@ export function Composer({
                 <span className="composer-shortcut-action">Duplicate</span>
                 <kbd className="composer-shortcut-key">⌘D</kbd>
               </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Copy</span>
+                <kbd className="composer-shortcut-key">⌘C</kbd>
+              </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Cut</span>
+                <kbd className="composer-shortcut-key">⌘X</kbd>
+              </div>
+              <div className="composer-shortcut-row">
+                <span className="composer-shortcut-action">Paste</span>
+                <kbd className="composer-shortcut-key">⌘V</kbd>
+              </div>
             </div>
           </div>
         )}
       </div>
       <div className="overlay-workspace composer-workspace">
         <div className="composer-canvas-area">
+          <EditMenu
+            canUndo={history.canUndo}
+            canRedo={history.canRedo}
+            hasSelection={selectedIds.length > 0}
+            hasClipboard={hasClipboard}
+            onUndo={history.undo}
+            onRedo={history.redo}
+            onCut={handleCut}
+            onCopy={handleCopy}
+            onPaste={handlePaste}
+          />
           <canvas
             ref={canvasRef}
             width={outputWidth}
