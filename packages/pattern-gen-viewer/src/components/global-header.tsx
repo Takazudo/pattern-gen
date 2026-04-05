@@ -3,25 +3,25 @@ import './global-header.css';
 
 interface GlobalHeaderProps {
   onOpenUserPage: () => void;
+  onLogoClick: () => void;
 }
 
-export function GlobalHeader({ onOpenUserPage }: GlobalHeaderProps) {
+export function GlobalHeader({ onOpenUserPage, onLogoClick }: GlobalHeaderProps) {
   return (
     <header className="global-header">
       <div className="global-header-left">
-        <a
-          className="global-header-logo-link"
-          href="https://takazudomodular.com/"
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          className="global-header-logo-btn"
+          onClick={onLogoClick}
+          type="button"
         >
           <img
             src={`${import.meta.env.BASE_URL}takazudo.svg`}
-            alt="Takazudo Modular"
+            alt=""
             className="global-header-logo"
           />
-        </a>
-        <span className="global-header-app-name">zudo-pattern-gen</span>
+          <span className="global-header-app-name">zudo-pattern-gen</span>
+        </button>
       </div>
       <div className="global-header-right">
         <a

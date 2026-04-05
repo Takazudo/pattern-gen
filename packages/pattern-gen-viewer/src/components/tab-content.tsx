@@ -169,6 +169,9 @@ function computeThresholdedCache(layer: ViewerImageLayer): ImageData | null {
 export interface TabContentProps {
   tabId: string;
   isActive: boolean;
+  initialPatternType?: string;
+  initialSlug?: string;
+  initialColorSchemeIndex?: number;
 }
 
 export interface TabContentHandle {
@@ -176,11 +179,11 @@ export interface TabContentHandle {
   importImageAsLayer: (file: File) => void;
 }
 
-export const TabContent = forwardRef<TabContentHandle, TabContentProps>(function TabContent({ tabId, isActive }, ref) {
+export const TabContent = forwardRef<TabContentHandle, TabContentProps>(function TabContent({ tabId, isActive, initialPatternType, initialSlug, initialColorSchemeIndex }, ref) {
   const { isAuthenticated } = useAuth();
-  const [slug, setSlug] = useState(randomSlug);
-  const [patternType, setPatternType] = useState(patternRegistry[0].name);
-  const [colorSchemeIndex, setColorSchemeIndex] = useState(0);
+  const [slug, setSlug] = useState(() => initialSlug ?? randomSlug());
+  const [patternType, setPatternType] = useState(() => initialPatternType ?? patternRegistry[0].name);
+  const [colorSchemeIndex, setColorSchemeIndex] = useState(() => initialColorSchemeIndex ?? 0);
   const [zoomSlider, setZoomSlider] = useState(50);
   const [translateX, setTranslateX] = useState(0);
   const [translateY, setTranslateY] = useState(0);

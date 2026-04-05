@@ -5,9 +5,13 @@ import type { Tab } from './tab-bar.js';
 import { TabContent } from './tab-content.js';
 import type { TabContentHandle } from './tab-content.js';
 import { UserPage } from './user-page.js';
+import { HomePage } from './home-page.js';
 import './app-shell.css';
 
+type AppPage = 'home' | 'editor';
+
 export function AppShell() {
+  const [currentPage, setCurrentPage] = useState<AppPage>('home');
   const [tabs, setTabs] = useState<Tab[]>([{ id: 'tab-1', name: 'Pattern 1' }]);
   const [activeTabId, setActiveTabId] = useState('tab-1');
   const [showUserPage, setShowUserPage] = useState(false);
@@ -55,26 +59,61 @@ export function AppShell() {
     }
   }, []);
 
+  const handleSelectPattern = useCallback((patternType: string, slug: string, colorSchemeIndex: number) => {
+    const tabName = patternType.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    tabCounterRef.current++;
+    const newTabId = `tab-${Date.now()}`;
+    setTabs((prev) => {
+      // If there's only the default empty tab, replace it
+      if (prev.length === 1 && prev[0].id === 'tab-1') {
+        return [{ id: prev[0].id, name: tabName, initialPatternType: patternType, initialSlug: slug, initialColorSchemeIndex: colorSchemeIndex }];
+      }
+      return [...prev, { id: newTabId, name: tabName, initialPatternType: patternType, initialSlug: slug, initialColorSchemeIndex: colorSchemeIndex }];
+    });
+    setActiveTabId((prev) => {
+      // If replacing default tab, keep its id
+      return tabs.length === 1 && tabs[0].id === 'tab-1' ? 'tab-1' : newTabId;
+    });
+    setCurrentPage('editor');
+  }, [tabs]);
+
+  const handleNavigateHome = useCallback(() => {
+    setCurrentPage('home');
+  }, []);
+
   return (
     <div className="app-shell">
-      <GlobalHeader onOpenUserPage={() => setShowUserPage(true)} />
-      <TabBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onSwitch={handleSwitchTab}
-        onClose={handleCloseTab}
-        onAdd={handleAddTab}
-        onRename={handleRenameTab}
+      <GlobalHeader
+        onOpenUserPage={() => setShowUserPage(true)}
+        onLogoClick={handleNavigateHome}
       />
+      {currentPage === 'editor' && (
+        <TabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onSwitch={handleSwitchTab}
+          onClose={handleCloseTab}
+          onAdd={handleAddTab}
+          onRename={handleRenameTab}
+        />
+      )}
       <div className="app-shell-content">
-        {tabs.map((tab) => (
-          <TabContent
-            key={tab.id}
-            ref={setTabRef(tab.id)}
-            tabId={tab.id}
-            isActive={tab.id === activeTabId}
-          />
-        ))}
+        {currentPage === 'home' && (
+          <HomePage onSelectPattern={handleSelectPattern} />
+        )}
+        {currentPage === 'editor' && (
+          tabs.map((tab) => (
+            <TabContent
+              key={tab.id}
+              ref={setTabRef(tab.id)}
+              tabId={tab.id}
+              isActive={tab.id === activeTabId}
+              initialPatternType={tab.initialPatternType}
+              initialSlug={tab.initialSlug}
+              initialColorSchemeIndex={tab.initialColorSchemeIndex}
+            />
+          ))
+        )}
       </div>
       {showUserPage && (
         <UserPage
