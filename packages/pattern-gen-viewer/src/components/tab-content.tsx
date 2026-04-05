@@ -1549,7 +1549,7 @@ export function TabContent({ tabId, isActive }: TabContentProps) {
   const showStepIndicator = !composerActive || tweakingPattern;
 
   return (
-    <div className="app" style={{ display: isActive ? 'contents' : 'none' }}>
+    <div className="app" style={isActive ? undefined : { display: 'none' }}>
       <div className="canvas-layer">
         <canvas ref={canvasRef} width={Math.round(CANVAS_SIZE * DPR)} height={Math.round(CANVAS_SIZE * DPR)} />
         {anyProcessing && (
