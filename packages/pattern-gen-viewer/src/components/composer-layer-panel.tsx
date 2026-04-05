@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useId } from 'react';
-import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData, FrameParamDef, LayerFilters } from '@takazudo/pattern-gen-core';
+import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData, FrameParamDef } from '@takazudo/pattern-gen-core';
 import { normalizeLayerFilters } from '@takazudo/pattern-gen-core';
 import { FRAME_GENERATORS, framesByName } from '@takazudo/pattern-gen-generators';
 import type { AlignmentType, GridConfig } from './composer.js';
