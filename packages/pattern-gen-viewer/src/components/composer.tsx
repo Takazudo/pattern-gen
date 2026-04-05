@@ -168,6 +168,8 @@ export function Composer({
 
   // Clipboard for cut/copy/paste
   const clipboardRef = useRef<(EditorLayer & { id: string })[]>([]);
+  const clipboardImagesRef = useRef(new Map<string, HTMLImageElement>());
+  const clipboardProcessedRef = useRef(new Map<string, ProcessedImage>());
   const [hasClipboard, setHasClipboard] = useState(false);
 
   // Helpers to update document state through history
@@ -907,6 +909,17 @@ export function Composer({
     const selected = layersRef.current.filter((l) => selectedSet.has(l.id));
     const cloned: (EditorLayer & { id: string })[] = JSON.parse(JSON.stringify(selected));
     clipboardRef.current = cloned;
+
+    // Preserve loaded images and processed (bg-removal) data for pasting
+    clipboardImagesRef.current.clear();
+    clipboardProcessedRef.current.clear();
+    for (const id of ids) {
+      const img = loadedImagesRef.current.get(id);
+      if (img) clipboardImagesRef.current.set(id, img);
+      const proc = processedImagesRef.current.get(id);
+      if (proc) clipboardProcessedRef.current.set(id, proc);
+    }
+
     setHasClipboard(true);
 
     // Also write to system clipboard for cross-tab potential
@@ -957,25 +970,56 @@ export function Composer({
     setLayers((prev) => [...prev, ...newLayers]);
     setSelectedIds(newIds);
 
-    // Load images and fonts for pasted layers
-    for (const layer of newLayers) {
-      if (layer.type === 'image') {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        const layerId = layer.id;
-        img.onload = () => {
-          loadedImagesRef.current.set(layerId, img);
-          setLayers((prev) => [...prev]);
-        };
-        img.src = layer.src;
+    // Carry over images, processed data, and load fonts for pasted layers
+    const oldToNew = new Map<string, string>();
+    for (let i = 0; i < clipboard.length; i++) {
+      oldToNew.set(clipboard[i].id, newLayers[i].id);
+    }
+
+    for (const [oldId, newId] of oldToNew) {
+      // Reuse loaded image element if available, otherwise load from src
+      const cachedImg = clipboardImagesRef.current.get(oldId);
+      if (cachedImg) {
+        loadedImagesRef.current.set(newId, cachedImg);
+      } else {
+        const layer = newLayers.find((l) => l.id === newId);
+        if (layer && layer.type === 'image') {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            loadedImagesRef.current.set(newId, img);
+            setLayers((prev) => [...prev]);
+          };
+          img.src = layer.src;
+        }
       }
+      // Carry over bg-removal processed data
+      const proc = clipboardProcessedRef.current.get(oldId);
+      if (proc) {
+        processedImagesRef.current.set(newId, proc);
+      }
+    }
+
+    for (const layer of newLayers) {
       if (layer.type === 'text') {
         trackFontLoad(layer.fontFamily);
       }
     }
 
     // Update clipboard with offset positions so successive pastes cascade
-    clipboardRef.current = newLayers.map((l) => JSON.parse(JSON.stringify(l)));
+    const newClipboard = newLayers.map((l) => JSON.parse(JSON.stringify(l)));
+    clipboardRef.current = newClipboard;
+    // Remap clipboard image/processed refs to new IDs for next paste
+    const newClipImages = new Map<string, HTMLImageElement>();
+    const newClipProcessed = new Map<string, ProcessedImage>();
+    for (const [oldId, newId] of oldToNew) {
+      const img = loadedImagesRef.current.get(newId);
+      if (img) newClipImages.set(newId, img);
+      const proc = processedImagesRef.current.get(newId);
+      if (proc) newClipProcessed.set(newId, proc);
+    }
+    clipboardImagesRef.current = newClipImages;
+    clipboardProcessedRef.current = newClipProcessed;
 
     history.commit();
   }, [trackFontLoad, history.flushContinuous, history.commit]);
