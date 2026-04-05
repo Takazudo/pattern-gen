@@ -407,8 +407,10 @@ export function Composer({
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       const cx = Math.round(crop.x * outputWidth);
       const cy = Math.round(crop.y * outputHeight);
-      const cw = Math.round(crop.width * outputWidth);
-      const ch = Math.round(crop.height * outputHeight);
+      const cx2 = Math.round((crop.x + crop.width) * outputWidth);
+      const cy2 = Math.round((crop.y + crop.height) * outputHeight);
+      const cw = cx2 - cx;
+      const ch = cy2 - cy;
       // Top
       ctx.fillRect(0, 0, outputWidth, cy);
       // Bottom
