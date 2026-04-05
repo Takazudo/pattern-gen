@@ -1,0 +1,91 @@
+/* ── Global Header ── */
+
+.global-header {
+  height: var(--global-header-height);
+  min-height: var(--global-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-sp-md);
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  z-index: 300;
+  position: relative;
+}
+
+.global-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-sm);
+}
+
+.global-header-logo-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-sm);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-fg);
+  font: inherit;
+  transition: color var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.global-header-logo-btn:hover {
+  color: var(--color-fg-muted);
+}
+
+.global-header-logo {
+  width: 22px;
+  height: 22px;
+  filter: brightness(0) invert(1);
+}
+
+.global-header-app-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.global-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-xs);
+}
+
+.global-header-link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-2xs);
+  padding: var(--spacing-sp-2xs) var(--spacing-sp-sm);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  transition: background var(--default-transition-duration) var(--default-transition-timing-function),
+    color var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.global-header-link:hover {
+  background: var(--color-control-bg-hover);
+  color: var(--color-fg);
+}
+
+.global-header-link svg {
+  flex-shrink: 0;
+}
+
+/* Override auth-button positioning when inside global header */
+.global-header .auth-button {
+  position: static;
+  top: auto;
+  right: auto;
+}
+
+.global-header .auth-button-wrapper {
+  position: relative;
+  top: auto;
+  right: auto;
+}

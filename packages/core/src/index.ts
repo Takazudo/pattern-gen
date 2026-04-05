@@ -64,13 +64,20 @@ export { serializeOgpConfig, parseOgpConfig, OGP_WIDTH, OGP_HEIGHT } from './ogp
 export type { OgpConfig, OgpCropRegion } from './ogp-config.js';
 
 // Composer config
-export { serializeComposerConfig, parseComposerConfig } from './composer-config.js';
+export {
+  serializeComposerConfig,
+  parseComposerConfig,
+  DEFAULT_LAYER_FILTERS,
+  normalizeLayerFilters,
+  buildFilterString,
+} from './composer-config.js';
 export type {
   ComposerConfig,
   EditorLayer,
   ImageLayerData,
   TextLayerData,
   LayerTransform,
+  LayerFilters,
   FrameConfig,
 } from './composer-config.js';
 

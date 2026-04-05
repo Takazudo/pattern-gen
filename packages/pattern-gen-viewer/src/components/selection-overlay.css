@@ -2,7 +2,7 @@
 
 .selection-overlay {
   position: fixed;
-  inset: 0;
+  inset: var(--chrome-height) 0 0 0;
   z-index: 100;
   user-select: none;
 }

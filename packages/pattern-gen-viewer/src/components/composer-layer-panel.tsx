@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useId } from 'react';
 import type { EditorLayer, FrameConfig, ImageLayerData, TextLayerData, FrameParamDef } from '@takazudo/pattern-gen-core';
+import { normalizeLayerFilters } from '@takazudo/pattern-gen-core';
 import { FRAME_GENERATORS, framesByName } from '@takazudo/pattern-gen-generators';
 import type { AlignmentType, GridConfig } from './composer.js';
 import { ComposerFontPicker } from './composer-font-picker.js';
@@ -484,6 +485,181 @@ export function ComposerLayerPanel({
               onCommitContinuous={onCommitContinuous}
             />
           )}
+        </ComposerCollapsibleSection>
+      )}
+
+      {/* Filters section */}
+      {selected && (
+        <ComposerCollapsibleSection title="Filters" defaultOpen={false} className="composer-filters">
+          {/* Blur */}
+          <label className="composer-prop-label">
+            Blur: <EditableLabelValue
+              formatted={String(normalizeLayerFilters(selected.filters).blur)}
+              onChange={(v) => onUpdate(selected.id, { filters: { ...selected.filters, blur: Math.min(20, Math.max(0, v)) } })}
+            />px
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={20}
+            step={0.5}
+            value={normalizeLayerFilters(selected.filters).blur}
+            onChange={(e) =>
+              onUpdateContinuous(selected.id, {
+                filters: { ...selected.filters, blur: Number(e.target.value) },
+              })
+            }
+            onPointerUp={onCommitContinuous}
+          />
+
+          {/* Brightness */}
+          <label className="composer-prop-label">
+            Brightness: <EditableLabelValue
+              formatted={String(normalizeLayerFilters(selected.filters).brightness)}
+              onChange={(v) => onUpdate(selected.id, { filters: { ...selected.filters, brightness: Math.min(200, Math.max(0, v)) } })}
+            />%
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={200}
+            value={normalizeLayerFilters(selected.filters).brightness}
+            onChange={(e) =>
+              onUpdateContinuous(selected.id, {
+                filters: { ...selected.filters, brightness: Number(e.target.value) },
+              })
+            }
+            onPointerUp={onCommitContinuous}
+          />
+
+          {/* Contrast */}
+          <label className="composer-prop-label">
+            Contrast: <EditableLabelValue
+              formatted={String(normalizeLayerFilters(selected.filters).contrast)}
+              onChange={(v) => onUpdate(selected.id, { filters: { ...selected.filters, contrast: Math.min(200, Math.max(0, v)) } })}
+            />%
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={200}
+            value={normalizeLayerFilters(selected.filters).contrast}
+            onChange={(e) =>
+              onUpdateContinuous(selected.id, {
+                filters: { ...selected.filters, contrast: Number(e.target.value) },
+              })
+            }
+            onPointerUp={onCommitContinuous}
+          />
+
+          {/* Saturate */}
+          <label className="composer-prop-label">
+            Saturate: <EditableLabelValue
+              formatted={String(normalizeLayerFilters(selected.filters).saturate)}
+              onChange={(v) => onUpdate(selected.id, { filters: { ...selected.filters, saturate: Math.min(200, Math.max(0, v)) } })}
+            />%
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={200}
+            value={normalizeLayerFilters(selected.filters).saturate}
+            onChange={(e) =>
+              onUpdateContinuous(selected.id, {
+                filters: { ...selected.filters, saturate: Number(e.target.value) },
+              })
+            }
+            onPointerUp={onCommitContinuous}
+          />
+
+          {/* Hue Rotate */}
+          <label className="composer-prop-label">
+            Hue: <EditableLabelValue
+              formatted={String(normalizeLayerFilters(selected.filters).hueRotate)}
+              onChange={(v) => onUpdate(selected.id, { filters: { ...selected.filters, hueRotate: Math.min(360, Math.max(0, v)) } })}
+            />°
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={360}
+            value={normalizeLayerFilters(selected.filters).hueRotate}
+            onChange={(e) =>
+              onUpdateContinuous(selected.id, {
+                filters: { ...selected.filters, hueRotate: Number(e.target.value) },
+              })
+            }
+            onPointerUp={onCommitContinuous}
+          />
+
+          {/* Grayscale */}
+          <label className="composer-prop-label">
+            Grayscale: <EditableLabelValue
+              formatted={String(normalizeLayerFilters(selected.filters).grayscale)}
+              onChange={(v) => onUpdate(selected.id, { filters: { ...selected.filters, grayscale: Math.min(100, Math.max(0, v)) } })}
+            />%
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={normalizeLayerFilters(selected.filters).grayscale}
+            onChange={(e) =>
+              onUpdateContinuous(selected.id, {
+                filters: { ...selected.filters, grayscale: Number(e.target.value) },
+              })
+            }
+            onPointerUp={onCommitContinuous}
+          />
+
+          {/* Sepia */}
+          <label className="composer-prop-label">
+            Sepia: <EditableLabelValue
+              formatted={String(normalizeLayerFilters(selected.filters).sepia)}
+              onChange={(v) => onUpdate(selected.id, { filters: { ...selected.filters, sepia: Math.min(100, Math.max(0, v)) } })}
+            />%
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={normalizeLayerFilters(selected.filters).sepia}
+            onChange={(e) =>
+              onUpdateContinuous(selected.id, {
+                filters: { ...selected.filters, sepia: Number(e.target.value) },
+              })
+            }
+            onPointerUp={onCommitContinuous}
+          />
+
+          {/* Invert */}
+          <label className="composer-prop-label">
+            Invert: <EditableLabelValue
+              formatted={String(normalizeLayerFilters(selected.filters).invert)}
+              onChange={(v) => onUpdate(selected.id, { filters: { ...selected.filters, invert: Math.min(100, Math.max(0, v)) } })}
+            />%
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={normalizeLayerFilters(selected.filters).invert}
+            onChange={(e) =>
+              onUpdateContinuous(selected.id, {
+                filters: { ...selected.filters, invert: Number(e.target.value) },
+              })
+            }
+            onPointerUp={onCommitContinuous}
+          />
+
+          {/* Reset button */}
+          <button
+            type="button"
+            className="composer-btn composer-btn-small"
+            onClick={() => onUpdate(selected.id, { filters: undefined })}
+          >
+            Reset Filters
+          </button>
         </ComposerCollapsibleSection>
       )}
 
