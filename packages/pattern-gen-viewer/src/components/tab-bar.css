@@ -1,0 +1,108 @@
+/* ── Tab Bar ── */
+
+.tab-bar {
+  height: var(--tab-bar-height);
+  min-height: var(--tab-bar-height);
+  display: flex;
+  align-items: stretch;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  z-index: 49;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-bar-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sp-2xs);
+  padding: 0 var(--spacing-sp-md);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-subtle);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  transition: color var(--default-transition-duration) var(--default-transition-timing-function),
+    background var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.tab-bar-tab:hover {
+  background: var(--color-control-bg);
+  color: var(--color-fg-muted);
+}
+
+.tab-bar-tab.active {
+  color: var(--color-fg);
+  border-bottom-color: var(--color-fg-muted);
+}
+
+.tab-bar-tab-name {
+  pointer-events: none;
+}
+
+.tab-bar-tab-input {
+  background: var(--color-control-bg);
+  border: 1px solid var(--color-border-focus);
+  border-radius: var(--radius-sm);
+  color: var(--color-fg);
+  font-size: var(--font-size-xs);
+  padding: 1px var(--spacing-sp-2xs);
+  outline: none;
+  width: 100px;
+}
+
+.tab-bar-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-fg-subtle);
+  font-size: var(--font-size-2xs);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--default-transition-duration) var(--default-transition-timing-function),
+    background var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.tab-bar-tab:hover .tab-bar-close,
+.tab-bar-tab.active .tab-bar-close {
+  opacity: 1;
+}
+
+.tab-bar-close:hover {
+  background: var(--color-control-bg-hover);
+  color: var(--color-fg);
+}
+
+.tab-bar-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tab-bar-height);
+  min-width: var(--tab-bar-height);
+  font-size: var(--font-size-base);
+  color: var(--color-fg-subtle);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--default-transition-duration) var(--default-transition-timing-function),
+    background var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.tab-bar-add:hover {
+  background: var(--color-control-bg);
+  color: var(--color-fg);
+}
