@@ -1561,6 +1561,7 @@ export function Composer({
             historyLabels={history.historyLabels}
             futureEntries={history.futureEntries}
             futureLabels={history.futureLabels}
+            presentLabel={history.presentLabel}
             snapshots={history.snapshots}
             onJumpTo={history.jumpTo}
             onRedoTo={history.redoTo}
