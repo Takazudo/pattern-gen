@@ -12,8 +12,8 @@ type AppPage = 'home' | 'editor';
 
 export function AppShell() {
   const [currentPage, setCurrentPage] = useState<AppPage>('home');
-  const [tabs, setTabs] = useState<Tab[]>([{ id: 'tab-1', name: 'Pattern 1' }]);
-  const [activeTabId, setActiveTabId] = useState('tab-1');
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeTabId, setActiveTabId] = useState('');
   const [showUserPage, setShowUserPage] = useState(false);
 
   const tabCounterRef = useRef(1);
@@ -60,20 +60,17 @@ export function AppShell() {
   }, []);
 
   const handleSelectPattern = useCallback((patternType: string, slug: string, colorSchemeIndex: number) => {
+    tabCounterRef.current++;
+    const newId = `tab-${Date.now()}`;
     const tabName = patternType.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    const tabData = { name: tabName, initialPatternType: patternType, initialSlug: slug, initialColorSchemeIndex: colorSchemeIndex };
-    let selectedTabId: string;
-    setTabs((prev) => {
-      // If there's only the default empty tab, replace it
-      if (prev.length === 1 && prev[0].id === 'tab-1') {
-        selectedTabId = prev[0].id;
-        return [{ ...tabData, id: prev[0].id }];
-      }
-      tabCounterRef.current++;
-      selectedTabId = `tab-${Date.now()}`;
-      return [...prev, { ...tabData, id: selectedTabId }];
-    });
-    setActiveTabId(selectedTabId!);
+    setTabs((prev) => [...prev, {
+      id: newId,
+      name: tabName,
+      initialPatternType: patternType,
+      initialSlug: slug,
+      initialColorSchemeIndex: colorSchemeIndex,
+    }]);
+    setActiveTabId(newId);
     setCurrentPage('editor');
   }, []);
 
