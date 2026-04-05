@@ -8,12 +8,54 @@ export interface LayerTransform {
   height: number;
 }
 
+export interface LayerFilters {
+  blur?: number;        // 0-20 px
+  brightness?: number;  // 0-200 (percent, default 100 = no change)
+  contrast?: number;    // 0-200 (percent, default 100 = no change)
+  saturate?: number;    // 0-200 (percent, default 100 = no change)
+  hueRotate?: number;   // 0-360 degrees
+  grayscale?: number;   // 0-100 percent
+  sepia?: number;       // 0-100 percent
+  invert?: number;      // 0-100 percent
+}
+
+export const DEFAULT_LAYER_FILTERS: Required<LayerFilters> = {
+  blur: 0,
+  brightness: 100,
+  contrast: 100,
+  saturate: 100,
+  hueRotate: 0,
+  grayscale: 0,
+  sepia: 0,
+  invert: 0,
+};
+
+export function normalizeLayerFilters(filters?: LayerFilters): Required<LayerFilters> {
+  return { ...DEFAULT_LAYER_FILTERS, ...filters };
+}
+
+export function buildFilterString(filters?: LayerFilters): string {
+  if (!filters) return 'none';
+  const f = normalizeLayerFilters(filters);
+  const parts: string[] = [];
+  if (f.blur !== 0) parts.push(`blur(${f.blur}px)`);
+  if (f.brightness !== 100) parts.push(`brightness(${f.brightness}%)`);
+  if (f.contrast !== 100) parts.push(`contrast(${f.contrast}%)`);
+  if (f.saturate !== 100) parts.push(`saturate(${f.saturate}%)`);
+  if (f.hueRotate !== 0) parts.push(`hue-rotate(${f.hueRotate}deg)`);
+  if (f.grayscale !== 0) parts.push(`grayscale(${f.grayscale}%)`);
+  if (f.sepia !== 0) parts.push(`sepia(${f.sepia}%)`);
+  if (f.invert !== 0) parts.push(`invert(${f.invert}%)`);
+  return parts.length > 0 ? parts.join(' ') : 'none';
+}
+
 export interface ImageLayerData {
   type: 'image';
   name: string;
   src: string; // URL or data URI
   transform: LayerTransform;
   opacity: number; // 0-1
+  filters?: LayerFilters;
   bgRemoval?: {
     enabled: boolean;
     threshold: number; // 0-255
@@ -43,6 +85,7 @@ export interface TextLayerData {
   };
   stroke: { enabled: boolean; color: string; width: number };
   transform: LayerTransform;
+  filters?: LayerFilters;
 }
 
 export type EditorLayer = ImageLayerData | TextLayerData;
