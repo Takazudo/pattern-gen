@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { patternRegistry } from '@takazudo/pattern-gen-generators';
 import { COLOR_SCHEMES } from '@takazudo/pattern-gen-core';
 import { generatePreview } from '../utils/generate-on-canvas.js';
@@ -71,20 +71,6 @@ export function HomePage({ onSelectPattern }: HomePageProps) {
     };
   }, [tileData]);
 
-  const setCanvasRef = useCallback(
-    (index: number) => (el: HTMLCanvasElement | null) => {
-      canvasRefs.current[index] = el;
-    },
-    [],
-  );
-
-  const setPlaceholderRef = useCallback(
-    (index: number) => (el: HTMLDivElement | null) => {
-      placeholderRefs.current[index] = el;
-    },
-    [],
-  );
-
   return (
     <div className="home-page">
       <div className="home-page-grid">
@@ -97,11 +83,14 @@ export function HomePage({ onSelectPattern }: HomePageProps) {
             }
           >
             <canvas
-              ref={setCanvasRef(i)}
+              ref={(el) => { canvasRefs.current[i] = el; }}
               width={TILE_SIZE}
               height={TILE_SIZE}
             />
-            <div ref={setPlaceholderRef(i)} className="home-page-tile-placeholder">
+            <div
+              ref={(el) => { placeholderRefs.current[i] = el; }}
+              className="home-page-tile-placeholder"
+            >
               {tile.displayName}
             </div>
             <div className="home-page-tile-overlay">
