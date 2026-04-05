@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import type { ComposerDocumentState, HistorySnapshot, ComposerHistory } from './use-composer-history.js';
+import type { ComposerDocumentState, HistorySnapshot } from './use-composer-history.js';
 import './composer-history-panel.css';
 
 /* ── SVG Icons ── */

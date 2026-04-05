@@ -98,8 +98,9 @@ export function historyReducer(
       const { index } = action;
       if (index < 0 || index >= current.past.length) return current;
       const target = current.past[index];
-      // Commit current state first (add to past), then restore target
+      // Preserve current present in past (like a reflog), then restore target
       const newPast = [...current.past, current.present];
+      if (newPast.length > MAX_HISTORY) newPast.shift();
       return {
         ...current,
         past: newPast,
@@ -131,12 +132,14 @@ export function historyReducer(
     }
 
     case 'RESTORE_SNAPSHOT': {
-      // Commit current state, then set present to the snapshot's state
+      // If there are uncommitted changes (present !== lastCommitted), push
+      // lastCommitted to past first, then push current present. This preserves
+      // both the last committed state and any uncommitted work so the user
+      // can jump back to either via undo/history.
       const newPast = current.present !== current.lastCommitted
         ? [...current.past, current.lastCommitted]
         : [...current.past];
       if (newPast.length > MAX_HISTORY) newPast.shift();
-      // Add the current present to past as well
       const finalPast = [...newPast, current.present];
       if (finalPast.length > MAX_HISTORY) finalPast.shift();
       return {

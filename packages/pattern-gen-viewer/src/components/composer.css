@@ -131,6 +131,7 @@
 .composer-sidebar {
   display: flex;
   flex-direction: column;
+  overflow-y: hidden; /* children handle their own scrolling */
 }
 
 .composer-sidebar > .composer-panel {
