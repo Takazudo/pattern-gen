@@ -24,8 +24,12 @@ function TrashIcon() {
 
 interface ComposerHistoryPanelProps {
   historyEntries: ComposerDocumentState[];
+  historyLabels: string[];
+  futureEntries: ComposerDocumentState[];
+  futureLabels: string[];
   snapshots: HistorySnapshot[];
   onJumpTo: (index: number) => void;
+  onRedoTo: (index: number) => void;
   onPinSnapshot: (state: ComposerDocumentState, label: string) => void;
   onRemoveSnapshot: (id: string) => void;
   onRestoreSnapshot: (state: ComposerDocumentState) => void;
@@ -37,8 +41,12 @@ const MAX_VISIBLE_ENTRIES = 30;
 
 export function ComposerHistoryPanel({
   historyEntries,
+  historyLabels,
+  futureEntries,
+  futureLabels,
   snapshots,
   onJumpTo,
+  onRedoTo,
   onPinSnapshot,
   onRemoveSnapshot,
   onRestoreSnapshot,
@@ -51,7 +59,7 @@ export function ComposerHistoryPanel({
     if (el) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [historyEntries.length]);
+  }, [historyEntries.length, futureEntries.length]);
 
   // Show only the last MAX_VISIBLE_ENTRIES
   const startIndex = Math.max(0, historyEntries.length - MAX_VISIBLE_ENTRIES);
@@ -104,6 +112,7 @@ export function ComposerHistoryPanel({
         ) : (
           visibleEntries.map((entry, i) => {
             const actualIndex = startIndex + i;
+            const label = historyLabels[actualIndex] || `State ${actualIndex + 1}`;
             return (
               <div
                 key={actualIndex}
@@ -112,16 +121,16 @@ export function ComposerHistoryPanel({
                 tabIndex={0}
                 onClick={() => onJumpTo(actualIndex)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onJumpTo(actualIndex); } }}
-                title={`Restore State ${actualIndex + 1}`}
+                title={`Restore: ${label}`}
               >
                 <span className="composer-history-entry-label">
-                  State {actualIndex + 1}
+                  {label}
                 </span>
                 <button
                   className="composer-history-entry-pin"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onPinSnapshot(entry, `State ${actualIndex + 1}`);
+                    onPinSnapshot(entry, label);
                   }}
                   title="Pin as snapshot"
                 >
@@ -136,6 +145,30 @@ export function ComposerHistoryPanel({
           <span className="composer-history-current-dot" />
           <span>Current</span>
         </div>
+        {/* Future (undone) entries */}
+        {futureEntries.map((_entry, i) => {
+          const label = futureLabels[i] || 'Edit';
+          return (
+            <div
+              key={`future-${i}`}
+              className="composer-history-entry composer-history-entry--future"
+              role="button"
+              tabIndex={0}
+              onClick={() => onRedoTo(i)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onRedoTo(i);
+                }
+              }}
+              title={`Redo: ${label}`}
+            >
+              <span className="composer-history-entry-label">
+                {label}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

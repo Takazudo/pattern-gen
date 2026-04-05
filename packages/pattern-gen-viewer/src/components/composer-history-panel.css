@@ -166,6 +166,17 @@
   font-size: var(--font-size-2xs);
 }
 
+/* ── Future (undone) entries ── */
+
+.composer-history-entry--future {
+  opacity: 0.35;
+}
+
+.composer-history-entry--future:hover {
+  opacity: 0.6;
+  background: oklch(100% 0 0 / 6%);
+}
+
 /* ── Current state marker ── */
 
 .composer-history-current {
