@@ -189,10 +189,21 @@
   font-weight: 500;
 }
 
+.composer-history-current-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .composer-history-current-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: oklch(70% 0.12 250);
   flex-shrink: 0;
+}
+
+.composer-history-current:hover .composer-history-entry-pin {
+  opacity: 1;
 }
