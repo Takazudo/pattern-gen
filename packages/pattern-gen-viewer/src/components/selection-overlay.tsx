@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { OGP_WIDTH, OGP_HEIGHT, getAspect, getOutputDimensions } from '@takazudo/pattern-gen-core';
 import type { AspectMode, AspectConfig } from '@takazudo/pattern-gen-core';
+import type { PresetSize } from '@takazudo/pattern-gen-core';
+import { PresetSizeChooser } from './preset-size-chooser.js';
 import './selection-overlay.css';
 
 export type { AspectMode, AspectConfig };
@@ -284,6 +286,7 @@ export function SelectionOverlay({
   onEdit,
 }: SelectionOverlayProps) {
   const [aspectConfig, setAspectConfig] = useState<AspectConfig>(DEFAULT_ASPECT_CONFIG);
+  const [showPresets, setShowPresets] = useState(false);
   const aspect = getAspect(aspectConfig);
   const aspectRef = useRef(aspect);
   aspectRef.current = aspect;
@@ -468,6 +471,18 @@ export function SelectionOverlay({
     [],
   );
 
+  const handlePresetSelect = useCallback((preset: PresetSize) => {
+    const newConfig: AspectConfig = {
+      ...aspectConfigRef.current,
+      mode: 'fixed',
+      fixedW: preset.width,
+      fixedH: preset.height,
+    };
+    const newAspect = getAspect(newConfig);
+    setAspectConfig(newConfig);
+    setRect((r) => reclampToAspect(r, newAspect));
+  }, []);
+
   const { x, y, width, height } = rect;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -540,7 +555,7 @@ export function SelectionOverlay({
           ⋮⋮⋮
         </div>
 
-        {/* Aspect mode buttons */}
+        {/* Aspect mode buttons + Presets */}
         <div className="selection-toolbar-row">
           {ASPECT_MODE_LABELS.map(({ mode, label }) => (
             <button
@@ -551,6 +566,12 @@ export function SelectionOverlay({
               {label}
             </button>
           ))}
+          <button
+            className="selection-mode-btn selection-presets-btn"
+            onClick={() => setShowPresets(true)}
+          >
+            Presets
+          </button>
         </div>
 
         {/* Detail row */}
@@ -648,6 +669,14 @@ export function SelectionOverlay({
           </button>
         </div>
       </div>
+
+      {/* Preset size chooser modal */}
+      {showPresets && (
+        <PresetSizeChooser
+          onSelect={handlePresetSelect}
+          onClose={() => setShowPresets(false)}
+        />
+      )}
     </div>
   );
 }
