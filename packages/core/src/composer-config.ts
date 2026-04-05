@@ -159,6 +159,7 @@ function validateImageLayer(raw: Record<string, unknown>): ImageLayerData {
     src: raw.src,
     transform,
     opacity: raw.opacity,
+    ...(raw.filters != null ? { filters: raw.filters as LayerFilters } : {}),
   };
 }
 
@@ -302,6 +303,7 @@ function validateTextLayer(raw: Record<string, unknown>): TextLayerData {
       width: stroke.width as number,
     },
     transform,
+    ...(raw.filters != null ? { filters: raw.filters as LayerFilters } : {}),
   };
 }
 
