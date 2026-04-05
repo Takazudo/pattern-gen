@@ -4,6 +4,9 @@ import './tab-bar.css';
 export interface Tab {
   id: string;
   name: string;
+  initialPatternType?: string;
+  initialSlug?: string;
+  initialColorSchemeIndex?: number;
 }
 
 interface TabBarProps {

@@ -20,16 +20,20 @@
   gap: var(--spacing-sp-sm);
 }
 
-.global-header-logo-link {
+.global-header-logo-btn {
   display: flex;
   align-items: center;
   gap: var(--spacing-sp-sm);
-  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
   color: var(--color-fg);
+  font: inherit;
   transition: color var(--default-transition-duration) var(--default-transition-timing-function);
 }
 
-.global-header-logo-link:hover {
+.global-header-logo-btn:hover {
   color: var(--color-fg-muted);
 }
 

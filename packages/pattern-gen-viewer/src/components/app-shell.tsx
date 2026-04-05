@@ -5,11 +5,15 @@ import type { Tab } from './tab-bar.js';
 import { TabContent } from './tab-content.js';
 import type { TabContentHandle } from './tab-content.js';
 import { UserPage } from './user-page.js';
+import { HomePage } from './home-page.js';
 import './app-shell.css';
 
+type AppPage = 'home' | 'editor';
+
 export function AppShell() {
-  const [tabs, setTabs] = useState<Tab[]>([{ id: 'tab-1', name: 'Pattern 1' }]);
-  const [activeTabId, setActiveTabId] = useState('tab-1');
+  const [currentPage, setCurrentPage] = useState<AppPage>('home');
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeTabId, setActiveTabId] = useState('');
   const [showUserPage, setShowUserPage] = useState(false);
 
   const tabCounterRef = useRef(1);
@@ -55,26 +59,59 @@ export function AppShell() {
     }
   }, []);
 
+  const handleSelectPattern = useCallback((patternType: string, slug: string, colorSchemeIndex: number) => {
+    tabCounterRef.current++;
+    const newId = `tab-${Date.now()}`;
+    const tabName = patternType.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    setTabs((prev) => [...prev, {
+      id: newId,
+      name: tabName,
+      initialPatternType: patternType,
+      initialSlug: slug,
+      initialColorSchemeIndex: colorSchemeIndex,
+    }]);
+    setActiveTabId(newId);
+    setCurrentPage('editor');
+  }, []);
+
+  const handleNavigateHome = useCallback(() => {
+    setCurrentPage('home');
+  }, []);
+
   return (
     <div className="app-shell">
-      <GlobalHeader onOpenUserPage={() => setShowUserPage(true)} />
-      <TabBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onSwitch={handleSwitchTab}
-        onClose={handleCloseTab}
-        onAdd={handleAddTab}
-        onRename={handleRenameTab}
+      <GlobalHeader
+        onOpenUserPage={() => setShowUserPage(true)}
+        onLogoClick={handleNavigateHome}
       />
+      {currentPage === 'editor' && (
+        <TabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onSwitch={handleSwitchTab}
+          onClose={handleCloseTab}
+          onAdd={handleAddTab}
+          onRename={handleRenameTab}
+        />
+      )}
       <div className="app-shell-content">
-        {tabs.map((tab) => (
-          <TabContent
-            key={tab.id}
-            ref={setTabRef(tab.id)}
-            tabId={tab.id}
-            isActive={tab.id === activeTabId}
-          />
-        ))}
+        {currentPage === 'home' && (
+          <HomePage onSelectPattern={handleSelectPattern} />
+        )}
+        {/* Keep tabs mounted but hidden to preserve state when on home page */}
+        <div style={{ display: currentPage === 'editor' ? 'contents' : 'none' }}>
+          {tabs.map((tab) => (
+            <TabContent
+              key={tab.id}
+              ref={setTabRef(tab.id)}
+              tabId={tab.id}
+              isActive={currentPage === 'editor' && tab.id === activeTabId}
+              initialPatternType={tab.initialPatternType}
+              initialSlug={tab.initialSlug}
+              initialColorSchemeIndex={tab.initialColorSchemeIndex}
+            />
+          ))}
+        </div>
       </div>
       {showUserPage && (
         <UserPage
