@@ -206,4 +206,75 @@ describe('parseComposerConfig validation', () => {
     const parsed = parseComposerConfig(json);
     expect(parsed.frame).toEqual(config.frame);
   });
+
+  it('parses config with crop field', () => {
+    const config = {
+      ...makeValidComposerConfig(),
+      crop: { x: 0.1, y: 0.2, width: 0.6, height: 0.5 },
+    };
+    const json = JSON.stringify(config);
+    const parsed = parseComposerConfig(json);
+    expect(parsed.crop).toEqual({ x: 0.1, y: 0.2, width: 0.6, height: 0.5 });
+  });
+
+  it('parses config without crop field (undefined)', () => {
+    const config = makeValidComposerConfig();
+    const json = JSON.stringify(config);
+    const parsed = parseComposerConfig(json);
+    expect(parsed.crop).toBeUndefined();
+  });
+
+  it('round-trips config with crop', () => {
+    const config: ComposerConfig = {
+      ...makeValidComposerConfig(),
+      crop: { x: 0, y: 0.1, width: 1, height: 0.8 },
+    };
+    const json = serializeComposerConfig(config);
+    const parsed = parseComposerConfig(json);
+    expect(parsed.crop).toEqual(config.crop);
+  });
+
+  it('throws on crop with non-number field', () => {
+    const config = {
+      ...makeValidComposerConfig(),
+      crop: { x: 'bad', y: 0, width: 1, height: 1 },
+    };
+    const json = JSON.stringify(config);
+    expect(() => parseComposerConfig(json)).toThrow(
+      'crop.x must be a finite number',
+    );
+  });
+
+  it('throws on crop with out-of-range values', () => {
+    const config = {
+      ...makeValidComposerConfig(),
+      crop: { x: -0.1, y: 0, width: 1, height: 1 },
+    };
+    const json = JSON.stringify(config);
+    expect(() => parseComposerConfig(json)).toThrow(
+      'crop values must be fractions in [0, 1]',
+    );
+  });
+
+  it('throws on crop that extends beyond canvas bounds', () => {
+    const config = {
+      ...makeValidComposerConfig(),
+      crop: { x: 0.6, y: 0, width: 0.6, height: 1 },
+    };
+    const json = JSON.stringify(config);
+    expect(() => parseComposerConfig(json)).toThrow(
+      'crop region extends beyond canvas bounds',
+    );
+  });
+
+  it('throws on crop with zero width', () => {
+    const config = {
+      ...makeValidComposerConfig(),
+      crop: { x: 0, y: 0, width: 0, height: 1 },
+    };
+    const json = JSON.stringify(config);
+    expect(() => parseComposerConfig(json)).toThrow(
+      'crop values must be fractions in [0, 1]',
+    );
+  });
 });

@@ -1,0 +1,125 @@
+/* ── Composer Crop Overlay ── */
+
+.crop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* ── Dim regions around crop rect ── */
+
+.crop-dim {
+  position: absolute;
+  background: oklch(0% 0 0 / 60%);
+  pointer-events: auto;
+}
+
+.crop-dim-top {
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.crop-dim-bottom {
+  left: 0;
+  right: 0;
+}
+
+.crop-dim-left {
+  left: 0;
+}
+
+.crop-dim-right {
+  right: 0;
+}
+
+/* ── Crop selection box ── */
+
+.crop-box {
+  position: absolute;
+  border: 2px dashed oklch(100% 0 0 / 70%);
+  cursor: move;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+/* ── Resize handles ── */
+
+.crop-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: oklch(100% 0 0);
+  border: 1px solid oklch(0% 0 0 / 50%);
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  z-index: 21;
+  pointer-events: auto;
+  transition:
+    width 0.1s,
+    height 0.1s,
+    box-shadow 0.1s;
+}
+
+.crop-handle:hover {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 6px oklch(100% 0 0 / 50%);
+}
+
+/* ── Confirm/Cancel toolbar ── */
+
+.crop-toolbar {
+  position: absolute;
+  bottom: -36px;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  z-index: 22;
+  pointer-events: auto;
+}
+
+.crop-toolbar-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid oklch(100% 0 0 / 20%);
+  border-radius: var(--radius-md);
+  background: oklch(0% 0 0 / 80%);
+  backdrop-filter: blur(12px);
+  color: oklch(85% 0 0);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.crop-toolbar-btn:hover {
+  background: oklch(100% 0 0 / 15%);
+  color: oklch(95% 0 0);
+}
+
+.crop-toolbar-btn-confirm {
+  color: oklch(75% 0.15 145);
+}
+
+.crop-toolbar-btn-confirm:hover {
+  color: oklch(85% 0.18 145);
+  background: oklch(75% 0.15 145 / 20%);
+}
+
+.crop-toolbar-btn-cancel {
+  color: oklch(75% 0.1 25);
+}
+
+.crop-toolbar-btn-cancel:hover {
+  color: oklch(85% 0.12 25);
+  background: oklch(75% 0.1 25 / 20%);
+}
+
+.crop-toolbar-btn-clear {
+  width: auto;
+  padding: 0 8px;
+  font-size: 11px;
+}

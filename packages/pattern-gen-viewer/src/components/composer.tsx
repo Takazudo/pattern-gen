@@ -3,6 +3,7 @@ import { parseComposerConfig, hashString, createRandom, buildFilterString } from
 import type {
   OgpConfig,
   ComposerConfig,
+  CropRect,
   EditorLayer,
   FrameConfig,
   ImageLayerData,
@@ -17,6 +18,7 @@ import { ComposerLayerPanel } from './composer-layer-panel.js';
 import { ComposerHistoryPanel } from './composer-history-panel.js';
 import { EditMenu } from './edit-menu.js';
 import { ImageTracePreview } from './image-trace-preview.js';
+import { ComposerCropOverlay } from './composer-crop-overlay.js';
 import { useComposerHistory } from './use-composer-history.js';
 import { loadGoogleFont, isFontLoaded } from './composer-font-picker.js';
 import { downloadBlob, triggerDownload } from '../utils/trigger-download.js';
@@ -158,7 +160,7 @@ export function Composer({
     frameConfig: null,
     gridConfig: { vDivide: 2, hDivide: 2, snap: false, visible: false, lineColor: 'rgba(180, 180, 180, 0.5)' },
   });
-  const { layers, frameConfig, gridConfig } = history.state;
+  const { layers, frameConfig, gridConfig, crop } = history.state;
 
   const layersRef = useRef(layers);
   layersRef.current = layers;
@@ -169,6 +171,9 @@ export function Composer({
   const [showImageTrace, setShowImageTrace] = useState(false);
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
+  const [cropMode, setCropMode] = useState(false);
+  const cropModeRef = useRef(cropMode);
+  cropModeRef.current = cropMode;
 
   // Clipboard for cut/copy/paste
   const clipboardRef = useRef<(EditorLayer & { id: string })[]>([]);
@@ -214,6 +219,38 @@ export function Composer({
   const flushFrameConfigContinuous = useCallback(() => {
     history.flushContinuous();
   }, [history.flushContinuous]);
+
+  // Crop handlers
+  const handleCropActivate = useCallback(() => {
+    setCropMode(true);
+  }, []);
+
+  const handleCropConfirm = useCallback(
+    (newCrop: CropRect) => {
+      history.flushContinuous();
+      // If crop is effectively full canvas, treat as no crop
+      const eps = 0.005;
+      const isFullCanvas =
+        newCrop.x < eps && newCrop.y < eps && newCrop.width > 1 - eps && newCrop.height > 1 - eps;
+      const current = historyRef.current;
+      history.set({ ...current, crop: isFullCanvas ? undefined : newCrop });
+      history.commit();
+      setCropMode(false);
+    },
+    [history.flushContinuous, history.set, history.commit],
+  );
+
+  const handleCropCancel = useCallback(() => {
+    setCropMode(false);
+  }, []);
+
+  const handleCropClear = useCallback(() => {
+    history.flushContinuous();
+    const current = historyRef.current;
+    history.set({ ...current, crop: undefined });
+    history.commit();
+    setCropMode(false);
+  }, [history.flushContinuous, history.set, history.commit]);
 
   const [dragState, setDragState] = useState<
     | {
@@ -406,13 +443,28 @@ export function Composer({
 
   // Render to export canvas (no selection handles)
   const renderExportCanvas = useCallback((): HTMLCanvasElement => {
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = outputWidth;
-    exportCanvas.height = outputHeight;
-    const ctx = exportCanvas.getContext('2d')!;
+    const fullCanvas = document.createElement('canvas');
+    fullCanvas.width = outputWidth;
+    fullCanvas.height = outputHeight;
+    const ctx = fullCanvas.getContext('2d')!;
     drawLayers(ctx, backgroundImage, layers, loadedImagesRef.current, processedImagesRef.current, frameConfig);
-    return exportCanvas;
-  }, [layers, backgroundImage, drawLayers, frameConfig, outputWidth, outputHeight]);
+
+    // Apply crop if set
+    if (crop) {
+      const sx = Math.round(crop.x * outputWidth);
+      const sy = Math.round(crop.y * outputHeight);
+      const sw = Math.max(1, Math.round(crop.width * outputWidth));
+      const sh = Math.max(1, Math.round(crop.height * outputHeight));
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = sw;
+      croppedCanvas.height = sh;
+      const cctx = croppedCanvas.getContext('2d')!;
+      cctx.drawImage(fullCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+      return croppedCanvas;
+    }
+
+    return fullCanvas;
+  }, [layers, backgroundImage, drawLayers, frameConfig, outputWidth, outputHeight, crop]);
 
   // Build editor config JSON
   const buildEditorConfig = useCallback((): ComposerConfig | null => {
@@ -422,8 +474,9 @@ export function Composer({
       background: backgroundConfig,
       layers: layers.map(({ id: _id, ...rest }) => rest),
       ...(frameConfig ? { frame: frameConfig } : {}),
+      ...(crop ? { crop } : {}),
     };
-  }, [layers, backgroundConfig, frameConfig]);
+  }, [layers, backgroundConfig, frameConfig, crop]);
 
   // Mouse handlers
   const handleCanvasMouseDown = useCallback(
@@ -1085,6 +1138,7 @@ export function Composer({
   useEffect(() => {
     if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (cropModeRef.current) return;
       if (e.key !== 'd' && e.key !== 'D') return;
       if (!e.metaKey && !e.ctrlKey) return;
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
@@ -1167,6 +1221,7 @@ export function Composer({
   useEffect(() => {
     if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (cropModeRef.current) return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
 
@@ -1217,6 +1272,7 @@ export function Composer({
             ...current,
             layers: newLayers,
             frameConfig: config.frame ?? null,
+            crop: config.crop,
           });
           setSelectedIds([]);
           history.commit();
@@ -1255,6 +1311,7 @@ export function Composer({
   useEffect(() => {
     if (!isActive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (cropModeRef.current) return;
       // Guard: don't fire when focus is in form elements
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -1404,13 +1461,25 @@ export function Composer({
             onCut={handleCut}
             onCopy={handleCopy}
             onPaste={handlePaste}
+            onCrop={handleCropActivate}
           />
-          <canvas
-            ref={canvasRef}
-            width={outputWidth}
-            height={outputHeight}
-            onMouseDown={handleCanvasMouseDown}
-          />
+          <div className="composer-canvas-wrapper">
+            <canvas
+              ref={canvasRef}
+              width={outputWidth}
+              height={outputHeight}
+              onMouseDown={cropMode ? undefined : handleCanvasMouseDown}
+            />
+            {cropMode && (
+              <ComposerCropOverlay
+                initialCrop={crop}
+                onConfirm={handleCropConfirm}
+                onCancel={handleCropCancel}
+                onClear={handleCropClear}
+                hasCrop={!!crop}
+              />
+            )}
+          </div>
         </div>
         <div className="overlay-panel composer-sidebar">
           <ComposerLayerPanel
