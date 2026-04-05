@@ -70,12 +70,15 @@ function resizeFromHandle(
   }
 }
 
+export type CropOverlayMode = 'slice' | 'crop';
+
 interface ComposerCropOverlayProps {
   initialCrop?: CropRect;
   onConfirm: (crop: CropRect) => void;
   onCancel: () => void;
-  onClear: () => void;
+  onClear?: () => void;
   hasCrop: boolean;
+  mode: CropOverlayMode;
 }
 
 export function ComposerCropOverlay({
@@ -84,6 +87,7 @@ export function ComposerCropOverlay({
   onCancel,
   onClear,
   hasCrop,
+  mode,
 }: ComposerCropOverlayProps) {
   const [rect, setRect] = useState<CropRect>(
     () => initialCrop ?? { x: 0, y: 0, width: 1, height: 1 },
@@ -238,11 +242,14 @@ export function ComposerCropOverlay({
           style={toolbarOnTop ? { bottom: 'auto', top: -36 } : undefined}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          {hasCrop && (
+          <span className="crop-toolbar-mode-label">
+            {mode === 'slice' ? 'Slice' : 'Crop'}
+          </span>
+          {hasCrop && mode === 'slice' && onClear && (
             <button
               className="crop-toolbar-btn crop-toolbar-btn-clear"
               onClick={(e) => { e.stopPropagation(); onClear(); }}
-              title="Remove crop"
+              title="Remove slice"
             >
               Remove
             </button>
@@ -251,15 +258,15 @@ export function ComposerCropOverlay({
             className="crop-toolbar-btn crop-toolbar-btn-cancel"
             onClick={(e) => { e.stopPropagation(); onCancel(); }}
             title="Cancel (Esc)"
-            aria-label="Cancel crop"
+            aria-label={`Cancel ${mode}`}
           >
             &#x2715;
           </button>
           <button
             className="crop-toolbar-btn crop-toolbar-btn-confirm"
             onClick={(e) => { e.stopPropagation(); onConfirm(rect); }}
-            title="Apply crop (Enter)"
-            aria-label="Apply crop"
+            title={`Apply ${mode} (Enter)`}
+            aria-label={`Apply ${mode}`}
           >
             &#x2713;
           </button>
